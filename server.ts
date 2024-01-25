@@ -1,6 +1,7 @@
 import express from 'express'
 import dotenv from 'dotenv'
 import testRouter from './routes/test'
+import userRouter from './routes/UsersRoute'
 
 // Load ENVs
 dotenv.config({path: `${__dirname}/config/config.env`});
@@ -16,7 +17,9 @@ const hostname: string = isDevelopment ?
     (process.env.BACK_HOSTNAME_DEV === undefined ? 'localhost' : process.env.BACK_HOSTNAME_DEV) :
     (process.env.BACK_HOSTNAME === undefined ? 'localhost' : process.env.BACK_HOSTNAME);
 
+app.use(express.json());
 app.use('/v1/test', testRouter);
+app.use('/v1/users', userRouter);
 
 const server = app.listen(port, function () {
     console.log(`Server is running on http://localhost:${port}`)
