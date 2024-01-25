@@ -18,7 +18,7 @@ const hostname: string = isDevelopment ?
 
 app.use('/v1/test', testRouter);
 
-const server = app.listen(port, hostname, function () {
+const server = app.listen(port, function () {
     console.log(`Server is running on http://localhost:${port}`)
 });
 
