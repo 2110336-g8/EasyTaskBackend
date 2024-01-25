@@ -1,1 +1,4 @@
-// Nothing for now
+export interface HelloWorld {
+    message: string;
+    timestamp: Date;
+}
