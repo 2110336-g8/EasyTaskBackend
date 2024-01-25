@@ -28,5 +28,6 @@ jobs:
           cd /home/${{ secrets.USERNAME }}/develop/
           git pull origin develop
           git status
+          nvm use 20.11.0
           npm install --only=prod
           pm2 restart easytask
