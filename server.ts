@@ -3,18 +3,18 @@ import dotenv from 'dotenv'
 import testRouter from './routes/test'
 
 // Load ENVs
-dotenv.config({path: './config/config.env'});
+dotenv.config({path: `${__dirname}/config/config.env`});
 
 // Parameters
 const app = express();
-const environment = process.env.NODE_ENV;
+const environment = process.env.ENVIRONMENT;
 const isDevelopment = environment === 'development';
 const port: number = isDevelopment ?
-    (process.env.PORT_DEV === undefined ? 5001 : parseInt(process.env.PORT_DEV, 10)) :
-    (process.env.PORT === undefined ? 5000 : parseInt(process.env.PORT, 10));
+    (process.env.BACK_PORT_DEV === undefined ? 5001 : parseInt(process.env.BACK_PORT_DEV, 10)) :
+    (process.env.BACK_PORT === undefined ? 5000 : parseInt(process.env.BACK_PORT, 10));
 const hostname: string = isDevelopment ?
-    (process.env.HOSTNAME_DEV === undefined ? 'localhost' : process.env.HOSTNAME_DEV) :
-    (process.env.HOSTNAME === undefined ? 'localhost' : process.env.HOSTNAME);
+    (process.env.BACK_HOSTNAME_DEV === undefined ? 'localhost' : process.env.BACK_HOSTNAME_DEV) :
+    (process.env.BACK_HOSTNAME === undefined ? 'localhost' : process.env.BACK_HOSTNAME);
 
 app.use('/v1/test', testRouter);
 
