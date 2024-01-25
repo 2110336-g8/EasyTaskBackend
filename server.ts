@@ -3,12 +3,12 @@ import dotenv from 'dotenv'
 import testRouter from './routes/test'
 
 // Load ENVs
-dotenv.config({ path: './config/config.env' })
+dotenv.config({path: './config/config.env'})
 
 const app = express();
-const port = process.env.PORT || 5000
+const port: number = process.env.PORT === undefined ? 5000 : parseInt(process.env.PORT, 10);
 
-app.use('/api/v1/test', testRouter)
+app.use('/v1/test', testRouter)
 
 const server = app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`)
