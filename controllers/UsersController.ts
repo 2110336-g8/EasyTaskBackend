@@ -20,3 +20,13 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
         }
     }
 }
+
+export const isPhoneNumberExist = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const phoneNumber = req.params.phoneNo
+        const isExist = await UserService.isPhoneNumberExist(phoneNumber)
+        res.status(200).json({isExist})
+    } catch (error) {
+        console.error(error)
+    }
+}

@@ -19,6 +19,15 @@ class UserService {
             }
         }
     }
+
+    static async isPhoneNumberExist(phoneNumber: string): Promise<boolean> {
+        try {
+            const user = await UserModel.findOne({ phoneNumber: phoneNumber });
+            return !!user;
+        } catch (error) {
+            throw new Error('Unknown Error');
+        }
+    }
 }
 
 export default UserService;
