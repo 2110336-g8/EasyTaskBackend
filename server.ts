@@ -19,7 +19,7 @@ const hostname: string = isDevelopment ?
     (process.env.BACK_HOSTNAME_DEV === undefined ? 'localhost' : process.env.BACK_HOSTNAME_DEV) :
     (process.env.BACK_HOSTNAME === undefined ? 'localhost' : process.env.BACK_HOSTNAME);
 
-// connectDB();
+connectDB();
 
 app.use(express.json());
 
