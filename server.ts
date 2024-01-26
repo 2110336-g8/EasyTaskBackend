@@ -2,6 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import testRouter from './routes/test'
 import userRouter from './routes/UsersRoute'
+import connectDB from './config/db';
 
 // Load ENVs
 dotenv.config({path: `${__dirname}/config/config.env`});
@@ -16,6 +17,8 @@ const port: number = isDevelopment ?
 const hostname: string = isDevelopment ?
     (process.env.BACK_HOSTNAME_DEV === undefined ? 'localhost' : process.env.BACK_HOSTNAME_DEV) :
     (process.env.BACK_HOSTNAME === undefined ? 'localhost' : process.env.BACK_HOSTNAME);
+
+connectDB();
 
 app.use(express.json());
 app.use('/v1/test', testRouter);
