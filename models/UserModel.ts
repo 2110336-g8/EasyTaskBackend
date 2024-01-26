@@ -1,4 +1,4 @@
-import mongoose, { Document } from "mongoose";
+import mongoose, {Document} from 'mongoose';
 
 export interface User {
     firstName: string;
@@ -8,7 +8,8 @@ export interface User {
     gender: 'M' | 'F' | 'O';
 }
 
-export interface UserDocument extends User, Document {}
+export interface UserDocument extends User, Document {
+}
 
 const UserSchema = new mongoose.Schema<UserDocument>({
     firstName: {
@@ -44,7 +45,7 @@ const UserSchema = new mongoose.Schema<UserDocument>({
         required: [true, 'Gender is required']
     },
 }, {
-    timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
+    timestamps: {createdAt: 'createdAt', updatedAt: 'updatedAt'},
 });
 
 export const UserModel = mongoose.model<UserDocument>('User', UserSchema);
