@@ -1,28 +1,38 @@
-import {NextFunction, Request, Response} from "express";
-import UserService from "../services/UsersService";
-import {ValidationError} from "../exceptions/UsersError";
-import {getHelloWorldMessage} from "../services/test";
+import {Request, Response} from "express";
 import AuthService from "../services/AuthService";
-import {LoginInterface, TokenInterface} from "../models/AuthModel";
+import {LoginInterface} from "../models/AuthModel";
+import {JwtPayload} from "jsonwebtoken";
 
-export const testAuthServer = async function (req: Request, res: Response) {
-    res.send(getHelloWorldMessage());
-};
-
+/**
+ * Generate new token from phoneNumber of login info.
+ *
+ * @param req
+ * @param res
+ */
 export const newToken = async function (req: Request, res: Response) {
-    res.send(req.body);
+    const data: LoginInterface = req.body;
 
-    // if ('phoneNumber' in data && 'password' in data) {
-    //     res.status(200).json({
-    //         token: AuthService.generateToken(data, 'secretKey', 60).token
-    //     });
-    // } else {
-    //     res.status(400).json({});
-    // }
-};
-
-export const checkToken = async function (req: Request, res: Response) {
-    res.status(401).json({
-        message: 'Unauthorized'
+    res.status(200).json({
+        token: AuthService.generateToken(data, 60)
     });
 };
+
+export const checkValidateToken = async function (req: Request, res: Response) {
+    if ('decodedToken' in res.locals) {
+        const decodedToken = res.locals.decodedToken;
+
+        res.status(200).json({
+            message: decodedToken
+        });
+    } else {
+        res.status(401).json({
+            message: 'Unauthorized'
+        });
+    }
+}
+
+export const loginUser = newToken;
+
+export const logoutUser = async function (req: Request, res: Response) {
+    res.status(200).json({});
+}
