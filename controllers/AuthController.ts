@@ -3,17 +3,22 @@ import UserService from "../services/UsersService";
 import {ValidationError} from "../exceptions/UsersError";
 import {getHelloWorldMessage} from "../services/test";
 import AuthService from "../services/AuthService";
+import {LoginInterface, TokenInterface} from "../models/AuthModel";
 
 export const testAuthServer = async function (req: Request, res: Response) {
     res.send(getHelloWorldMessage());
 };
 
-export const getToken = async function (req: Request, res: Response) {
-    const token: string = AuthService.getToken(req, 0);
+export const newToken = async function (req: Request, res: Response) {
+    res.send(req.body);
 
-    res.status(200).json({
-        token: token
-    });
+    // if ('phoneNumber' in data && 'password' in data) {
+    //     res.status(200).json({
+    //         token: AuthService.generateToken(data, 'secretKey', 60).token
+    //     });
+    // } else {
+    //     res.status(400).json({});
+    // }
 };
 
 export const checkToken = async function (req: Request, res: Response) {

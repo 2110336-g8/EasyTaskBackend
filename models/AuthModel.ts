@@ -1,6 +1,9 @@
-import mongoose, {Document} from 'mongoose';
-
-export interface Token {
+export interface TokenInterface {
     token: string;
-    expiry: string;
+    expiry: number;
+}
+
+export interface LoginInterface {
+    phoneNumber: string;
+    password: string;
 }
