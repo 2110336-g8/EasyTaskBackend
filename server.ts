@@ -1,14 +1,13 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import testRouter from './routes/test';
-import userRouter from './routes/UsersRoute';
-import authRouter from './routes/AuthRoute';
+import express from 'express'
+import dotenv from 'dotenv'
+import testRouter from './routes/test'
+import userRouter from './routes/UsersRoute'
+import connectDB from './config/db';
 
 // Load ENVs
 dotenv.config({path: `${__dirname}/config/config.env`});
 
 // Parameters
-const apiPrefix = '/v1';
 const app = express();
 const environment = process.env.ENVIRONMENT;
 const isDevelopment = environment === 'development';
@@ -19,10 +18,11 @@ const hostname: string = isDevelopment ?
     (process.env.BACK_HOSTNAME_DEV === undefined ? 'localhost' : process.env.BACK_HOSTNAME_DEV) :
     (process.env.BACK_HOSTNAME === undefined ? 'localhost' : process.env.BACK_HOSTNAME);
 
+connectDB();
+
 app.use(express.json());
-app.use(`${apiPrefix}/test`, testRouter);
-app.use(`${apiPrefix}/users`, userRouter);
-app.use(`${apiPrefix}/auth`, authRouter);
+app.use('/v1/test', testRouter);
+app.use('/v1/users', userRouter);
 
 const server = app.listen(port, function () {
     console.log(`Server is running on http://localhost:${port}`)
