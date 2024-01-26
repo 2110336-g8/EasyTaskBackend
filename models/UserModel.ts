@@ -1,4 +1,4 @@
-import mongoose, { Document } from "mongoose";
+import mongoose, { Document, ObjectId } from "mongoose";
 
 export interface User {
     firstName: string;
@@ -47,5 +47,5 @@ const UserSchema = new mongoose.Schema<UserDocument>({
     timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
 });
 
-export const UserModel = mongoose.model<UserDocument>('User', UserSchema);
+export const UserModel = mongoose.model<UserDocument>('user', UserSchema);
 
