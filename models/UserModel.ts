@@ -94,6 +94,12 @@ UserSchema.method('isValidPassword', async function (
     return isValid
 })
 
+UserSchema.methods.toJSON = function () {
+    const userObject: any = this.toObject();
+    delete userObject.password;
+    return userObject;
+};
+
 UserSchema.pre('save', async function (next) {
     const hashedPassword = await hash(this.password, 10)
     this.password = hashedPassword
