@@ -1,5 +1,5 @@
 import mongoose, {Document, ObjectId, Types} from 'mongoose';
-import { compare, hash } from 'bcrypt'
+import {compare, hash} from 'bcrypt'
 
 export interface User {
     firstName: string;
@@ -13,8 +13,8 @@ export interface User {
     bankAccNo?: string;
 }
 
-interface UserMethods{
-    isValidPassword:(password: string) => Promise<boolean>
+interface UserMethods {
+    isValidPassword: (password: string) => Promise<boolean>
 }
 
 export interface UserDocument extends User, UserMethods, Document {
@@ -88,14 +88,14 @@ const UserSchema = new mongoose.Schema<UserDocument>({
     timestamps: {createdAt: 'createdAt', updatedAt: 'updatedAt'},
 });
 
-UserSchema.method('isValidPassword', async function(
-    password: string): Promise<boolean>{
+UserSchema.method('isValidPassword', async function (
+    password: string): Promise<boolean> {
     const isValid = await compare(password, this.password)
     return isValid
 })
 
-UserSchema.pre('save', async function(next){
-    const hashedPassword =  await hash(this.password, 10)
+UserSchema.pre('save', async function (next) {
+    const hashedPassword = await hash(this.password, 10)
     this.password = hashedPassword
     next()
 })

@@ -34,13 +34,13 @@ export const checkValidateToken = async function (req: Request, res: Response) {
 export const loginUser = async function (req: Request, res: Response, next: NextFunction) {
     const data: LoginInterface = req.body;
     const validUserPassword = await AuthService.verifyUser(data);
+
     if (!validUserPassword) {
         res.status(401).json({
             message: 'Unauthorized'
-        })
-    }
-    else {
-        next()
+        });
+    } else {
+        next();
     }
 };
 

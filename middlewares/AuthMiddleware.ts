@@ -48,7 +48,7 @@ export const validateToken = async function (req: Request, res: Response, next: 
             // If expired
             respond401(res);
         } else {
-            // Token is valid
+            // Token is valid, pass the token
             res.locals.decodedToken = decodedToken;
             next();
         }
