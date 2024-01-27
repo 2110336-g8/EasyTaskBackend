@@ -44,6 +44,6 @@ export const isPhoneNumberExist = async (req: Request, res: Response, next: Next
         const isExist = await UserService.isPhoneNumberExist(phoneNumber)
         res.status(200).json({isExist})
     } catch (error) {
-        console.error(error)
+        res.status(500).json({error: 'Internal server error'})
     }
 }
