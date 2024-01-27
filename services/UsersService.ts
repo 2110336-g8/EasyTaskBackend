@@ -1,6 +1,6 @@
 import { Error as MongooseError } from 'mongoose';
 import { UserModel, User, UserDocument } from '../models/UserModel';
-import { ValidationError } from '../exceptions/UsersError';
+import { ValidationError , UserNotFoundError} from '../exceptions/UsersError';
 import { MongoError, MongoServerError } from 'mongodb';
 
 class UserService {
@@ -16,6 +16,67 @@ class UserService {
                 throw new ValidationError((error as MongoServerError).message)
             } else {
                 throw new Error('Unknown Error')
+            }
+        }
+    }
+
+    static async getUserInformation(userId: string): Promise<UserDocument> {
+        try{
+            // Assuming you have a method in UserModel to find and update a user by ID
+            const user = await UserModel.findById(userId);
+
+            if (!user) {
+                // Handle user not found scenario
+                throw new UserNotFoundError('the given object id is not found');
+            }
+
+            return user;
+        } catch (error) {
+            if (error instanceof MongooseError.CastError) {
+                // Handle invalid ObjectId format
+                throw new ValidationError('Invalid ObjectId format');
+            } else if (error instanceof UserNotFoundError){
+                throw error;
+            } else {
+                throw new Error('Unknown Error');
+            }
+        }
+    }
+
+    static async deleteUser(userId: string, password: string): Promise<void> {
+        try {
+            // Validate input parameters
+            if (!userId || !password) {
+                throw new ValidationError('Object ID and password are required');
+            }
+
+            // Find the user by ID
+            const user = await UserModel.findById(userId);
+
+            if (!user) {
+                // Handle user not found scenario
+                throw new UserNotFoundError('User not found');
+            }
+
+            // Verify that the provided password matches the stored password
+            const isPasswordValid = await user.isValidPassword(password);
+
+            if (!isPasswordValid) {
+                throw new ValidationError('Invalid password');
+            }
+
+            // If both conditions are met, delete the user
+            await UserModel.findByIdAndDelete(userId);
+        } catch (error) {
+            if (error instanceof MongooseError.CastError) {
+                // Handle invalid ObjectId format
+                throw new ValidationError('Invalid ObjectId format');
+            } else if (error instanceof ValidationError || error instanceof UserNotFoundError) {
+                // Handle validation errors or user not found error
+                throw error;
+            } else {
+                // Handle other errors
+                throw new Error('Unknown Error');
             }
         }
     }
