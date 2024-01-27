@@ -1,7 +1,6 @@
 import {NextFunction, Request, Response} from "express";
 import AuthService from "../services/AuthService";
 import {LoginInterface} from "../models/AuthModel";
-import {JwtPayload} from "jsonwebtoken";
 
 /**
  * Generate new token from phoneNumber of login info.
