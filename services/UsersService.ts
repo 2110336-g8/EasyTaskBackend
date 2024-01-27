@@ -20,6 +20,18 @@ class UserService {
         }
     }
 
+    static async updateUserProfile(userId: string, updatedData: any): Promise<any> {
+        // Assuming you have a method in UserModel to find and update a user by ID
+        const user = await UserModel.findByIdAndUpdate(userId, updatedData, { new: true });
+
+        if (!user) {
+            // Handle user not found scenario
+            throw new Error('User not found');
+        }
+
+        return user;
+    }
+
     static async isPhoneNumberExist(phoneNumber: string): Promise<boolean> {
         try {
             const user = await UserModel.findOne({ phoneNumber: phoneNumber });

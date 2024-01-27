@@ -21,6 +21,23 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     }
 }
 
+export const updateUserProfile = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.params.obj_id;
+        const updatedData = req.body;
+
+        const updatedUser = await UserService.updateUserProfile(userId, updatedData);
+
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            res.status(400).json({ error: 'Invalid data', details: error.message })
+        } else {
+            res.status(500).json({ error: 'Internal server error'})
+        }
+    }
+}
+
 export const isPhoneNumberExist = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const phoneNumber = req.params.phoneNo
