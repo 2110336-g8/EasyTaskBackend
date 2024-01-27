@@ -1,8 +1,10 @@
 import mongoose, {Document, ObjectId, Types} from 'mongoose';
+import { compare, hash } from 'bcrypt'
 
 export interface User {
     firstName: string;
     lastName: string;
+    password: string;
     phoneNumber: string;
     photoURL?: string;
     gender: 'M' | 'F' | 'O';
@@ -11,7 +13,11 @@ export interface User {
     bankAccNo?: string;
 }
 
-export interface UserDocument extends User, Document {
+interface UserMethods{
+    isValidPassword:(password: string) => Promise<boolean>
+}
+
+export interface UserDocument extends User, UserMethods, Document {
 }
 
 const UserSchema = new mongoose.Schema<UserDocument>({
@@ -24,6 +30,11 @@ const UserSchema = new mongoose.Schema<UserDocument>({
         type: String,
         required: [true, 'Last name is required'],
         maxlength: [255, 'Last name cannot be longer than 255 characters'],
+    },
+    password: {
+        type: String,
+        required: [true, 'Password is required'],
+        minlength: [8, 'Password cannot be shorter than 8 characters']
     },
     phoneNumber: {
         type: String,
@@ -76,6 +87,18 @@ const UserSchema = new mongoose.Schema<UserDocument>({
 }, {
     timestamps: {createdAt: 'createdAt', updatedAt: 'updatedAt'},
 });
+
+UserSchema.method('isValidPassword', async function(
+    password: string): Promise<boolean>{
+    const isValid = await compare(password, this.password)
+    return isValid
+})
+
+UserSchema.pre('save', async function(next){
+    const hashedPassword =  await hash(this.password, 10)
+    this.password = hashedPassword
+    next()
+})
 
 export const UserModel = mongoose.model<UserDocument>('User', UserSchema);
 
