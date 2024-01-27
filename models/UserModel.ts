@@ -1,4 +1,4 @@
-import mongoose, { Document, ObjectId } from "mongoose";
+import mongoose, {Document, ObjectId, Types} from 'mongoose';
 
 export interface User {
     firstName: string;
@@ -6,9 +6,13 @@ export interface User {
     phoneNumber: string;
     photoURL?: string;
     gender: 'M' | 'F' | 'O';
+    citizenId: string;
+    bankId?: ObjectId;
+    bankAccNo?: string;
 }
 
-export interface UserDocument extends User, Document {}
+export interface UserDocument extends User, Document {
+}
 
 const UserSchema = new mongoose.Schema<UserDocument>({
     firstName: {
@@ -25,14 +29,17 @@ const UserSchema = new mongoose.Schema<UserDocument>({
         type: String,
         unique: true,
         required: [true, 'Phone number is required'],
-        // You might want to add additional validation for phone numbers
-        // Example: validate: /^[0-9]{10}$/, // 10 digits only
+        validate: {
+            validator: function (v: string) {
+                return /^[0-9]{10}$/.test(v);
+            },
+            message: 'Invalid phone number format'
+        }
     },
     photoURL: {
         type: String,
         validate: {
             validator: function (v: string) {
-                // Add custom validation for URL format
                 return /^(ftp|http|https):\/\/[^ "]+$/.test(v);
             },
             message: 'Invalid URL format for photo',
@@ -43,9 +50,32 @@ const UserSchema = new mongoose.Schema<UserDocument>({
         enum: ['M', 'F', 'O'],
         required: [true, 'Gender is required']
     },
+    citizenId: {
+        type: String,
+        unique: true,
+        required: [true, 'Citizen ID is required'],
+        validate: {
+            validator: function (v: string) {
+                return /^[0-9]{13}$/.test(v);
+            },
+            message: 'Citizen ID need to be all number with length 13'
+        }
+    },
+    bankId: {
+        type: Types.ObjectId
+    },
+    bankAccNo: {
+        type: String,
+        validate: {
+            validator: function (v: string) {
+                return /^[0-9]{10}$/.test(v);
+            },
+            message: 'Bank account number need to be all number with length 10'
+        }
+    }
 }, {
-    timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
+    timestamps: {createdAt: 'createdAt', updatedAt: 'updatedAt'},
 });
 
-export const UserModel = mongoose.model<UserDocument>('user', UserSchema);
+export const UserModel = mongoose.model<UserDocument>('User', UserSchema);
 

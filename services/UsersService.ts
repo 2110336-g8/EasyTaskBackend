@@ -13,7 +13,7 @@ class UserService {
                 throw new ValidationError(error.message)
             }
             if ((error as MongoServerError).code == 11000) {
-                throw new ValidationError("duplicate phone number")
+                throw new ValidationError((error as MongoServerError).message)
             } else {
                 throw new Error('Unknown Error')
             }
