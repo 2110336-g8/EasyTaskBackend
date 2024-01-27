@@ -10,7 +10,7 @@ authRouter.route('/token/new').post(validateLoginRequest, newToken);
 authRouter.route('/token/validate').get(validateToken, checkValidateToken);
 
 // Login and Logout
-authRouter.route('/login').post(validateLoginRequest, loginUser);
+authRouter.route('/login').post(validateLoginRequest, loginUser, newToken);
 authRouter.route('/logout').post(logoutUser);
 
 export default authRouter;

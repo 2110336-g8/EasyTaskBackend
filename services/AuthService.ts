@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import {LoginInterface} from "../models/AuthModel";
+import { UserModel } from '../models/UserModel';
+import { UserNotFoundError } from '../exceptions/UsersError';
+import { compare } from 'bcrypt';
 
 const key_pair = {
     key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
@@ -26,10 +29,18 @@ class AuthService {
         });
     }
 
-    static verifyUser(login: LoginInterface): boolean {
+    static async verifyUser(login: LoginInterface): Promise<boolean> {
         // TODO: phoneNumber - password database lookup handling
+        //return true;
+        const user = await UserModel.findOne({phoneNumber : login.phoneNumber})
 
-        return true;
+        if (!user) {
+           return false
+        }
+
+        const isMatch = await user.isValidPassword(login.password)
+        return isMatch
+
     }
 }
 

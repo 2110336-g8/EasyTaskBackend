@@ -1,4 +1,4 @@
-import {Request, Response} from "express";
+import {NextFunction, Request, Response} from "express";
 import AuthService from "../services/AuthService";
 import {LoginInterface} from "../models/AuthModel";
 import {JwtPayload} from "jsonwebtoken";
@@ -31,7 +31,18 @@ export const checkValidateToken = async function (req: Request, res: Response) {
     }
 }
 
-export const loginUser = newToken;
+export const loginUser = async function (req: Request, res: Response, next: NextFunction) {
+    const data: LoginInterface = req.body;
+    const validUserPassword = await AuthService.verifyUser(data);
+    if (!validUserPassword) {
+        res.status(401).json({
+            message: 'Unauthorized'
+        })
+    }
+    else {
+        next()
+    }
+};
 
 export const logoutUser = async function (req: Request, res: Response) {
     res.status(200).json({});
