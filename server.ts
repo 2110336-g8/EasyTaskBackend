@@ -1,6 +1,5 @@
 import express from 'express'
 import dotenv from 'dotenv'
-import testRouter from './routes/test'
 import userRouter from './routes/UsersRoute'
 import connectDB from './config/db';
 import authRouter from "./routes/AuthRoute";
@@ -24,7 +23,6 @@ connectDB();
 
 app.use(express.json());
 
-app.use('/v1/test', testRouter);
 app.use('/v1/users', userRouter);
 app.use('/v1/auth', authRouter);
 app.use('/v1/tasks', taskRouter)
