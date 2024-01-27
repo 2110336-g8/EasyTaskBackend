@@ -4,6 +4,7 @@ import testRouter from './routes/test'
 import userRouter from './routes/UsersRoute'
 import connectDB from './config/db';
 import authRouter from "./routes/AuthRoute";
+import taskRouter from "./routes/TasksRoute"
 
 // Load ENVs
 dotenv.config({path: `${__dirname}/config/config.env`});
@@ -26,6 +27,7 @@ app.use(express.json());
 app.use('/v1/test', testRouter);
 app.use('/v1/users', userRouter);
 app.use('/v1/auth', authRouter);
+app.use('/v1/tasks', taskRouter)
 
 const server = app.listen(port, function () {
     console.log(`Server is running on http://localhost:${port}`)
