@@ -27,5 +27,6 @@ jobs:
             
             pm2 describe backend >> /dev/null && (pm2 stop backend; pm2 delete backend)
             
+            npm run build
             pm2 start npm --name "backend" -- run start
             pm2 save
