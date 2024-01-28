@@ -29,4 +29,6 @@ jobs:
           git pull origin ${{ github.ref_name }}
           git status
           npm install -g
-          pm2 describe backend >> /dev/null && pm2 restart backend || pm2 start npm --name "backend" -- run start
+          pm2 describe backend >> /dev/null && (pm2 stop backend; pm2 delete backend)
+          pm2 start npm --name "backend" -- run start
+          pm2 save
