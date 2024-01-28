@@ -29,8 +29,4 @@ jobs:
           git pull origin ${{ github.ref_name }}
           git status
           npm install --only=prod
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            pm2 describe backend >> /dev/null && pm2 restart backend || pm2 start npm --name "backend" -- run start
-          elif [ "${{ github.ref_name }}" = "develop" ]; then
-            pm2 describe backend >> /dev/null && pm2 restart backend || pm2 start npm --name "backend" -- run dev
-          fi
+          pm2 describe backend >> /dev/null && pm2 restart backend || pm2 start npm --name "backend" -- run start
