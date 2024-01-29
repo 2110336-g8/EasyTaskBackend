@@ -11,7 +11,7 @@ const key_pair = {
 class AuthService {
     static generateToken(
         payload: LoginInterface,
-        sessionMinutes: number = 60,
+        sessionMinutes: number = parseInt(process.env.JWT_EXP_MIN || '60'),
     ): string {
         const expiryTime: number =
             Math.floor(Date.now() / 1000) + sessionMinutes * 60

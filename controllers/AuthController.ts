@@ -33,12 +33,32 @@ export const checkValidateToken = async function (req: Request, res: Response) {
     }
 }
 
+const setJwtCookie = (
+    res: Response,
+    token: string,
+    cookieName: string = 'jwt',
+    expirationInMinutes: number = parseInt(process.env.JWT_EXP_MIN || '60'),
+): void => {
+    const expirationDate = new Date()
+    expirationDate.setTime(
+        expirationDate.getTime() + expirationInMinutes * 60 * 1000,
+    )
+
+    res.cookie(cookieName, token, {
+        httpOnly: true,
+        expires: expirationDate,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+    })
+}
+
 export const registerUser = async (req: Request, res: Response) => {
     try {
         const userData = req.body
         const newUser: UserDocument = await UserService.postUser(userData)
         const loginData: LoginInterface = newUser
         const token = AuthService.generateToken(loginData)
+        setJwtCookie(res, token)
         res.status(201).json({
             user: newUser,
             token,
@@ -65,6 +85,7 @@ export const loginUser = async function (req: Request, res: Response) {
         })
     } else {
         const token = AuthService.generateToken(data)
+        setJwtCookie(res, token)
         res.status(200).json({
             token,
         })
