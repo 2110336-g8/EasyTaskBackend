@@ -33,6 +33,28 @@ export const checkValidateToken = async function (req: Request, res: Response) {
     }
 }
 
+export const registerUser = async (req: Request, res: Response) => {
+    try {
+        const userData = req.body
+        const newUser: UserDocument = await UserService.postUser(userData)
+        const loginData: LoginInterface = newUser
+        const token = AuthService.generateToken(loginData)
+        res.status(201).json({
+            user: newUser,
+            token,
+        })
+    } catch (error) {
+        if (error instanceof UserValidationError) {
+            res.status(400).json({
+                error: error.name,
+                details: error.message,
+            })
+        } else {
+            res.status(500).json({ error: 'Internal server error' })
+        }
+    }
+}
+
 export const loginUser = async function (req: Request, res: Response) {
     const data: LoginInterface = req.body
     const validUserPassword = await AuthService.verifyUser(data)
@@ -42,8 +64,9 @@ export const loginUser = async function (req: Request, res: Response) {
             message: 'Unauthorized',
         })
     } else {
+        const token = AuthService.generateToken(data)
         res.status(200).json({
-            token: AuthService.generateToken(data, 60),
+            token,
         })
     }
 }
