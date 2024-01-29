@@ -1,6 +1,6 @@
 import express from 'express'
 import {
-    getUserInformation,
+    getUserById,
     deleteUser,
     isPhoneNumberExist,
     updateUserProfile,
@@ -10,7 +10,7 @@ const router = express.Router()
 
 router
     .route('/:obj_id')
-    .get(getUserInformation)
+    .get(getUserById)
     .delete(deleteUser)
     .patch(updateUserProfile)
 router.route('/isPhoneNumberExist/:phoneNo').get(isPhoneNumberExist)

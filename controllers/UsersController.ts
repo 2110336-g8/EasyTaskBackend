@@ -5,7 +5,7 @@ import {
     UserNotFoundError,
 } from '../exceptions/UsersError'
 
-export const getUserInformation = async (req: Request, res: Response) => {
+export const getUserById = async (req: Request, res: Response) => {
     try {
         const userId = req.params.obj_id
         const user = await UserService.getUserById(userId)
