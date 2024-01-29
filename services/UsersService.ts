@@ -25,7 +25,7 @@ class UserService {
         }
     }
 
-    static async getUserInformation(userId: string): Promise<UserDocument> {
+    static async getUserById(userId: string): Promise<UserDocument> {
         try {
             const user = await UserModel.findById(userId);
             if (!user) {
@@ -42,6 +42,7 @@ class UserService {
             }
         }
     }
+    
 
     static async deleteUser(userId: string, password: string): Promise<void> {
         try {

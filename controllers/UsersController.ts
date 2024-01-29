@@ -33,7 +33,7 @@ export const getUserInformation = async (
 ) => {
     try {
         const userId = req.params.obj_id;
-        const user = await UserService.getUserInformation(userId);
+        const user = await UserService.getUserById(userId);
         res.status(200).json(user);
     } catch (error) {
         if (error instanceof UserNotFoundError) {
