@@ -4,6 +4,7 @@ import {
     checkValidateToken,
     loginUser,
     logoutUser,
+    registerUser,
 } from '../controllers/AuthController'
 import {
     validateLoginRequest,
@@ -15,6 +16,9 @@ const authRouter = express.Router()
 // For token generation
 authRouter.route('/token/new').post(validateLoginRequest, newToken)
 authRouter.route('/token/validate').get(validateToken, checkValidateToken)
+
+// Register
+authRouter.route('/register').post(registerUser, newToken)
 
 // Login and Logout
 authRouter.route('/login').post(validateLoginRequest, loginUser, newToken)

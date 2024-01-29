@@ -1,6 +1,5 @@
 import express from 'express'
 import {
-    createUser,
     getUserInformation,
     deleteUser,
     isPhoneNumberExist,
@@ -9,7 +8,6 @@ import {
 
 const router = express.Router()
 
-router.route('/').post(createUser)
 router
     .route('/:obj_id')
     .get(getUserInformation)

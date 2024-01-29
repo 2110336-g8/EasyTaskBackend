@@ -5,27 +5,6 @@ import {
     UserNotFoundError,
 } from '../exceptions/UsersError'
 
-export const createUser = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-) => {
-    try {
-        const userData = req.body
-        const newUser = await UserService.postUser(userData)
-        res.status(201).json(newUser)
-    } catch (error) {
-        if (error instanceof UserValidationError) {
-            res.status(400).json({
-                error: error.name,
-                details: error.message,
-            })
-        } else {
-            res.status(500).json({ error: 'Internal server error' })
-        }
-    }
-}
-
 export const getUserInformation = async (
     req: Request,
     res: Response,
