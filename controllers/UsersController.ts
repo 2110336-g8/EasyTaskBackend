@@ -17,7 +17,7 @@ export const createUser = async (
     } catch (error) {
         if (error instanceof UserValidationError) {
             res.status(400).json({
-                error: "Invalid data",
+                error: error.name,
                 details: error.message,
             });
         } else {
@@ -96,12 +96,12 @@ export const updateUserProfile = async (
     } catch (error) {
         if (error instanceof UserValidationError) {
             res.status(400).json({
-                error: "Invalid data",
+                error: error.name,
                 details: error.message,
             });
         } else if (error instanceof UserNotFoundError) {
             res.status(404).json({
-                error: "User not found",
+                error: error.message,
                 details: error.message,
             });
         } else {
