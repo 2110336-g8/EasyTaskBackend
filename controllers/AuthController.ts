@@ -33,11 +33,7 @@ export const checkValidateToken = async function (req: Request, res: Response) {
     }
 }
 
-export const loginUser = async function (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-) {
+export const loginUser = async function (req: Request, res: Response) {
     const data: LoginInterface = req.body
     const validUserPassword = await AuthService.verifyUser(data)
 
@@ -46,7 +42,9 @@ export const loginUser = async function (
             message: 'Unauthorized',
         })
     } else {
-        next()
+        res.status(200).json({
+            token: AuthService.generateToken(data, 60),
+        })
     }
 }
 
