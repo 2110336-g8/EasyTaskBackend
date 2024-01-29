@@ -1,5 +1,5 @@
 import mongoose, { Document, ObjectId, Types } from 'mongoose'
-import { compare, hash } from 'bcrypt'
+import { compare, genSalt, hash } from 'bcrypt'
 
 export interface User {
     firstName: string
@@ -106,7 +106,8 @@ UserSchema.methods.toJSON = function () {
 }
 
 UserSchema.pre('save', async function (next) {
-    const hashedPassword = await hash(this.password, 10)
+    const salt = await genSalt(10)
+    const hashedPassword = await hash(this.password, salt)
     this.password = hashedPassword
     next()
 })
