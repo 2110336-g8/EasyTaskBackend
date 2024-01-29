@@ -1,16 +1,23 @@
-import express from "express";
-import {newToken, checkValidateToken, loginUser, logoutUser} from "../controllers/AuthController";
-import {validateLoginRequest, validateToken} from "../middlewares/AuthMiddleware";
+import express from 'express'
+import {
+    newToken,
+    checkValidateToken,
+    loginUser,
+    logoutUser,
+} from '../controllers/AuthController'
+import {
+    validateLoginRequest,
+    validateToken,
+} from '../middlewares/AuthMiddleware'
 
-
-const authRouter = express.Router();
+const authRouter = express.Router()
 
 // For token generation
-authRouter.route('/token/new').post(validateLoginRequest, newToken);
-authRouter.route('/token/validate').get(validateToken, checkValidateToken);
+authRouter.route('/token/new').post(validateLoginRequest, newToken)
+authRouter.route('/token/validate').get(validateToken, checkValidateToken)
 
 // Login and Logout
-authRouter.route('/login').post(validateLoginRequest, loginUser, newToken);
-authRouter.route('/logout').post(logoutUser);
+authRouter.route('/login').post(validateLoginRequest, loginUser, newToken)
+authRouter.route('/logout').post(logoutUser)
 
-export default authRouter;
+export default authRouter

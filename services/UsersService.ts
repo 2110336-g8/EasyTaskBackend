@@ -1,95 +1,94 @@
-import { Error as MongooseError } from "mongoose";
-import { UserModel, User, UserDocument } from "../models/UserModel";
+import { Error as MongooseError } from 'mongoose'
+import { UserModel, User, UserDocument } from '../models/UserModel'
 import {
     UserValidationError,
     UserNotFoundError,
-} from "../exceptions/UsersError";
-import { MongoError, MongoServerError } from "mongodb";
+} from '../exceptions/UsersError'
+import { MongoError, MongoServerError } from 'mongodb'
 
 class UserService {
-    static async postUser(userData: Omit<User, "_id">): Promise<UserDocument> {
+    static async postUser(userData: Omit<User, '_id'>): Promise<UserDocument> {
         try {
-            const newUser: UserDocument = await UserModel.create(userData);
-            return newUser;
+            const newUser: UserDocument = await UserModel.create(userData)
+            return newUser
         } catch (error) {
             if (error instanceof MongooseError.ValidationError) {
-                throw new UserValidationError(error.message);
+                throw new UserValidationError(error.message)
             }
             if ((error as MongoServerError).code == 11000) {
                 throw new UserValidationError(
-                    (error as MongoServerError).message
-                );
+                    (error as MongoServerError).message,
+                )
             } else {
-                throw new Error("Unknown Error");
+                throw new Error('Unknown Error')
             }
         }
     }
 
     static async getUserById(userId: string): Promise<UserDocument> {
         try {
-            const user = await UserModel.findById(userId);
+            const user = await UserModel.findById(userId)
             if (!user) {
-                throw new UserNotFoundError();
+                throw new UserNotFoundError()
             }
-            return user;
+            return user
         } catch (error) {
             if (error instanceof MongooseError.CastError) {
-                throw new UserValidationError("Invalid ObjectId format");
+                throw new UserValidationError('Invalid ObjectId format')
             } else if (error instanceof UserNotFoundError) {
-                throw error;
+                throw error
             } else {
-                throw new Error("Unknown Error");
+                throw new Error('Unknown Error')
             }
         }
     }
-    
 
     static async deleteUser(userId: string, password: string): Promise<void> {
         try {
             // Validate input parameters
             if (!userId || !password) {
                 throw new UserValidationError(
-                    "Object ID and password are required"
-                );
+                    'Object ID and password are required',
+                )
             }
 
             // Find the user by ID
-            const user = await UserModel.findById(userId);
+            const user = await UserModel.findById(userId)
 
             if (!user) {
                 // Handle user not found scenario
-                throw new UserNotFoundError("User not found");
+                throw new UserNotFoundError('User not found')
             }
 
             // Verify that the provided password matches the stored password
-            const isPasswordValid = await user.isValidPassword(password);
+            const isPasswordValid = await user.isValidPassword(password)
 
             if (!isPasswordValid) {
-                throw new UserValidationError("Invalid password");
+                throw new UserValidationError('Invalid password')
             }
 
             // If both conditions are met, delete the user
-            await UserModel.findByIdAndDelete(userId);
+            await UserModel.findByIdAndDelete(userId)
         } catch (error) {
             if (error instanceof MongooseError.CastError) {
                 // Handle invalid ObjectId format
-                throw new UserValidationError("Invalid ObjectId format");
+                throw new UserValidationError('Invalid ObjectId format')
             } else if (
                 error instanceof UserValidationError ||
                 error instanceof UserNotFoundError
             ) {
                 // Handle validation errors or user not found error
-                throw error;
+                throw error
             } else {
                 // Handle other errors
-                throw new Error("Unknown Error");
+                throw new Error('Unknown Error')
             }
         }
     }
 
     static async updateUserProfile(
         userId: string,
-        updatedData: Partial<UserDocument>
+        updatedData: Partial<UserDocument>,
     ): Promise<UserDocument> {
         try {
             // Assuming you have a method in UserModel to find and update a user by ID
@@ -99,38 +98,38 @@ class UserService {
                 {
                     new: true,
                     runValidators: true,
-                }
-            );
+                },
+            )
             if (!user) {
                 // Handle user not found scenario
-                throw new UserNotFoundError();
+                throw new UserNotFoundError()
             }
-            return user;
+            return user
         } catch (error) {
             if (error instanceof MongooseError.CastError) {
-                throw new UserValidationError(error.message);
+                throw new UserValidationError(error.message)
             } else if (error instanceof MongooseError.ValidationError) {
-                throw new UserValidationError(error.message);
+                throw new UserValidationError(error.message)
             } else if ((error as MongoServerError).code == 11000) {
                 throw new UserValidationError(
-                    (error as MongoServerError).message
-                );
+                    (error as MongoServerError).message,
+                )
             } else if (error instanceof UserNotFoundError) {
-                throw error;
+                throw error
             } else {
-                throw new Error("Unknown Error");
+                throw new Error('Unknown Error')
             }
         }
     }
 
     static async isPhoneNumberExist(phoneNumber: string): Promise<boolean> {
         try {
-            const user = await UserModel.findOne({ phoneNumber: phoneNumber });
-            return !!user;
+            const user = await UserModel.findOne({ phoneNumber: phoneNumber })
+            return !!user
         } catch (error) {
-            throw new Error("Unknown Error");
+            throw new Error('Unknown Error')
         }
     }
 }
 
-export default UserService;
+export default UserService
