@@ -2,11 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 import TaskService from '../services/TasksService'
 import { TaskValidationError } from '../exceptions/TasksError'
 
-export const createTask = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-) => {
+export const createTask = async (req: Request, res: Response) => {
     try {
         // Assuming that request body contains task data
         const taskData = req.body

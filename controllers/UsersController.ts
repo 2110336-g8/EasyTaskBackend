@@ -5,11 +5,7 @@ import {
     UserNotFoundError,
 } from '../exceptions/UsersError'
 
-export const getUserInformation = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-) => {
+export const getUserInformation = async (req: Request, res: Response) => {
     try {
         const userId = req.params.obj_id
         const user = await UserService.getUserById(userId)
@@ -31,11 +27,7 @@ export const getUserInformation = async (
     }
 }
 
-export const deleteUser = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-) => {
+export const deleteUser = async (req: Request, res: Response) => {
     try {
         const userId = req.params.obj_id
         const password = req.body.password
@@ -58,11 +50,7 @@ export const deleteUser = async (
     }
 }
 
-export const updateUserProfile = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-) => {
+export const updateUserProfile = async (req: Request, res: Response) => {
     try {
         const userId = req.params.obj_id
         const updatedData = req.body
@@ -89,11 +77,7 @@ export const updateUserProfile = async (
     }
 }
 
-export const isPhoneNumberExist = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-) => {
+export const isPhoneNumberExist = async (req: Request, res: Response) => {
     try {
         const phoneNumber = req.params.phoneNo
         const isExist = await UserService.isPhoneNumberExist(phoneNumber)
