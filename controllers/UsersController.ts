@@ -5,16 +5,16 @@ import { Service, Inject } from 'typedi'
 
 @Service()
 class UsersController {
-    private userService: UsersService
+    private usersService: UsersService
 
     constructor(@Inject() userService: UsersService) {
-        this.userService = userService
+        this.usersService = userService
     }
 
     createUser = async (req: Request, res: Response): Promise<void> => {
         try {
             const data = req.body
-            const user = await this.userService.createUser(data)
+            const user = await this.usersService.createUser(data)
             res.status(201).json(user)
         } catch (error) {
             if (error instanceof ValidationError) {
@@ -31,7 +31,7 @@ class UsersController {
     getUserbyId = async (req: Request, res: Response): Promise<void> => {
         try {
             const id = req.params.id
-            const user = await this.userService.getUserById(id)
+            const user = await this.usersService.getUserById(id)
             res.status(200).json(user)
         } catch (error) {
             console.error(error)
@@ -43,7 +43,7 @@ class UsersController {
         try {
             const id = req.params.id
             const data = req.body
-            const user = await this.userService.updateUser(id, data)
+            const user = await this.usersService.updateUser(id, data)
             res.status(200).json(user)
         } catch (error) {
             if (error instanceof ValidationError) {
