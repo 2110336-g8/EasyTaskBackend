@@ -1,5 +1,5 @@
 import { UsersRepository } from '../repositories/UsersRepo'
-import { IUser, IUserDocument } from '../models/UserModel'
+import { IUserDocument } from '../models/UserModel'
 import { Service, Inject } from 'typedi'
 import { NotFoundError } from '../errors/RepoError'
 
