@@ -1,14 +1,16 @@
 import express from 'express'
-import {
-    getUserById,
-    deleteUser,
-    isPhoneNumberExist,
-    updateUser,
-} from '../controllers/UsersController'
+import UsersController from '../controllers/UsersController'
+import Container from 'typedi'
 
 const router = express.Router()
 
-router.route('/:obj_id').get(getUserById).delete(deleteUser).patch(updateUser)
-router.route('/isPhoneNumberExist/:phoneNo').get(isPhoneNumberExist)
+// Assuming you have already instantiated the `UserService`
+const usersController = Container.get(UsersController)
+
+router.route('/').post(usersController.createUser)
+router
+    .route('/:id')
+    .get(usersController.getUserbyId)
+    .patch(usersController.updateUser)
 
 export default router
