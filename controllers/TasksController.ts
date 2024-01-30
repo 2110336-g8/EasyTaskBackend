@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import { Request, Response } from 'express'
 import TaskService from '../services/TasksService'
 import { TaskValidationError } from '../exceptions/TasksError'
 
