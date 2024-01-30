@@ -99,11 +99,11 @@ UserSchema.method(
     },
 )
 
-UserSchema.methods.toJSON = function () {
+UserSchema.method('toJSON', function () {
     const userObject: any = this.toObject()
     delete userObject.password
     return userObject
-}
+})
 
 UserSchema.pre('save', async function (next) {
     const salt = await genSalt(10)
