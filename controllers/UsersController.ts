@@ -4,7 +4,7 @@ import { NotFoundError, ValidationError } from '../errors/RepoError'
 import { Service, Inject } from 'typedi'
 
 @Service()
-class UserController {
+class UsersController {
     private userService: UsersService
 
     constructor(@Inject() userService: UsersService) {
@@ -13,9 +13,9 @@ class UserController {
 
     createUser = async (req: Request, res: Response): Promise<void> => {
         try {
-            const newUser = req.body
-            const createdUser = await this.userService.createUser(newUser)
-            res.status(201).json(createdUser)
+            const data = req.body
+            const user = await this.userService.createUser(data)
+            res.status(201).json(user)
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
@@ -63,4 +63,4 @@ class UserController {
     }
 }
 
-export default UserController
+export default UsersController
