@@ -1,6 +1,7 @@
 import { UsersRepository } from '../repositories/UsersRepo'
 import { IUser, IUserDocument } from '../models/UserModel'
 import { Service, Inject } from 'typedi'
+import { NotFoundError } from '../errors/RepoError'
 
 @Service()
 export class UsersService {
@@ -23,7 +24,7 @@ export class UsersService {
         try {
             const user = await this.userRepository.findOne(id)
             if (!user) {
-                throw new Error('')
+                throw new NotFoundError()
             }
             return user
         } catch (error) {
@@ -35,7 +36,7 @@ export class UsersService {
         try {
             const user = await this.userRepository.update(id, data)
             if (!user) {
-                throw new Error('')
+                throw new NotFoundError()
             }
             return user
         } catch (error) {

@@ -53,7 +53,7 @@ class UserController {
                 })
             } else if (error instanceof NotFoundError) {
                 res.status(404).json({
-                    error: error.message,
+                    error: error.name,
                     details: error.message,
                 })
             } else {
