@@ -47,3 +47,5 @@ export class UsersService {
         throw new Error('Not Implemented')
     }
 }
+
+export default UsersService
