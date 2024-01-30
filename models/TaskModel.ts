@@ -1,5 +1,5 @@
 import mongoose, { Document, Types, Schema } from 'mongoose'
-import { TaskValidationError } from '../exceptions/TasksError'
+import { ValidationError } from '../errors/RepoError'
 
 export interface ITask {
     title: string
@@ -124,7 +124,7 @@ TaskSchema.pre('save', function (next) {
     const workerIDs = new Set()
     for (const worker of task.hiredWorkers) {
         if (workerIDs.has(worker.workerID.toString())) {
-            const error = new TaskValidationError(
+            const error = new ValidationError(
                 `Duplicate workerID '${worker.workerID}' within the same task.`,
             )
             return next(error)
@@ -132,7 +132,7 @@ TaskSchema.pre('save', function (next) {
         workerIDs.add(worker.workerID.toString())
 
         if (task.customerID.toString() === worker.workerID.toString()) {
-            const error = new TaskValidationError(
+            const error = new ValidationError(
                 `customerID '${task.customerID}' cannot be equal to any workerID within the same task.`,
             )
             return next(error)

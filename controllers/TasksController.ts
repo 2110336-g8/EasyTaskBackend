@@ -29,3 +29,5 @@ class TasksController {
         }
     }
 }
+
+export default TasksController

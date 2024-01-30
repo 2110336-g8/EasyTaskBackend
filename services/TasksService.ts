@@ -4,14 +4,14 @@ import { Inject, Service } from 'typedi'
 
 @Service()
 class TaskService {
-    private taskRepository: TasksRepository
+    private tasksRepository: TasksRepository
 
     constructor(@Inject() taskRepository: TasksRepository) {
-        this.taskRepository = taskRepository
+        this.tasksRepository = taskRepository
     }
     async createTask(taskData: ITaskDocument): Promise<ITaskDocument> {
         try {
-            const task: ITaskDocument = await this.taskRepository.create(
+            const task: ITaskDocument = await this.tasksRepository.create(
                 taskData,
             )
             return task

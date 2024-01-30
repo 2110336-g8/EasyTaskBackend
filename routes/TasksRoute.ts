@@ -1,8 +1,11 @@
 import express from 'express'
-import { createTask } from '../controllers/TasksController'
+import Container from 'typedi'
+import TaskController from '../controllers/TasksController'
 
-const taskRouter = express.Router()
+const taskService = Container.get(TaskController)
 
-taskRouter.route('/').post(createTask)
+const router = express.Router()
 
-export default taskRouter
+router.route('/').post(taskService.createTask)
+
+export default router
