@@ -1,3 +1,4 @@
+import 'reflect-metadata'
 import express, { Request, Response } from 'express'
 import dotenv from 'dotenv'
 import userRouter from './routes/UsersRoute'
@@ -17,15 +18,15 @@ const port: number = isDevelopment
         ? 5001
         : parseInt(process.env.BACK_PORT_DEV, 10)
     : process.env.BACK_PORT === undefined
-      ? 5000
-      : parseInt(process.env.BACK_PORT, 10)
+    ? 5000
+    : parseInt(process.env.BACK_PORT, 10)
 const hostname: string = isDevelopment
     ? process.env.BACK_HOSTNAME_DEV === undefined
         ? 'localhost'
         : process.env.BACK_HOSTNAME_DEV
     : process.env.BACK_HOSTNAME === undefined
-      ? 'localhost'
-      : process.env.BACK_HOSTNAME
+    ? 'localhost'
+    : process.env.BACK_HOSTNAME
 
 connectDB()
 
