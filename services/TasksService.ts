@@ -4,7 +4,9 @@ import { TaskValidationError } from '../exceptions/TasksError'
 import { MongoError, MongoServerError } from 'mongodb'
 
 class TaskService {
-    static async postTask(taskData: Omit<Task, '_id'>): Promise<TaskDocument> {
+    static async createTask(
+        taskData: Omit<Task, '_id'>,
+    ): Promise<TaskDocument> {
         try {
             const newTask: TaskDocument = await TaskModel.create(taskData)
             return newTask

@@ -8,7 +8,7 @@ export const createTask = async (req: Request, res: Response) => {
         const taskData = req.body
 
         // Create a new task using the TaskService
-        const newTask = await TaskService.postTask(taskData)
+        const newTask = await TaskService.createTask(taskData)
 
         // Respond with the created task
         res.status(201).json(newTask)

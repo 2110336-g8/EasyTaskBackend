@@ -3,16 +3,12 @@ import {
     getUserById,
     deleteUser,
     isPhoneNumberExist,
-    updateUserProfile,
+    updateUser,
 } from '../controllers/UsersController'
 
 const router = express.Router()
 
-router
-    .route('/:obj_id')
-    .get(getUserById)
-    .delete(deleteUser)
-    .patch(updateUserProfile)
+router.route('/:obj_id').get(getUserById).delete(deleteUser).patch(updateUser)
 router.route('/isPhoneNumberExist/:phoneNo').get(isPhoneNumberExist)
 
 export default router

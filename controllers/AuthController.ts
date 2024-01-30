@@ -55,7 +55,7 @@ const setJwtCookie = (
 export const registerUser = async (req: Request, res: Response) => {
     try {
         const userData = req.body
-        const newUser: UserDocument = await UserService.postUser(userData)
+        const newUser: UserDocument = await UserService.CreateUser(userData)
         const loginData: LoginInterface = newUser
         const token = AuthService.generateToken(loginData)
         setJwtCookie(res, token)

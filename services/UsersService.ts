@@ -7,7 +7,9 @@ import {
 import { MongoError, MongoServerError } from 'mongodb'
 
 class UserService {
-    static async postUser(userData: Omit<User, '_id'>): Promise<UserDocument> {
+    static async CreateUser(
+        userData: Omit<User, '_id'>,
+    ): Promise<UserDocument> {
         try {
             const newUser: UserDocument = await UserModel.create(userData)
             return newUser
@@ -86,7 +88,7 @@ class UserService {
         }
     }
 
-    static async updateUserProfile(
+    static async updateUser(
         userId: string,
         updatedData: Partial<UserDocument>,
     ): Promise<UserDocument> {

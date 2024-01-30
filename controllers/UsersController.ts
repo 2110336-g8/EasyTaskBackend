@@ -50,14 +50,11 @@ export const deleteUser = async (req: Request, res: Response) => {
     }
 }
 
-export const updateUserProfile = async (req: Request, res: Response) => {
+export const updateUser = async (req: Request, res: Response) => {
     try {
         const userId = req.params.obj_id
         const updatedData = req.body
-        const updatedUser = await UserService.updateUserProfile(
-            userId,
-            updatedData,
-        )
+        const updatedUser = await UserService.updateUser(userId, updatedData)
 
         res.status(200).json(updatedUser)
     } catch (error) {
