@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import AuthService from '../services/AuthService'
-import { LoginInterface } from '../models/AuthModel'
-import { User, UserDocument } from '../models/UserModel'
+import { ILoginInterface } from '../models/AuthModel'
+import { IUser, IUserDocument } from '../models/UserModel'
 import UserService from '../services/UsersService'
 import { UserValidationError } from '../exceptions/UsersError'
 
@@ -12,7 +12,7 @@ import { UserValidationError } from '../exceptions/UsersError'
  * @param res
  */
 export const newToken = async function (req: Request, res: Response) {
-    const data: LoginInterface = req.body
+    const data: ILoginInterface = req.body
 
     res.status(200).json({
         token: AuthService.generateToken(data, 60),
@@ -55,8 +55,8 @@ const setJwtCookie = (
 export const registerUser = async (req: Request, res: Response) => {
     try {
         const userData = req.body
-        const newUser: UserDocument = await UserService.CreateUser(userData)
-        const loginData: LoginInterface = newUser
+        const newUser: IUserDocument = await UserService.CreateUser(userData)
+        const loginData: ILoginInterface = newUser
         const token = AuthService.generateToken(loginData)
         setJwtCookie(res, token)
         res.status(201).json({
@@ -76,7 +76,7 @@ export const registerUser = async (req: Request, res: Response) => {
 }
 
 export const loginUser = async function (req: Request, res: Response) {
-    const data: LoginInterface = req.body
+    const data: ILoginInterface = req.body
     const validUserPassword = await AuthService.verifyUser(data)
 
     if (!validUserPassword) {

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import fs from 'fs'
-import { LoginInterface } from '../models/AuthModel'
+import { ILoginInterface } from '../models/AuthModel'
 import { UserModel } from '../models/UserModel'
 
 const key_pair = {
@@ -10,7 +10,7 @@ const key_pair = {
 
 class AuthService {
     static generateToken(
-        payload: LoginInterface,
+        payload: ILoginInterface,
         sessionMinutes: number = parseInt(process.env.JWT_EXP_MIN || '60'),
     ): string {
         const expiryTime: number =
@@ -36,7 +36,7 @@ class AuthService {
      *
      * @param login
      */
-    static async verifyUser(login: LoginInterface): Promise<boolean> {
+    static async verifyUser(login: ILoginInterface): Promise<boolean> {
         const user = await UserModel.findOne({ phoneNumber: login.phoneNumber })
 
         // No user in the database.

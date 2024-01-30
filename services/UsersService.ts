@@ -1,5 +1,5 @@
 import { Error as MongooseError } from 'mongoose'
-import { UserModel, User, UserDocument } from '../models/UserModel'
+import { UserModel, IUser, IUserDocument } from '../models/UserModel'
 import {
     UserValidationError,
     UserNotFoundError,
@@ -8,10 +8,10 @@ import { MongoError, MongoServerError } from 'mongodb'
 
 class UserService {
     static async CreateUser(
-        userData: Omit<User, '_id'>,
-    ): Promise<UserDocument> {
+        userData: Omit<IUser, '_id'>,
+    ): Promise<IUserDocument> {
         try {
-            const newUser: UserDocument = await UserModel.create(userData)
+            const newUser: IUserDocument = await UserModel.create(userData)
             return newUser
         } catch (error) {
             if (error instanceof MongooseError.ValidationError) {
@@ -27,7 +27,7 @@ class UserService {
         }
     }
 
-    static async getUserById(userId: string): Promise<UserDocument> {
+    static async getUserById(userId: string): Promise<IUserDocument> {
         try {
             const user = await UserModel.findById(userId)
             if (!user) {
@@ -90,8 +90,8 @@ class UserService {
 
     static async updateUser(
         userId: string,
-        updatedData: Partial<UserDocument>,
-    ): Promise<UserDocument> {
+        updatedData: Partial<IUserDocument>,
+    ): Promise<IUserDocument> {
         try {
             // Assuming you have a method in UserModel to find and update a user by ID
             const user = await UserModel.findByIdAndUpdate(

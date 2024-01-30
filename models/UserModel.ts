@@ -1,7 +1,7 @@
 import mongoose, { Document, ObjectId, Types } from 'mongoose'
 import { compare, genSalt, hash } from 'bcrypt'
 
-export interface User {
+export interface IUser {
     firstName: string
     lastName: string
     password: string
@@ -13,13 +13,13 @@ export interface User {
     bankAccNo?: string
 }
 
-interface UserMethods {
+interface IUserMethods {
     isValidPassword: (password: string) => Promise<boolean>
 }
 
-export interface UserDocument extends User, UserMethods, Document {}
+export interface IUserDocument extends IUser, IUserMethods, Document {}
 
-const UserSchema = new mongoose.Schema<UserDocument>(
+const UserSchema = new mongoose.Schema<IUserDocument>(
     {
         firstName: {
             type: String,
@@ -112,5 +112,5 @@ UserSchema.pre('save', async function (next) {
     next()
 })
 
-export const UserModel = mongoose.model<UserDocument>('User', UserSchema)
+export const UserModel = mongoose.model<IUserDocument>('User', UserSchema)
 //

@@ -1,7 +1,7 @@
 import mongoose, { Document, Types, Schema } from 'mongoose'
 import { TaskValidationError } from '../exceptions/TasksError'
 
-export interface Task {
+export interface ITask {
     title: string
     category?: string
     description?: string
@@ -24,9 +24,9 @@ export interface Task {
     }>
 }
 
-export interface TaskDocument extends Task, Document {}
+export interface ITaskDocument extends ITask, Document {}
 
-const TaskSchema = new Schema<TaskDocument>(
+const TaskSchema = new Schema<ITaskDocument>(
     {
         title: {
             type: String,
@@ -117,7 +117,7 @@ const TaskSchema = new Schema<TaskDocument>(
 )
 
 TaskSchema.pre('save', function (next) {
-    const task = this as TaskDocument
+    const task = this as ITaskDocument
 
     // Check uniqueness of workerIDs within the same task
     // Check if customerID is equal to any workerID
@@ -142,4 +142,4 @@ TaskSchema.pre('save', function (next) {
     next()
 })
 
-export const TaskModel = mongoose.model<TaskDocument>('Task', TaskSchema)
+export const TaskModel = mongoose.model<ITaskDocument>('Task', TaskSchema)
