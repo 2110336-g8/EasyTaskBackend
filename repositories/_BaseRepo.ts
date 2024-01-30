@@ -39,7 +39,7 @@ export abstract class BaseMongooseRepository<T> implements IRead<T>, IWrite<T> {
                     runValidators: true,
                 },
             )
-            return updatedItem ? updatedItem.toObject() : null
+            return updatedItem ? updatedItem.toJSON() : null
         } catch (error) {
             if (error instanceof MongooseError.ValidationError) {
                 throw new ValidationError(error.message)
