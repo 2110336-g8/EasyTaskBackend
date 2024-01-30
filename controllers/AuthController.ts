@@ -4,7 +4,6 @@ import AuthService from '../services/AuthService'
 import UsersService from '../services/UsersService'
 import { Request, Response } from 'express'
 import { ValidationError } from '../errors/RepoError'
-import { IUserDocument } from '../models/UserModel'
 
 @Service()
 class AuthController {

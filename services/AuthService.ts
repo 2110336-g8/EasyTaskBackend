@@ -1,4 +1,4 @@
-import jwt, { verify } from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 import fs from 'fs'
 import { Inject, Service } from 'typedi'
 import { ILoginInterface } from '../models/AuthModel'

@@ -1,7 +1,6 @@
 import express from 'express'
 import AuthController from '../controllers/AuthController'
 import Container from 'typedi'
-import AuthService from '../services/AuthService'
 import AuthMiddleware from '../middlewares/AuthMiddleware'
 
 const router = express.Router()
