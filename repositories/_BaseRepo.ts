@@ -1,30 +1,30 @@
-import { Model, QueryOptions, Error as MongooseError } from "mongoose";
-import { IRead } from "../interfaces/IRead";
-import { IWrite } from "../interfaces/IWrite";
-import { ValidationError } from "../errors/RepoError";
-import { MongoError } from "mongodb";
+import { Model, QueryOptions, Error as MongooseError } from 'mongoose'
+import { IRead } from '../interfaces/IRead'
+import { IWrite } from '../interfaces/IWrite'
+import { ValidationError } from '../errors/RepoError'
+import { MongoError } from 'mongodb'
 
 export abstract class BaseMongooseRepository<T> implements IRead<T>, IWrite<T> {
-    protected readonly _model: Model<T>;
+    protected readonly _model: Model<T>
 
     constructor(model: Model<T>) {
-        this._model = model;
+        this._model = model
     }
 
     async create(item: T): Promise<T> {
-        const item_w_id: Omit<T, "_id"> = item;
+        const item_w_id: Omit<T, '_id'> = item
         try {
-            const createdItem = await this._model.create(item_w_id);
-            return createdItem.toJSON();
+            const createdItem = await this._model.create(item_w_id)
+            return createdItem.toJSON()
         } catch (error) {
             if (error instanceof MongooseError.ValidationError) {
-                throw new ValidationError(error.message);
+                throw new ValidationError(error.message)
             } else if ((error as MongoError).code == 11000) {
-                throw new ValidationError((error as MongoError).message);
+                throw new ValidationError((error as MongoError).message)
             } else if (error instanceof ValidationError) {
-                throw error;
+                throw error
             } else {
-                throw new Error("Unknown Error");
+                throw new Error('Unknown Error')
             }
         }
     }
@@ -37,32 +37,32 @@ export abstract class BaseMongooseRepository<T> implements IRead<T>, IWrite<T> {
                 {
                     new: true,
                     runValidators: true,
-                }
-            );
-            return updatedItem ? updatedItem.toObject() : null;
+                },
+            )
+            return updatedItem ? updatedItem.toObject() : null
         } catch (error) {
             if (error instanceof MongooseError.ValidationError) {
-                throw new ValidationError(error.message);
+                throw new ValidationError(error.message)
             } else if ((error as MongoError).code == 11000) {
-                throw new ValidationError((error as MongoError).message);
+                throw new ValidationError((error as MongoError).message)
             } else {
-                throw new Error("Unknown Error");
+                throw new Error('Unknown Error')
             }
         }
     }
 
     async delete(id: string): Promise<boolean> {
-        const result = await this._model.deleteOne({ _id: id });
-        return result.deletedCount !== 0;
+        const result = await this._model.deleteOne({ _id: id })
+        return result.deletedCount !== 0
     }
 
     async find(query: T): Promise<T[]> {
-        const items = await this._model.find(query as QueryOptions<T>).lean();
-        return items as T[];
+        const items = await this._model.find(query as QueryOptions<T>).lean()
+        return items as T[]
     }
 
     async findOne(id: string): Promise<T | null> {
-        const item = await this._model.findById(id).lean();
-        return item ? (item as T) : null;
+        const item = await this._model.findById(id).lean()
+        return item ? (item as T) : null
     }
 }
