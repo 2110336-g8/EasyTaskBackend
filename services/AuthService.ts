@@ -1,19 +1,19 @@
-import jwt from 'jsonwebtoken'
+import jwt, { verify } from 'jsonwebtoken'
 import fs from 'fs'
 import { Inject, Service } from 'typedi'
-import { UsersRepository } from '../repositories/UsersRepo'
 import { ILoginInterface } from '../models/AuthModel'
+import UsersService from './UsersService'
 
 @Service()
 class AuthService {
-    private userRepository: UsersRepository
+    private usersService: UsersService
     private key_pair = {
         key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
         pub: fs.readFileSync(`${__dirname}/../config/rs256.key.pub`),
     }
 
-    constructor(@Inject() userRepository: UsersRepository) {
-        this.userRepository = userRepository
+    constructor(@Inject() usersService: UsersService) {
+        this.usersService = usersService
     }
 
     generateToken(
@@ -38,13 +38,16 @@ class AuthService {
     }
 
     async verifyUser(login: ILoginInterface): Promise<boolean> {
-        const user = await this.userRepository.findOne(login.phoneNumber)
-
-        if (!user) {
+        try {
+            const user = await this.usersService.getUserByPhone(
+                login.phoneNumber,
+            )
+            const isVerify = await user.isValidPassword(login.password)
+            return isVerify
+        } catch (error) {
+            console.error(error)
             return false
         }
-
-        return await user.isValidPassword(login.password)
     }
 }
 

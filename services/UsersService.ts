@@ -22,7 +22,19 @@ export class UsersService {
 
     async getUserById(id: string): Promise<IUserDocument> {
         try {
-            const user = await this.userRepository.findOne(id)
+            const user = await this.userRepository.findOne({ _id: id })
+            if (!user) {
+                throw new NotFoundError()
+            }
+            return user
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async getUserByPhone(phoneNumber: string): Promise<IUserDocument> {
+        try {
+            const user = await this.userRepository.findOne({ phoneNumber })
             if (!user) {
                 throw new NotFoundError()
             }

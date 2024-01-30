@@ -56,13 +56,13 @@ export abstract class BaseMongooseRepository<T> implements IRead<T>, IWrite<T> {
         return result.deletedCount !== 0
     }
 
-    async find(query: T): Promise<T[]> {
-        const items = await this._model.find(query as QueryOptions<T>).lean()
+    async find(query: QueryOptions<T>): Promise<T[]> {
+        const items = await this._model.find(query)
         return items as T[]
     }
 
-    async findOne(id: string): Promise<T | null> {
-        const item = await this._model.findById(id).lean()
+    async findOne(query: QueryOptions<T>): Promise<T | null> {
+        const item = await this._model.findOne(query)
         return item ? (item as T) : null
     }
 }

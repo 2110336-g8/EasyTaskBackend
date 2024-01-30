@@ -3,7 +3,7 @@ import express, { Request, Response } from 'express'
 import dotenv from 'dotenv'
 import userRouter from './routes/UsersRoute'
 import connectDB from './config/db'
-import authRouter from './routes/AuthRoute'
+import router from './routes/AuthRoute'
 import taskRouter from './routes/TasksRoute'
 
 // Load ENVs
@@ -33,7 +33,7 @@ connectDB()
 app.use(express.json())
 
 app.use('/v1/users', userRouter)
-app.use('/v1/auth', authRouter)
+app.use('/v1/auth', router)
 app.use('/v1/tasks', taskRouter)
 
 // Other paths are invalid, res 404

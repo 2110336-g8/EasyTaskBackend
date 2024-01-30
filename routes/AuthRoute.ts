@@ -1,27 +1,30 @@
 import express from 'express'
-import {
-    newToken,
-    checkValidateToken,
-    loginUser,
-    logoutUser,
-    registerUser,
-} from '../controllers/AuthController'
-import {
-    validateLoginRequest,
-    validateToken,
-} from '../middlewares/AuthMiddleware'
+import AuthController from '../controllers/AuthController'
+import Container from 'typedi'
+import AuthService from '../services/AuthService'
+import AuthMiddleware from '../middlewares/AuthMiddleware'
 
-const authRouter = express.Router()
+const router = express.Router()
+const authController = Container.get(AuthController)
+const authMiddleware = Container.get(AuthMiddleware)
 
 // For token generation
-authRouter.route('/token/new').post(validateLoginRequest, newToken)
-authRouter.route('/token/validate').get(validateToken, checkValidateToken)
+// router.route('/token/new').post(validateLoginRequest, newToken)
+// router.route('/token/validate').get(validateToken, checkValidateToken)
 
 // Register
-authRouter.route('/register').post(registerUser, newToken)
+router
+    .route('/register')
+    .post(authController.loginUser, authController.newToken)
 
 // Login and Logout
-authRouter.route('/login').post(validateLoginRequest, loginUser, newToken)
-authRouter.route('/logout').post(logoutUser)
+router
+    .route('/login')
+    .post(
+        authMiddleware.validateLoginRequest,
+        authController.loginUser,
+        authController.newToken,
+    )
+router.route('/logout').post(authController.logoutUser)
 
-export default authRouter
+export default router

@@ -35,7 +35,6 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
             type: String,
             required: [true, 'Password is required'],
             minlength: [8, 'Password cannot be shorter than 8 characters'],
-            select: false,
         },
         phoneNumber: {
             type: String,
@@ -92,19 +91,18 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
     },
 )
 
-UserSchema.method(
-    'isValidPassword',
-    async function (password: string): Promise<boolean> {
-        const isValid = await compare(password, this.password)
-        return isValid
-    },
-)
+UserSchema.methods.isValidPassword = async function (
+    password: string,
+): Promise<boolean> {
+    const isValid = await compare(password, this.password)
+    return isValid
+}
 
-UserSchema.method('toJSON', function () {
+UserSchema.methods.toJSON = function () {
     const userObject: any = this.toObject()
     delete userObject.password
     return userObject
-})
+}
 
 UserSchema.pre('save', async function (next) {
     const salt = await genSalt(10)
@@ -114,4 +112,3 @@ UserSchema.pre('save', async function (next) {
 })
 
 export const UserModel = mongoose.model<IUserDocument>('User', UserSchema)
-//

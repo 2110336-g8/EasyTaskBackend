@@ -4,6 +4,7 @@ import AuthService from '../services/AuthService'
 import UsersService from '../services/UsersService'
 import { Request, Response } from 'express'
 import { ValidationError } from '../errors/RepoError'
+import { IUserDocument } from '../models/UserModel'
 
 @Service()
 class AuthController {
@@ -24,7 +25,7 @@ class AuthController {
             const user = await this.usersService.createUser(data)
             const loginData: ILoginInterface = user
             const token = this.authService.generateToken(loginData)
-            //setJwtCookie(res, token)
+            this.setJwtCookie(res, token)
             res.status(201).json({
                 user,
                 token,
@@ -78,6 +79,14 @@ class AuthController {
             expires: expirationDate,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
+        })
+    }
+
+    newToken = async (req: Request, res: Response) => {
+        const data: ILoginInterface = req.body
+
+        res.status(200).json({
+            token: this.authService.generateToken(data, 60),
         })
     }
 }
