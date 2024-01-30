@@ -1,26 +1,31 @@
 import { Request, Response } from 'express'
-import TaskService from '../services/TasksService'
-import { TaskValidationError } from '../exceptions/TasksError'
+import { UsersService as UsersService } from '../services/UsersService'
+import { NotFoundError, ValidationError } from '../errors/RepoError'
+import { Service, Inject } from 'typedi'
+import TasksService from '../services/TasksService'
 
-export const createTask = async (req: Request, res: Response) => {
-    try {
-        // Assuming that request body contains task data
-        const taskData = req.body
+@Service()
+class TasksController {
+    private tasksService: TasksService
 
-        // Create a new task using the TaskService
-        const newTask = await TaskService.createTask(taskData)
+    constructor(@Inject() tasksService: TasksService) {
+        this.tasksService = tasksService
+    }
 
-        // Respond with the created task
-        res.status(201).json(newTask)
-    } catch (error) {
-        if (error instanceof TaskValidationError) {
-            res.status(400).json({
-                error: 'Invalid data',
-                details: error.message,
-            })
-        } else {
-            // Handle other types of errors
-            res.status(500).json({ error: 'Internal server error' })
+    createTask = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const data = req.body
+            const task = await this.tasksService.createTask(data)
+            res.status(201).json(task)
+        } catch (error) {
+            if (error instanceof ValidationError) {
+                res.status(400).json({
+                    error: error.name,
+                    detalis: error.message,
+                })
+            } else {
+                res.status(500).json({ error: 'Internal Server Error' })
+            }
         }
     }
 }
