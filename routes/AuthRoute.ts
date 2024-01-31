@@ -16,9 +16,7 @@ router.route('/sendOtp').post(authController.sentOtp)
 router.route('/verifyOtp').post(authController.verifyOtp)
 
 // Register
-router
-    .route('/register')
-    .post(authController.loginUser, authController.newToken)
+router.route('/register').post(authController.registerUser)
 
 // Login and Logout
 router

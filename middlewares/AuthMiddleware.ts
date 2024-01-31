@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { isValidLoginInterface } from '../models/AuthModel'
-import AuthService from '../services/AuthService'
+import { AuthService } from '../services/AuthService'
 import { Inject, Service } from 'typedi'
 
 @Service()

@@ -1,28 +1,28 @@
-import { Inject, Service } from 'typedi'
+import Container, { Inject, Service, Token } from 'typedi'
 import { OtpRepository } from '../repositories/OtpRepo'
 import { IOtpDocument } from '../models/OtpModel'
 import { CannotCreateOtpError } from '../errors/OtpError'
-import UsersService from './UsersService'
+import { UsersRepository } from '../repositories/UsersRepo'
 
 @Service()
-export default class OtpService {
+export class OtpService {
     private otpRepository: OtpRepository
-    private usersService: UsersService
+    private usersRepository: UsersRepository
 
     constructor(
         @Inject() otpRepository: OtpRepository,
-        @Inject() usersService: UsersService,
+        @Inject() usersRepository: UsersRepository,
     ) {
         this.otpRepository = otpRepository
-        this.usersService = usersService
+        this.usersRepository = usersRepository
     }
 
     async createOtp(email: string): Promise<IOtpDocument> {
         try {
             const existOtp = await this.getOtpByEmail(email)
-            const existEmailUser = await this.usersService.getUserByEmail(email)
+            const existEmailUser = await this.usersRepository.findOne({ email })
             if (existEmailUser) {
-                throw new CannotCreateOtpError('This email already has a user')
+                throw new CannotCreateOtpError('Email is already used')
             }
             if (existOtp) {
                 const expiredAt = existOtp.expiredAt.getTime()

@@ -1,26 +1,30 @@
 import { Inject, Service } from 'typedi'
 import { ILoginInterface } from '../models/AuthModel'
-import AuthService from '../services/AuthService'
-import UsersService from '../services/UsersService'
+import { AuthService } from '../services/AuthService'
+import { UsersService } from '../services/UsersService'
 import { Request, Response } from 'express'
 import { ValidationError } from '../errors/RepoError'
-import OtpService from '../services/OtpService'
+import { OtpService } from '../services/OtpService'
 import { CannotCreateOtpError } from '../errors/OtpError'
+import { CannotCreateUserError } from '../errors/UsersError'
 
 @Service()
 class AuthController {
     private authService: AuthService
     private otpService: OtpService
+    private userService: UsersService
 
     constructor(
         @Inject() authService: AuthService,
         @Inject() otpService: OtpService,
+        @Inject() userService: UsersService,
     ) {
         this.authService = authService
         this.otpService = otpService
+        this.userService = userService
     }
 
-    sentOtp = async (req: Request, res: Response) => {
+    sentOtp = async (req: Request, res: Response): Promise<void> => {
         try {
             const { email } = req.body
             if (!email) {
@@ -51,7 +55,7 @@ class AuthController {
         }
     }
 
-    verifyOtp = async (req: Request, res: Response) => {
+    verifyOtp = async (req: Request, res: Response): Promise<void> => {
         const { email, otp } = req.body
         if (!email || !otp) {
             res.status(400).json({
@@ -72,31 +76,29 @@ class AuthController {
         })
     }
 
-    registerUser = async (req: Request, res: Response) => {
-        // TO FIX
-        // try {
-        //     const data = req.body
-        //     const user = await this.usersService.createUser(data)
-        //     const loginData: ILoginInterface = user as ILoginInterface
-        //     const token = this.authService.generateToken(loginData)
-        //     this.setJwtCookie(res, token)
-        //     res.status(201).json({
-        //         user,
-        //         token,
-        //     })
-        // } catch (error) {
-        //     if (error instanceof ValidationError) {
-        //         res.status(400).json({
-        //             error: error.name,
-        //             details: error.message,
-        //         })
-        //     } else {
-        //         res.status(500).json({ error: 'Internal server error' })
-        //     }
-        // }
+    registerUser = async (req: Request, res: Response): Promise<void> => {
+        const data = req.body
+        try {
+            console.log('Creating User')
+            const user = await this.userService.createUser(data)
+
+            console.log('Deleting OTP')
+            await this.otpService.deleteOtp(user.email)
+
+            const token = this.authService.generateToken(data)
+            this.setJwtCookie(res, token)
+            res.status(201).json({ user, token })
+        } catch (error) {
+            if (error instanceof CannotCreateUserError) {
+                res.status(403).json({
+                    error: error.name,
+                    detalis: error.message,
+                })
+            }
+        }
     }
 
-    loginUser = async (req: Request, res: Response) => {
+    loginUser = async (req: Request, res: Response): Promise<void> => {
         // TO FIX
         // const data: ILoginInterface = req.body
         // const validUserPassword = await this.authService.verifyUser(data)
@@ -113,7 +115,7 @@ class AuthController {
         // }
     }
 
-    logoutUser = async function (req: Request, res: Response) {
+    logoutUser = async function (req: Request, res: Response): Promise<void> {
         res.status(200).json({})
     }
 
@@ -136,7 +138,7 @@ class AuthController {
         })
     }
 
-    newToken = async (req: Request, res: Response) => {
+    newToken = async (req: Request, res: Response): Promise<void> => {
         const data: ILoginInterface = req.body
 
         res.status(200).json({

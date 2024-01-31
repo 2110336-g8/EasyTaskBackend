@@ -2,10 +2,10 @@ import jwt from 'jsonwebtoken'
 import fs from 'fs'
 import { Inject, Service } from 'typedi'
 import { ILoginInterface } from '../models/AuthModel'
-import UsersService from './UsersService'
+import { UsersService } from './UsersService'
 
 @Service()
-export default class AuthService {
+export class AuthService {
     private usersService: UsersService
     private key_pair = {
         key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
@@ -23,7 +23,7 @@ export default class AuthService {
         const expiryTime: number =
             Math.floor(Date.now() / 1000) + sessionMinutes * 60
         const subPayload = {
-            phoneNumber: payload.phoneNumber,
+            phoneNumber: payload.email,
         }
         return jwt.sign(subPayload, this.key_pair.key, {
             expiresIn: expiryTime,

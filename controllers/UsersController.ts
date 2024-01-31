@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { UsersService as UsersService } from '../services/UsersService'
 import { ValidationError } from '../errors/RepoError'
 import { Service, Inject } from 'typedi'
+import { CannotCreateUserError } from '../errors/UsersError'
 
 @Service()
 class UsersController {
@@ -17,7 +18,7 @@ class UsersController {
             const user = await this.usersService.createUser(data)
             res.status(201).json(user)
         } catch (error) {
-            if (error instanceof ValidationError) {
+            if (error instanceof CannotCreateUserError) {
                 res.status(400).json({
                     error: error.name,
                     detalis: error.message,
@@ -34,7 +35,6 @@ class UsersController {
             const user = await this.usersService.getUserById(id)
             res.status(200).json(user)
         } catch (error) {
-            console.error(error)
             res.status(500).json({ error: 'Internal Server Error' })
         }
     }
