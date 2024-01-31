@@ -42,7 +42,12 @@ const OtpSchema = new mongoose.Schema<IOtpDocument>(
         },
         verifiedAt: {
             type: Date,
-            require: [true, ''],
+            require: [
+                function (this: IOtp) {
+                    return this.isVerified
+                },
+                'Verified timestamp is required',
+            ],
         },
     },
     {
@@ -50,10 +55,10 @@ const OtpSchema = new mongoose.Schema<IOtpDocument>(
     },
 )
 
-OtpSchema.methods.isValidOtp = (otp: string) => {
-    // const matchedOtp = otp == this.otp
-    // const now = new Date()
-    // return this.expiredAt > now
+OtpSchema.methods.isValidOtp = function (otp: string): boolean {
+    const matched = otp === this.otp
+    const expired = new Date().getTime() > this.expiredAt.getTime()
+    return matched && !expired
 }
 
 export const OtpModel = mongoose.model<IOtpDocument>('Otp', OtpSchema)
