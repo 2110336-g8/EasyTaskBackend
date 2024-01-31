@@ -1,7 +1,6 @@
 import { UsersRepository } from '../repositories/UsersRepo'
 import { IUserDocument } from '../models/UserModel'
 import { Service, Inject } from 'typedi'
-import { NotFoundError } from '../errors/RepoError'
 
 @Service()
 export class UsersService {
@@ -20,11 +19,11 @@ export class UsersService {
         }
     }
 
-    async getUserById(id: string): Promise<IUserDocument> {
+    async getUserById(id: string): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.findOne({ _id: id })
             if (!user) {
-                throw new NotFoundError()
+                return null
             }
             return user
         } catch (error) {
@@ -32,11 +31,11 @@ export class UsersService {
         }
     }
 
-    async getUserByPhone(phoneNumber: string): Promise<IUserDocument> {
+    async getUserByEmail(email: string): Promise<IUserDocument | null> {
         try {
-            const user = await this.userRepository.findOne({ phoneNumber })
+            const user = await this.userRepository.findOne({ email })
             if (!user) {
-                throw new NotFoundError()
+                return null
             }
             return user
         } catch (error) {
@@ -44,11 +43,14 @@ export class UsersService {
         }
     }
 
-    async updateUser(id: string, data: IUserDocument) {
+    async updateUser(
+        id: string,
+        data: IUserDocument,
+    ): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.update(id, data)
             if (!user) {
-                throw new NotFoundError()
+                null
             }
             return user
         } catch (error) {
