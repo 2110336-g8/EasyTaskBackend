@@ -51,6 +51,27 @@ class AuthController {
         }
     }
 
+    verifyOtp = async (req: Request, res: Response) => {
+        const { email, otp } = req.body
+        if (!email || !otp) {
+            res.status(400).json({
+                error: 'Email and OTP are required to send OTP',
+            })
+            return
+        }
+        const verifiedOtpDoc = await this.otpService.verifyOtp(email, otp)
+        if (!verifiedOtpDoc) {
+            res.status(403).json({
+                error: 'Failed to verify OTP',
+            })
+            return
+        }
+        res.status(200).json({
+            message: 'OTP verified successfully',
+            email: verifiedOtpDoc.email,
+        })
+    }
+
     registerUser = async (req: Request, res: Response) => {
         // TO FIX
         // try {

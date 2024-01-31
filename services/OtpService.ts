@@ -29,7 +29,7 @@ export default class OtpService {
                 const expiredAt = existOtp.expiredAt.getTime()
                 const now = new Date().getTime()
                 if (expiredAt - now < 4 * 60 * 1000) {
-                    this.deleteOtp(email)
+                    await this.deleteOtp(email)
                 } else {
                     throw new CannotCreateOtpError(
                         'This email alredy generated otp less than 1 min, Please try again later',
@@ -54,22 +54,22 @@ export default class OtpService {
         }
     }
 
-    async verifyOtp(email: string, otp: string): Promise<boolean> {
+    async verifyOtp(email: string, otp: string): Promise<IOtpDocument | null> {
         const otpDoc = await this.getOtpByEmail(email)
-        if (!otpDoc) return false
+        if (!otpDoc) return null
 
         const valid = otpDoc.isValidOtp(otp)
-        if (!valid) return false
+        if (!valid) return null
 
         const id = otpDoc._id
         try {
-            await this.otpRepository.update(id, {
+            const verifiedOtpDoc = await this.otpRepository.update(id, {
                 isVerified: true,
                 verifiedAt: new Date(),
             } as IOtpDocument)
-            return true
+            return verifiedOtpDoc
         } catch (error) {
-            return false
+            return null
         }
     }
 

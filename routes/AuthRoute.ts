@@ -13,6 +13,8 @@ const authMiddleware = Container.get(AuthMiddleware)
 
 // OTP
 router.route('/sendOtp').post(authController.sentOtp)
+router.route('/verifyOtp').post(authController.verifyOtp)
+
 // Register
 router
     .route('/register')
