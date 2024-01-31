@@ -11,6 +11,8 @@ const authMiddleware = Container.get(AuthMiddleware)
 // router.route('/token/new').post(validateLoginRequest, newToken)
 // router.route('/token/validate').get(validateToken, checkValidateToken)
 
+// OTP
+router.route('/sendOtp').post(authController.sentOtp)
 // Register
 router
     .route('/register')

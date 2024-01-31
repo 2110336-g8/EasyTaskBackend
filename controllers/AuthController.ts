@@ -37,8 +37,16 @@ class AuthController {
                 messsage: `Sent OTP to ${createdOtp.email} successfully`,
             })
         } catch (error) {
-            if (error instanceof CannotCreateOtpError) {
-                res.status(403).json(error)
+            if (
+                error instanceof CannotCreateOtpError ||
+                error instanceof ValidationError
+            ) {
+                res.status(403).json({
+                    error: error.name,
+                    detalis: error.message,
+                })
+            } else {
+                res.status(500).json(error)
             }
         }
     }
