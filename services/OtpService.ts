@@ -2,7 +2,6 @@ import { Inject, Service } from 'typedi'
 import { OtpRepository } from '../repositories/OtpRepo'
 import { IOtpDocument } from '../models/OtpModel'
 import { CannotCreateOtpError } from '../errors/OtpError'
-import { UsersRepository } from '../repositories/UsersRepo'
 import UsersService from './UsersService'
 
 @Service()
