@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { UsersService as UsersService } from '../services/UsersService'
-import { NotFoundError, ValidationError } from '../errors/RepoError'
+import { ValidationError } from '../errors/RepoError'
 import { Service, Inject } from 'typedi'
 
 @Service()
@@ -44,15 +44,15 @@ class UsersController {
             const id = req.params.id
             const data = req.body
             const user = await this.usersService.updateUser(id, data)
+            if (!user) {
+                res.status(404).json({
+                    error: 'User not found',
+                })
+            }
             res.status(200).json(user)
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
-                    error: error.name,
-                    details: error.message,
-                })
-            } else if (error instanceof NotFoundError) {
-                res.status(404).json({
                     error: error.name,
                     details: error.message,
                 })
