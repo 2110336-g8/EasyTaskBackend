@@ -38,16 +38,17 @@ class AuthService {
     }
 
     async verifyUser(login: ILoginInterface): Promise<boolean> {
-        try {
-            const user = await this.usersService.getUserByPhone(
-                login.phoneNumber,
-            )
-            const isVerify = await user.isValidPassword(login.password)
-            return isVerify
-        } catch (error) {
-            console.error(error)
-            return false
-        }
+        // try {
+        //     const user = await this.usersService.getUserByPhone(
+        //         login.phoneNumber,
+        //     )
+        //     const isVerify = await user.isValidPassword(login.password)
+        //     return isVerify
+        // } catch (error) {
+        //     console.error(error)
+        //     return false
+        // }
+        return false
     }
 }
 

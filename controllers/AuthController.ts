@@ -22,7 +22,7 @@ class AuthController {
         try {
             const data = req.body
             const user = await this.usersService.createUser(data)
-            const loginData: ILoginInterface = user
+            const loginData: ILoginInterface = user as ILoginInterface
             const token = this.authService.generateToken(loginData)
             this.setJwtCookie(res, token)
             res.status(201).json({
