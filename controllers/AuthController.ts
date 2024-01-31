@@ -79,12 +79,8 @@ class AuthController {
     registerUser = async (req: Request, res: Response): Promise<void> => {
         const data = req.body
         try {
-            console.log('Creating User')
             const user = await this.userService.createUser(data)
-
-            console.log('Deleting OTP')
             await this.otpService.deleteOtp(user.email)
-
             const token = this.authService.generateToken(data)
             this.setJwtCookie(res, token)
             res.status(201).json({ user, token })
