@@ -3,6 +3,7 @@ import fs from 'fs'
 import { Inject, Service } from 'typedi'
 import { ILoginInterface } from '../models/AuthModel'
 import { UsersService } from './UsersService'
+import { IUserDocument } from '../models/UserModel'
 
 @Service()
 export class AuthService {
@@ -37,17 +38,15 @@ export class AuthService {
         })
     }
 
-    async verifyUser(login: ILoginInterface): Promise<boolean> {
-        // try {
-        //     const user = await this.usersService.getUserByPhone(
-        //         login.phoneNumber,
-        //     )
-        //     const isVerify = await user.isValidPassword(login.password)
-        //     return isVerify
-        // } catch (error) {
-        //     console.error(error)
-        //     return false
-        // }
-        return false
+    async verifyUser(login: ILoginInterface): Promise<IUserDocument | null> {
+        try {
+            const user = await this.usersService.getUserByEmail(login.email)
+            if (!user) return null
+
+            const isVerify = await user.isValidPassword(login.password)
+            return user
+        } catch (error) {
+            return null
+        }
     }
 }

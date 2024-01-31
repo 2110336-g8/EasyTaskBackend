@@ -12,6 +12,7 @@ class UsersController {
         this.usersService = userService
     }
 
+    // TO BE DELETE
     createUser = async (req: Request, res: Response): Promise<void> => {
         try {
             const data = req.body

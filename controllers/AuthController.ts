@@ -38,6 +38,7 @@ class AuthController {
             // TODO : send Email
 
             res.status(201).json({
+                success: true,
                 messsage: `Sent OTP to ${createdOtp.email} successfully`,
             })
         } catch (error) {
@@ -71,6 +72,7 @@ class AuthController {
             return
         }
         res.status(200).json({
+            success: true,
             message: 'OTP verified successfully',
             email: verifiedOtpDoc.email,
         })
@@ -83,7 +85,12 @@ class AuthController {
             await this.otpService.deleteOtp(user.email)
             const token = this.authService.generateToken(data)
             this.setJwtCookie(res, token)
-            res.status(201).json({ user, token })
+            res.status(201).json({
+                success: true,
+                message: 'Register and logged in',
+                token,
+                user,
+            })
         } catch (error) {
             if (error instanceof CannotCreateUserError) {
                 res.status(403).json({
@@ -95,20 +102,22 @@ class AuthController {
     }
 
     loginUser = async (req: Request, res: Response): Promise<void> => {
-        // TO FIX
-        // const data: ILoginInterface = req.body
-        // const validUserPassword = await this.authService.verifyUser(data)
-        // if (!validUserPassword) {
-        //     res.status(401).json({
-        //         message: 'Unauthorized',
-        //     })
-        // } else {
-        //     const token = this.authService.generateToken(data)
-        //     this.setJwtCookie(res, token)
-        //     res.status(200).json({
-        //         token,
-        //     })
-        // }
+        const data: ILoginInterface = req.body
+        const user = await this.authService.verifyUser(data)
+        if (!user) {
+            res.status(401).json({
+                message: 'Unauthorized',
+            })
+        } else {
+            const token = this.authService.generateToken(data)
+            this.setJwtCookie(res, token)
+            res.status(200).json({
+                success: true,
+                message: 'Logged in',
+                token,
+                user,
+            })
+        }
     }
 
     logoutUser = async function (req: Request, res: Response): Promise<void> {
@@ -138,6 +147,7 @@ class AuthController {
         const data: ILoginInterface = req.body
 
         res.status(200).json({
+            success: true,
             token: this.authService.generateToken(data, 60),
         })
     }

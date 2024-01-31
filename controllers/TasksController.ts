@@ -15,7 +15,10 @@ class TasksController {
         try {
             const data = req.body
             const task = await this.tasksService.createTask(data)
-            res.status(201).json(task)
+            res.status(201).json({
+                success: true,
+                task,
+            })
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
