@@ -5,7 +5,7 @@ import { ILoginInterface } from '../models/AuthModel'
 import UsersService from './UsersService'
 
 @Service()
-class AuthService {
+export default class AuthService {
     private usersService: UsersService
     private key_pair = {
         key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
@@ -51,5 +51,3 @@ class AuthService {
         return false
     }
 }
-
-export default AuthService

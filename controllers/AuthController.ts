@@ -4,58 +4,84 @@ import AuthService from '../services/AuthService'
 import UsersService from '../services/UsersService'
 import { Request, Response } from 'express'
 import { ValidationError } from '../errors/RepoError'
+import OtpService from '../services/OtpService'
+import { CannotCreateOtpError } from '../errors/OtpError'
 
 @Service()
 class AuthController {
     private authService: AuthService
-    private usersService: UsersService
+    private otpService: OtpService
 
     constructor(
         @Inject() authService: AuthService,
-        @Inject() usersService: UsersService,
+        @Inject() otpService: OtpService,
     ) {
         this.authService = authService
-        this.usersService = usersService
+        this.otpService = otpService
     }
 
-    registerUser = async (req: Request, res: Response) => {
+    sentOtp = async (req: Request, res: Response) => {
         try {
-            const data = req.body
-            const user = await this.usersService.createUser(data)
-            const loginData: ILoginInterface = user as ILoginInterface
-            const token = this.authService.generateToken(loginData)
-            this.setJwtCookie(res, token)
+            const { email } = req.body
+            if (!email) {
+                res.status(400).json({
+                    error: 'Email is required to send OTP',
+                })
+                return
+            }
+            const createdOtp = await this.otpService.createOtp(email)
+
+            // TODO : send Email
+
             res.status(201).json({
-                user,
-                token,
+                messsage: `Sent OTP to ${createdOtp.email} successfully`,
             })
         } catch (error) {
-            if (error instanceof ValidationError) {
-                res.status(400).json({
-                    error: error.name,
-                    details: error.message,
-                })
-            } else {
-                res.status(500).json({ error: 'Internal server error' })
+            if (error instanceof CannotCreateOtpError) {
+                res.status(403).json(error)
             }
         }
     }
 
-    loginUser = async (req: Request, res: Response) => {
-        const data: ILoginInterface = req.body
-        const validUserPassword = await this.authService.verifyUser(data)
+    registerUser = async (req: Request, res: Response) => {
+        // TO FIX
+        // try {
+        //     const data = req.body
+        //     const user = await this.usersService.createUser(data)
+        //     const loginData: ILoginInterface = user as ILoginInterface
+        //     const token = this.authService.generateToken(loginData)
+        //     this.setJwtCookie(res, token)
+        //     res.status(201).json({
+        //         user,
+        //         token,
+        //     })
+        // } catch (error) {
+        //     if (error instanceof ValidationError) {
+        //         res.status(400).json({
+        //             error: error.name,
+        //             details: error.message,
+        //         })
+        //     } else {
+        //         res.status(500).json({ error: 'Internal server error' })
+        //     }
+        // }
+    }
 
-        if (!validUserPassword) {
-            res.status(401).json({
-                message: 'Unauthorized',
-            })
-        } else {
-            const token = this.authService.generateToken(data)
-            this.setJwtCookie(res, token)
-            res.status(200).json({
-                token,
-            })
-        }
+    loginUser = async (req: Request, res: Response) => {
+        // TO FIX
+        // const data: ILoginInterface = req.body
+        // const validUserPassword = await this.authService.verifyUser(data)
+        // if (!validUserPassword) {
+        //     res.status(401).json({
+        //         message: 'Unauthorized',
+        //     })
+        // } else {
+        //     const token = this.authService.generateToken(data)
+        //     this.setJwtCookie(res, token)
+        //     res.status(200).json({
+        //         token,
+        //     })
+        // }
     }
 
     logoutUser = async function (req: Request, res: Response) {
@@ -91,56 +117,3 @@ class AuthController {
 }
 
 export default AuthController
-
-// /**
-//  * Generate new token from phoneNumber of login info.
-//  *
-//  * @param req
-//  * @param res
-//  */
-// export const newToken = async function (req: Request, res: Response) {
-//     const data: ILoginInterface = req.body
-
-//     res.status(200).json({
-//         token: AuthService.generateToken(data, 60),
-//     })
-
-//     registerUser = async (req: Request, res: Response) => {
-//         try {
-//             const userData = req.body
-//             const newUser: IUserDocument = await UserService.CreateUser(
-//                 userData,
-//             )
-//             const loginData: ILoginInterface = newUser
-//             const token = AuthService.generateToken(loginData)
-//             setJwtCookie(res, token)
-//             res.status(201).json({
-//                 user: newUser,
-//                 token,
-//             })
-//         } catch (error) {
-//             if (error instanceof UserValidationError) {
-//                 res.status(400).json({
-//                     error: error.name,
-//                     details: error.message,
-//                 })
-//             } else {
-//                 res.status(500).json({ error: 'Internal server error' })
-//             }
-//         }
-//     }
-// }
-
-// export const checkValidateToken = async function (req: Request, res: Response) {
-//     if ('decodedToken' in res.locals) {
-//         const decodedToken = res.locals.decodedToken
-
-//         res.status(200).json({
-//             message: decodedToken,
-//         })
-//     } else {
-//         res.status(401).json({
-//             message: 'Unauthorized',
-//         })
-//     }
-// }
