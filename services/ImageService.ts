@@ -1,9 +1,13 @@
-import { Inject, Service } from 'typedi'
-import { ImageRepository } from '../repositories/ImageRepo'
-import { ImageModel, IImageDocument } from '../models/ImageModel'
-import { IRepository } from '../repositories/BaseRepo';
-import { CannotCreateImageError , CannotGetImageError, CannotDeleteImageError} from '../errors/ImageError'
-import { AWSS3Service } from './AWSS3Service'
+import { Inject, Service } from 'typedi';
+import { IImageRepository, ImageRepository } from '../repositories/ImageRepo';
+import { ImageModel, IImageDocument } from '../models/ImageModel';
+import {
+    CannotCreateImageError,
+    CannotGetImageError,
+    CannotDeleteImageError,
+} from '../errors/ImageError';
+import AWSS3Service from './AWSS3Service';
+import { IRepository } from '../repositories/BaseRepo'
 @Service()
 export class ImageService {
   private imageRepository: IRepository<IImageDocument>;
@@ -17,7 +21,13 @@ export class ImageService {
     this.awsS3Service = awsS3Service;
   }
 
-    async createImage(ownerId: string, fileBuffer: Buffer, mimeType: string, imageKey: string, purpose: string): Promise<IImageDocument> {
+    async createImage(
+        ownerId: string,
+        fileBuffer: Buffer,
+        mimeType: string,
+        imageKey: string,
+        purpose: string,
+    ): Promise<IImageDocument> {
         try {
             // Upload the image to AWS S3
             await this.awsS3Service.uploadFile(fileBuffer, ownerId, mimeType);
@@ -25,7 +35,7 @@ export class ImageService {
             const imageDoc = await this.imageRepository.create({
                 ownerId: ownerId,
                 imageKey: imageKey,
-                purpose : purpose,
+                purpose: purpose,
                 createdAt: new Date(),
             } as IImageDocument);
 
@@ -33,16 +43,17 @@ export class ImageService {
         } catch (error) {
             throw new CannotCreateImageError(
                 'There is the error when creating image',
-            )
+            );
         }
     }
-    
 
     async getImageByOwnerId(ownerId: string): Promise<string | null> {
         try {
             // Find the image document based on the ownerId using findById
-            const imageDoc: IImageDocument | null = await ImageModel.findOne({ownerId});
-    
+            const imageDoc: IImageDocument | null = await ImageModel.findOne({
+                ownerId,
+            });
+
             if (!imageDoc) {
                 throw new Error('Image not found for the given ownerId');
             }
@@ -54,12 +65,14 @@ export class ImageService {
         } catch (error) {
             throw new CannotGetImageError('Can not get the image');
         }
-    }    
+    }
 
     async deleteImage(ownerId: string): Promise<boolean> {
         try {
             // Find the image document based on the ownerId
-            const imageDoc: IImageDocument | null = await ImageModel.findOne({ ownerId });
+            const imageDoc: IImageDocument | null = await ImageModel.findOne({
+                ownerId,
+            });
 
             if (!imageDoc) {
                 throw new Error('Image not found for the given ownerId');
@@ -69,7 +82,7 @@ export class ImageService {
             const key = imageDoc.imageKey;
             // Delete image from AWS S3
             await this.awsS3Service.deleteFile(key);
-    
+
             // Delete image details from the database
             const success = await this.imageRepository.deleteOne(imageDoc.id);
             return success;
@@ -77,5 +90,4 @@ export class ImageService {
             throw new CannotDeleteImageError('Can not delete the image');
         }
     }
-
 }
