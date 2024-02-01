@@ -7,8 +7,15 @@ import { IVerifyOtp } from '../models/AuthModel';
 import { IRepository } from '../repositories/BaseRepo';
 import { IUserDocument } from '../models/UserModel';
 
+export interface IOtpService {
+    createOtp: (email: string) => Promise<IOtpDocument>;
+    getOtpByEmail: (email: string) => Promise<IOtpDocument | null>;
+    verifyOtp: (data: IVerifyOtp) => Promise<IOtpDocument | null>;
+    deleteOtp: (email: string) => Promise<boolean>;
+}
+
 @Service()
-export class OtpService {
+export class OtpService implements IOtpService {
     private otpRepository: IRepository<IOtpDocument>;
     private usersRepository: IRepository<IUserDocument>;
 
@@ -76,14 +83,6 @@ export class OtpService {
             return verifiedOtpDoc;
         } catch (error) {
             return null;
-        }
-    }
-
-    async isVerifiedOtp(email: string): Promise<boolean> {
-        const otpDoc = await this.getOtpByEmail(email);
-        if (!otpDoc) return false;
-        else {
-            return otpDoc.isVerified;
         }
     }
 

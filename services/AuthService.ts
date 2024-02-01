@@ -1,12 +1,17 @@
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import fs from 'fs';
 import { Inject, Service } from 'typedi';
 import { ILogin } from '../models/AuthModel';
 import { UsersService } from './UsersService';
 import { IUserDocument } from '../models/UserModel';
 
+export interface IAuthService {
+    generateToken: (payload: ILogin, sessionMinutes?: number) => string;
+    decodeToken: (token: string) => string | JwtPayload;
+    verifyUser: (login: ILogin) => Promise<IUserDocument | null>;
+}
 @Service()
-export class AuthService {
+export class AuthService implements IAuthService {
     private usersService: UsersService;
     private key_pair = {
         key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
@@ -32,7 +37,7 @@ export class AuthService {
         });
     }
 
-    decodeToken(token: string) {
+    decodeToken(token: string): string | JwtPayload {
         return jwt.verify(token, this.key_pair.pub, {
             algorithms: ['RS256'],
         });
