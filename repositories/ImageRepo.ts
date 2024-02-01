@@ -1,5 +1,5 @@
 import { Service } from 'typedi'
-import { BaseMongooseRepository } from './_BaseRepo'
+import { BaseMongooseRepository } from './BaseRepo'
 import { IImageDocument, ImageModel } from '../models/ImageModel'
 
 @Service()

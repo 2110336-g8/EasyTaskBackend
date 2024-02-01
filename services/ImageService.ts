@@ -44,10 +44,9 @@ export class ImageService {
             if (!imageDoc) {
                 throw new Error('Image not found for the given ownerId');
             }
-    
-            // Extract imageKey from the found image document
             const key = imageDoc.imageKey;
             const imageUrl = await AWSS3Service.getObjectSignedUrl(key)
+
             // const imageUrl = await AWSS3Service.getObjectSignedUrl('65b541c5f264a6557e00f08c.jpg') ////uncomment this to test
             return imageUrl;
         } catch (error) {

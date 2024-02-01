@@ -1,22 +1,23 @@
-import express from 'express'
-import UsersController from '../controllers/UsersController'
-import Container from 'typedi'
+import express from 'express';
+import UsersController from '../controllers/UsersController';
+import Container from 'typedi';
 
-const router = express.Router()
+const router = express.Router();
 
-// Assuming you have already instantiated the `UserService`
-const usersController = Container.get(UsersController)
+const usersController: UsersController = Container.get(UsersController);
 
-router.route('/').post(usersController.createUser)
+router.route('/').post(usersController.createUser);
+
 router
     .route('/:id')
     .get(usersController.getUserbyId)
-    .patch(usersController.updateUser)
+    .patch(usersController.updateUser);
 
 router 
     .route('/:id/profile-image')
     .get(usersController.getProfileImage)
     .post(usersController.uploadProfileImage)
-    .delete(usersController.deleteProfileImage)
+    .delete(usersController.deleteProfileImage);
 
 export default router
+

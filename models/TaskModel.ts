@@ -1,27 +1,27 @@
-import mongoose, { Document, Types, Schema } from 'mongoose'
-import { ValidationError } from '../errors/RepoError'
+import mongoose, { Document, Types, Schema } from 'mongoose';
+import { ValidationError } from '../errors/RepoError';
 
 export interface ITask {
-    title: string
-    category?: string
-    description?: string
-    images?: string
-    location?: string
-    state: 'New' | 'In Progress' | 'Completed' | 'Cancel'
-    wages: number // smallest unit
-    startDate: Date
-    endDate: Date
-    workers: number //
-    customerID: Types.ObjectId
-    verifiedFlag: boolean
+    title: string;
+    category?: string;
+    description?: string;
+    images?: string;
+    location?: string;
+    state: 'New' | 'In Progress' | 'Completed' | 'Cancel';
+    wages: number; // smallest unit
+    startDate: Date;
+    endDate: Date;
+    workers: number; //
+    customerID: Types.ObjectId;
+    verifiedFlag: boolean;
     hiredWorkers: Array<{
-        workerID: Types.ObjectId
-        status: 'In Progress' | 'Completed' | 'Cancel'
-        reviewFromCustomer?: string
-        ratingFromCustomer?: number
-        reviewFromWorker?: string
-        ratingFromWorker?: number
-    }>
+        workerID: Types.ObjectId;
+        status: 'In Progress' | 'Completed' | 'Cancel';
+        reviewFromCustomer?: string;
+        ratingFromCustomer?: number;
+        reviewFromWorker?: string;
+        ratingFromWorker?: number;
+    }>;
 }
 
 export interface ITaskDocument extends ITask, Document {}
@@ -114,32 +114,32 @@ const TaskSchema = new Schema<ITaskDocument>(
     {
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
-)
+);
 
 TaskSchema.pre('save', function (next) {
-    const task = this as ITaskDocument
+    const task = this as ITaskDocument;
 
     // Check uniqueness of workerIDs within the same task
     // Check if customerID is equal to any workerID
-    const workerIDs = new Set()
+    const workerIDs = new Set();
     for (const worker of task.hiredWorkers) {
         if (workerIDs.has(worker.workerID.toString())) {
             const error = new ValidationError(
                 `Duplicate workerID '${worker.workerID}' within the same task.`,
-            )
-            return next(error)
+            );
+            return next(error);
         }
-        workerIDs.add(worker.workerID.toString())
+        workerIDs.add(worker.workerID.toString());
 
         if (task.customerID.toString() === worker.workerID.toString()) {
             const error = new ValidationError(
                 `customerID '${task.customerID}' cannot be equal to any workerID within the same task.`,
-            )
-            return next(error)
+            );
+            return next(error);
         }
     }
 
-    next()
-})
+    next();
+});
 
-export const TaskModel = mongoose.model<ITaskDocument>('Task', TaskSchema)
+export const TaskModel = mongoose.model<ITaskDocument>('Task', TaskSchema);
