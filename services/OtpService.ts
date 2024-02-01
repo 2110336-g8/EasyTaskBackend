@@ -91,6 +91,22 @@ export class OtpService implements IOtpService {
     }
 
     async deleteTrashOtp() {
-        await this.otpRepository.deleteExpiredOtps();
+        const otpDocs = await this.otpRepository.getAll();
+        otpDocs.forEach((e: IOtpDocument) => {
+            const now = new Date();
+            const toDelVerify = new Date();
+            toDelVerify.setMinutes(toDelVerify.getMinutes() - 30);
+
+            if (e.expiredAt.getTime() > now.getTime()) {
+                return;
+            }
+            if (
+                e.isVerified &&
+                e.verifiedAt.getTime() > toDelVerify.getTime()
+            ) {
+                return;
+            }
+            this.otpRepository.deleteOne(e._id);
+        });
     }
 }

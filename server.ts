@@ -62,6 +62,8 @@ app.use('*', (req: Request, res: Response) => {
     });
 });
 
+require('./config/schedule');
+
 const server = app.listen(backPort, function () {
     console.log(`Server is running on ${backHostname}:${backPort}`);
 });

@@ -4,6 +4,7 @@ import { MongoError } from 'mongodb';
 
 export interface IRepository<T> {
     findOne(id: string): Promise<T | null>;
+    getAll(): Promise<T[]>;
     create(item: T): Promise<T>;
     update(id: string, item: T): Promise<T | null>;
     deleteOne(id: string): Promise<boolean>;
@@ -14,9 +15,6 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
 
     constructor(model: Model<T>) {
         this._model = model;
-    }
-    find(id: string): Promise<T[]> {
-        throw new Error('Method not implemented.');
     }
 
     async create(item: T): Promise<T> {
@@ -67,5 +65,10 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
     async findOne(id: string): Promise<T | null> {
         const item = await this._model.findById(id);
         return item ? (item as T) : null;
+    }
+
+    async getAll(): Promise<T[]> {
+        const items = await this._model.find();
+        return items as T[];
     }
 }
