@@ -6,21 +6,25 @@ import { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { IOtpService, OtpService } from '../services/OtpService';
 import { CannotCreateUserError } from '../errors/UsersError';
+import { IEmailService, MailJetService } from '../services/EmailService';
 
 @Service()
 class AuthController {
     private authService: IAuthService;
     private otpService: IOtpService;
     private userService: IUsersService;
+    private emailService: IEmailService;
 
     constructor(
         @Inject(() => AuthService) authService: IAuthService,
         @Inject(() => OtpService) otpService: IOtpService,
         @Inject(() => UsersService) userService: IUsersService,
+        @Inject(() => MailJetService) emailService: IEmailService,
     ) {
         this.authService = authService;
         this.otpService = otpService;
         this.userService = userService;
+        this.emailService = emailService;
     }
 
     sentOtp = async (req: Request, res: Response): Promise<void> => {
@@ -28,7 +32,11 @@ class AuthController {
             const { email } = req.body;
             const createdOtp = await this.otpService.createOtp(email);
 
-            // TODO : send Email
+            const isSent = await this.emailService.sendOtp(createdOtp);
+
+            if (!isSent) {
+                this.handleError(res, new Error());
+            }
 
             res.status(201).json({
                 success: true,
