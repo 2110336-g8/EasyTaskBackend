@@ -7,7 +7,6 @@ import { ValidationError } from '../errors/RepoError';
 import { IOtpService, OtpService } from '../services/OtpService';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { IEmailService, MailJetService } from '../services/EmailService';
-import { CannotSendEmailError } from '../errors/EmailError';
 
 @Service()
 class AuthController {
@@ -37,6 +36,10 @@ class AuthController {
                 createdOtp.email,
                 createdOtp.otp,
             );
+
+            if (!isSent) {
+                this.handleError(res, new Error());
+            }
 
             res.status(201).json({
                 success: true,
@@ -143,11 +146,6 @@ class AuthController {
             });
         } else if (error instanceof ValidationError) {
             res.status(400).json({
-                error: error.name,
-                details: error.message,
-            });
-        } else if (error instanceof CannotSendEmailError) {
-            res.status(500).json({
                 error: error.name,
                 details: error.message,
             });
