@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import { Inject, Service } from 'typedi';
-import { ILoginInterface } from '../models/AuthModel';
+import { ILogin } from '../models/AuthModel';
 import { UsersService } from './UsersService';
 import { IUserDocument } from '../models/UserModel';
 
@@ -18,7 +18,7 @@ export class AuthService {
     }
 
     generateToken(
-        payload: ILoginInterface,
+        payload: ILogin,
         sessionMinutes: number = parseInt(process.env.JWT_EXP_MIN || '60'),
     ): string {
         const expiryTime: number =
@@ -38,7 +38,7 @@ export class AuthService {
         });
     }
 
-    async verifyUser(login: ILoginInterface): Promise<IUserDocument | null> {
+    async verifyUser(login: ILogin): Promise<IUserDocument | null> {
         try {
             const user = await this.usersService.getUserByEmail(login.email);
             if (!user) return null;

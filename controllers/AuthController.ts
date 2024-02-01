@@ -1,5 +1,5 @@
 import { Inject, Service } from 'typedi';
-import { ILoginInterface } from '../models/AuthModel';
+import { ILogin, IVerifyOtp } from '../models/AuthModel';
 import { AuthService } from '../services/AuthService';
 import { UsersService } from '../services/UsersService';
 import { Request, Response } from 'express';
@@ -26,12 +26,6 @@ class AuthController {
     sentOtp = async (req: Request, res: Response): Promise<void> => {
         try {
             const { email } = req.body;
-            if (!email) {
-                res.status(400).json({
-                    error: 'Email is required to send OTP',
-                });
-                return;
-            }
             const createdOtp = await this.otpService.createOtp(email);
 
             // TODO : send Email
@@ -46,14 +40,8 @@ class AuthController {
     };
 
     verifyOtp = async (req: Request, res: Response): Promise<void> => {
-        const { email, otp } = req.body;
-        if (!email || !otp) {
-            res.status(400).json({
-                error: 'Email and OTP are required to send OTP',
-            });
-            return;
-        }
-        const verifiedOtpDoc = await this.otpService.verifyOtp(email, otp);
+        const data: IVerifyOtp = req.body;
+        const verifiedOtpDoc = await this.otpService.verifyOtp(data);
         if (!verifiedOtpDoc) {
             res.status(403).json({
                 error: 'Failed to verify OTP',
@@ -91,7 +79,7 @@ class AuthController {
     };
 
     loginUser = async (req: Request, res: Response): Promise<void> => {
-        const data: ILoginInterface = req.body;
+        const data: ILogin = req.body;
         const user = await this.authService.verifyUser(data);
         if (!user) {
             this.respondUnAuth(res);
@@ -131,7 +119,7 @@ class AuthController {
     };
 
     newToken = async (req: Request, res: Response): Promise<void> => {
-        const data: ILoginInterface = req.body;
+        const data: ILogin = req.body;
 
         res.status(200).json({
             success: true,

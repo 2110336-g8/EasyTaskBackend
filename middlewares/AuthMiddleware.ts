@@ -1,5 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-import { isValidLoginInterface } from '../models/AuthModel';
+import {
+    isValidILogin,
+    isValidISendOtp,
+    isValidIVerifyOtp,
+} from '../models/AuthModel';
 import { AuthService } from '../services/AuthService';
 import { Inject, Service } from 'typedi';
 
@@ -11,17 +15,47 @@ class AuthMiddleware {
         this.authService = authService;
     }
 
+    validateSendOtpRequest(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): void {
+        if (isValidISendOtp(req.body)) {
+            next();
+        } else {
+            res.status(400).json({
+                error: 'Invalid Request',
+                detalis: 'Email is required to send OTP',
+            });
+        }
+    }
+
+    validateVerifyOtpRequest(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): void {
+        if (isValidIVerifyOtp(req)) {
+            next();
+        } else {
+            res.status(400).json({
+                error: 'Email and OTP are required to send OTP',
+            });
+        }
+    }
+
     validateLoginRequest(
         req: Request,
         res: Response,
         next: NextFunction,
     ): void {
-        // Use authService or authRepository for validation logic
-        // Example: if (this.authService.isValidLogin(req.body)) {
-        if (true) {
+        if (isValidILogin(req.body)) {
             next();
         } else {
-            res.status(400).json({});
+            res.status(400).json({
+                error: 'Invalide Request',
+                details: 'Email and password are required to login',
+            });
         }
     }
 

@@ -3,6 +3,7 @@ import { OtpRepository } from '../repositories/OtpRepo';
 import { IOtpDocument } from '../models/OtpModel';
 import { CannotCreateOtpError } from '../errors/OtpError';
 import { UsersRepository } from '../repositories/UsersRepo';
+import { IVerifyOtp } from '../models/AuthModel';
 
 @Service()
 export class OtpService {
@@ -55,11 +56,11 @@ export class OtpService {
         }
     }
 
-    async verifyOtp(email: string, otp: string): Promise<IOtpDocument | null> {
-        const otpDoc = await this.getOtpByEmail(email);
+    async verifyOtp(data: IVerifyOtp): Promise<IOtpDocument | null> {
+        const otpDoc = await this.getOtpByEmail(data.email);
         if (!otpDoc) return null;
 
-        const valid = otpDoc.isValidOtp(otp);
+        const valid = otpDoc.isValidOtp(data.otp);
         if (!valid) return null;
 
         const id = otpDoc._id;
