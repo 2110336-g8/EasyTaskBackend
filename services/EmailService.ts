@@ -1,6 +1,7 @@
 import Mailjet, { Client } from 'node-mailjet';
 import { Service } from 'typedi';
 import { IOtp } from '../models/OtpModel';
+import { CannotSendEmailError } from '../errors/EmailError';
 
 export interface IEmailService {
     sendOtp: (otp: IOtp) => Promise<boolean>;
@@ -47,7 +48,7 @@ export class MailJetService {
             });
             return sent.response.status == 200;
         } catch (error) {
-            return false;
+            throw new CannotSendEmailError((error as Error).message);
         }
     }
 }
