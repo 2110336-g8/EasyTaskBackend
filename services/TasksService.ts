@@ -1,12 +1,16 @@
 import { ITaskDocument } from '../models/TaskModel';
+import { IRepository } from '../repositories/BaseRepo';
 import { TasksRepository } from '../repositories/TasksRepo';
 import { Inject, Service } from 'typedi';
 
 @Service()
 class TaskService {
-    private tasksRepository: TasksRepository;
+    private tasksRepository: IRepository<ITaskDocument>;
 
-    constructor(@Inject() taskRepository: TasksRepository) {
+    constructor(
+        @Inject(() => TasksRepository)
+        taskRepository: IRepository<ITaskDocument>,
+    ) {
         this.tasksRepository = taskRepository;
     }
     async createTask(taskData: ITaskDocument): Promise<ITaskDocument> {

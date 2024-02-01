@@ -4,15 +4,19 @@ import { IOtpDocument } from '../models/OtpModel';
 import { CannotCreateOtpError } from '../errors/OtpError';
 import { UsersRepository } from '../repositories/UsersRepo';
 import { IVerifyOtp } from '../models/AuthModel';
+import { IRepository } from '../repositories/BaseRepo';
+import { IUserDocument } from '../models/UserModel';
 
 @Service()
 export class OtpService {
-    private otpRepository: OtpRepository;
-    private usersRepository: UsersRepository;
+    private otpRepository: IRepository<IOtpDocument>;
+    private usersRepository: IRepository<IUserDocument>;
 
     constructor(
-        @Inject() otpRepository: OtpRepository,
-        @Inject() usersRepository: UsersRepository,
+        @Inject(() => OtpRepository)
+        otpRepository: IRepository<IOtpDocument>,
+        @Inject(() => UsersRepository)
+        usersRepository: IRepository<IUserDocument>,
     ) {
         this.otpRepository = otpRepository;
         this.usersRepository = usersRepository;

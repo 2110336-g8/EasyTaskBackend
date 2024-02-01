@@ -1,5 +1,5 @@
 import { ITaskDocument, TaskModel } from '../models/TaskModel';
-import { BaseMongooseRepository } from './_BaseRepo';
+import { BaseMongooseRepository } from './BaseRepo';
 import { Service } from 'typedi';
 
 @Service()

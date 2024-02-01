@@ -1,5 +1,5 @@
 import { IUserDocument, UserModel } from '../models/UserModel';
-import { BaseMongooseRepository } from './_BaseRepo';
+import { BaseMongooseRepository } from './BaseRepo';
 import { Service } from 'typedi';
 
 @Service()

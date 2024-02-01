@@ -1,10 +1,21 @@
 import { Model, QueryOptions, Error as MongooseError } from 'mongoose';
-import { IRead } from '../interfaces/IRead';
-import { IWrite } from '../interfaces/IWrite';
 import { ValidationError } from '../errors/RepoError';
 import { MongoError } from 'mongodb';
 
-export abstract class BaseMongooseRepository<T> implements IRead<T>, IWrite<T> {
+export interface IRead<T> {
+    find(item: QueryOptions<T>): Promise<T[]>;
+    findOne(item: QueryOptions<T>): Promise<T | null>;
+}
+
+export interface IWrite<T> {
+    create(item: T): Promise<T>;
+    update(id: string, item: T): Promise<T | null>;
+    deleteOne(id: string): Promise<boolean>;
+}
+
+export interface IRepository<T> extends IRead<T>, IWrite<T> {}
+
+export abstract class BaseMongooseRepository<T> implements IRepository<T> {
     protected readonly _model: Model<T>;
 
     constructor(model: Model<T>) {

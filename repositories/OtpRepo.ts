@@ -1,5 +1,5 @@
 import { Service } from 'typedi';
-import { BaseMongooseRepository } from './_BaseRepo';
+import { BaseMongooseRepository } from './BaseRepo';
 import { IOtpDocument, OtpModel } from '../models/OtpModel';
 
 @Service()

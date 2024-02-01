@@ -1,19 +1,22 @@
 import { UsersRepository } from '../repositories/UsersRepo';
 import { IUserDocument } from '../models/UserModel';
 import { Service, Inject, Token } from 'typedi';
-import { OtpService } from './OtpService';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
 import { OtpRepository } from '../repositories/OtpRepo';
+import { IRepository } from '../repositories/BaseRepo';
+import { IOtpDocument } from '../models/OtpModel';
 
 @Service()
 export class UsersService {
-    private userRepository: UsersRepository;
-    private otpRepository: OtpRepository;
+    private userRepository: IRepository<IUserDocument>;
+    private otpRepository: IRepository<IOtpDocument>;
 
     constructor(
-        @Inject() userRepository: UsersRepository,
-        @Inject() otpRepository: OtpRepository,
+        @Inject(() => UsersRepository)
+        userRepository: IRepository<IUserDocument>,
+        @Inject(() => OtpRepository)
+        otpRepository: IRepository<IOtpDocument>,
     ) {
         this.userRepository = userRepository;
         this.otpRepository = otpRepository;
