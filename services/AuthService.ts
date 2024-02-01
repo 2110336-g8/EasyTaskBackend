@@ -44,7 +44,7 @@ export class AuthService {
             if (!user) return null
 
             const isVerify = await user.isValidPassword(login.password)
-            return user
+            return isVerify ? user : null
         } catch (error) {
             return null
         }
