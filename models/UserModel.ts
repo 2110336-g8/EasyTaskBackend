@@ -7,7 +7,7 @@ export interface IUser {
     email: string
     password: string
     phoneNumber?: string
-    photoURL?: string
+    imageKey?: string
     bankId?: ObjectId
     bankAccNo?: string
 }
@@ -55,14 +55,8 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                 message: 'Invalid phone number format',
             },
         },
-        photoURL: {
+        imageKey: {
             type: String,
-            validate: {
-                validator: function (v: string) {
-                    return /^(ftp|http|https):\/\/[^ "]+$/.test(v)
-                },
-                message: 'Invalid URL format for photo',
-            },
         },
         bankId: {
             type: Types.ObjectId,

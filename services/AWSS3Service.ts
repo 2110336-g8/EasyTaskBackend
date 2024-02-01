@@ -2,7 +2,7 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } fro
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({path :'./config/config.env'});
 
 const bucketName: string | undefined = process.env.AWS_BUCKET_NAME;
 const region: string | undefined = process.env.AWS_BUCKET_REGION;
@@ -37,24 +37,35 @@ export async function uploadFile(
     return s3Client.send(new PutObjectCommand(uploadParams));
   }
   
-  export async function deleteFile(fileName: string): Promise<any> {
+  export async function deleteFile(imageKey: string): Promise<any> {
     const deleteParams = {
       Bucket: bucketName,
-      Key: fileName,
+      Key: imageKey,
     };
   
     return s3Client.send(new DeleteObjectCommand(deleteParams));
   }
   
-  export async function getObjectSignedUrl(key: string): Promise<string> {
-    const params = {
-      Bucket: bucketName,
-      Key: key,
-    };
   
-    const command = new GetObjectCommand(params);
-    const seconds = 60;
-    const url = await getSignedUrl(s3Client, command, { expiresIn: seconds });
-  
-    return url;
-  }
+export async function getObjectSignedUrl(imageKey: string): Promise<string> {
+    try {
+        const params = {
+            Bucket: bucketName,
+            Key: imageKey,
+        };
+
+        console.log("URL is requested");
+        
+        const command = new GetObjectCommand(params);
+
+        const seconds: number = parseInt(process.env.IMAGE_EXPIRE_TIME ?? "3600"); // if there isn't this var in env, it will set to 1 hour
+        const url = await getSignedUrl(s3Client, command, { expiresIn: seconds });
+
+        return url;
+    } catch (error) {
+        console.error(error);
+        throw new Error('Error getting signed URL');
+    }
+}
+
+export default { uploadFile, deleteFile, getObjectSignedUrl };

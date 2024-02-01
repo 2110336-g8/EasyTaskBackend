@@ -13,4 +13,10 @@ router
     .get(usersController.getUserbyId)
     .patch(usersController.updateUser)
 
+router 
+    .route('/:id/profile-image')
+    .get(usersController.getProfileImage)
+    .post(usersController.uploadProfileImage)
+    .delete(usersController.deleteProfileImage)
+
 export default router
