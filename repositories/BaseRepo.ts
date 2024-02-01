@@ -2,24 +2,21 @@ import { Model, QueryOptions, Error as MongooseError } from 'mongoose';
 import { ValidationError } from '../errors/RepoError';
 import { MongoError } from 'mongodb';
 
-export interface IRead<T> {
-    find(item: QueryOptions<T>): Promise<T[]>;
-    findOne(item: QueryOptions<T>): Promise<T | null>;
-}
-
-export interface IWrite<T> {
+export interface IRepository<T> {
+    findOne(id: string): Promise<T | null>;
     create(item: T): Promise<T>;
     update(id: string, item: T): Promise<T | null>;
     deleteOne(id: string): Promise<boolean>;
 }
-
-export interface IRepository<T> extends IRead<T>, IWrite<T> {}
 
 export abstract class BaseMongooseRepository<T> implements IRepository<T> {
     protected readonly _model: Model<T>;
 
     constructor(model: Model<T>) {
         this._model = model;
+    }
+    find(id: string): Promise<T[]> {
+        throw new Error('Method not implemented.');
     }
 
     async create(item: T): Promise<T> {
@@ -67,13 +64,8 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
         return result.deletedCount !== 0;
     }
 
-    async find(query: QueryOptions<T>): Promise<T[]> {
-        const items = await this._model.find(query);
-        return items as T[];
-    }
-
-    async findOne(query: QueryOptions<T>): Promise<T | null> {
-        const item = await this._model.findOne(query);
+    async findOne(id: string): Promise<T | null> {
+        const item = await this._model.findById(id);
         return item ? (item as T) : null;
     }
 }

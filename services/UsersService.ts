@@ -1,9 +1,9 @@
-import { UsersRepository } from '../repositories/UsersRepo';
+import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
 import { IUserDocument } from '../models/UserModel';
 import { Service, Inject, Token } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
-import { OtpRepository } from '../repositories/OtpRepo';
+import { IOtpRepository, OtpRepository } from '../repositories/OtpRepo';
 import { IRepository } from '../repositories/BaseRepo';
 import { IOtpDocument } from '../models/OtpModel';
 
@@ -19,23 +19,21 @@ export interface IUsersService {
 
 @Service()
 export class UsersService implements IUsersService {
-    private userRepository: IRepository<IUserDocument>;
-    private otpRepository: IRepository<IOtpDocument>;
+    private userRepository: IUsersRepositorty;
+    private otpRepository: IOtpRepository;
 
     constructor(
         @Inject(() => UsersRepository)
-        userRepository: IRepository<IUserDocument>,
+        userRepository: IUsersRepositorty,
         @Inject(() => OtpRepository)
-        otpRepository: IRepository<IOtpDocument>,
+        otpRepository: IOtpRepository,
     ) {
         this.userRepository = userRepository;
         this.otpRepository = otpRepository;
     }
 
     async createUser(userData: IUserDocument): Promise<IUserDocument> {
-        const otpDoc = await this.otpRepository.findOne({
-            email: userData.email,
-        });
+        const otpDoc = await this.otpRepository.findOneByEmail(userData.email);
         if (!otpDoc) {
             throw new CannotCreateUserError('Email is not verified');
         }
@@ -62,7 +60,7 @@ export class UsersService implements IUsersService {
 
     async getUserById(id: string): Promise<IUserDocument | null> {
         try {
-            const user = await this.userRepository.findOne({ _id: id });
+            const user = await this.userRepository.findOne(id);
             if (!user) {
                 return null;
             }
@@ -74,7 +72,7 @@ export class UsersService implements IUsersService {
 
     async getUserByEmail(email: string): Promise<IUserDocument | null> {
         try {
-            const user = await this.userRepository.findOne({ email });
+            const user = await this.userRepository.findOneByEmail(email);
             if (!user) {
                 return null;
             }

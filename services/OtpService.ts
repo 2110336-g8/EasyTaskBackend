@@ -1,11 +1,9 @@
 import Container, { Inject, Service, Token } from 'typedi';
-import { OtpRepository } from '../repositories/OtpRepo';
+import { IOtpRepository, OtpRepository } from '../repositories/OtpRepo';
 import { IOtpDocument } from '../models/OtpModel';
 import { CannotCreateOtpError } from '../errors/OtpError';
-import { UsersRepository } from '../repositories/UsersRepo';
+import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
 import { IVerifyOtp } from '../models/AuthModel';
-import { IRepository } from '../repositories/BaseRepo';
-import { IUserDocument } from '../models/UserModel';
 
 export interface IOtpService {
     createOtp: (email: string) => Promise<IOtpDocument>;
@@ -16,14 +14,14 @@ export interface IOtpService {
 
 @Service()
 export class OtpService implements IOtpService {
-    private otpRepository: IRepository<IOtpDocument>;
-    private usersRepository: IRepository<IUserDocument>;
+    private otpRepository: IOtpRepository;
+    private usersRepository: IUsersRepositorty;
 
     constructor(
         @Inject(() => OtpRepository)
-        otpRepository: IRepository<IOtpDocument>,
+        otpRepository: IOtpRepository,
         @Inject(() => UsersRepository)
-        usersRepository: IRepository<IUserDocument>,
+        usersRepository: IUsersRepositorty,
     ) {
         this.otpRepository = otpRepository;
         this.usersRepository = usersRepository;
@@ -32,9 +30,8 @@ export class OtpService implements IOtpService {
     async createOtp(email: string): Promise<IOtpDocument> {
         try {
             const existOtp = await this.getOtpByEmail(email);
-            const existEmailUser = await this.usersRepository.findOne({
-                email,
-            });
+            const existEmailUser =
+                await this.usersRepository.findOneByEmail(email);
             if (existEmailUser) {
                 throw new CannotCreateOtpError('Email is already used');
             }
@@ -60,7 +57,7 @@ export class OtpService implements IOtpService {
 
     async getOtpByEmail(email: string): Promise<IOtpDocument | null> {
         try {
-            const otpDoc = await this.otpRepository.findOne({ email });
+            const otpDoc = await this.otpRepository.findOneByEmail(email);
             return otpDoc;
         } catch (error) {
             return null;
@@ -91,5 +88,9 @@ export class OtpService implements IOtpService {
         if (!otpDoc) return false;
         const success = await this.otpRepository.deleteOne(otpDoc._id);
         return success;
+    }
+
+    async deleteTrashOtp() {
+        await this.otpRepository.deleteExpiredOtps();
     }
 }

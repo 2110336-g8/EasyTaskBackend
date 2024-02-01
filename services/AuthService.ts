@@ -2,7 +2,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import fs from 'fs';
 import { Inject, Service } from 'typedi';
 import { ILogin } from '../models/AuthModel';
-import { UsersService } from './UsersService';
+import { IUsersService, UsersService } from './UsersService';
 import { IUserDocument } from '../models/UserModel';
 
 export interface IAuthService {
@@ -12,13 +12,13 @@ export interface IAuthService {
 }
 @Service()
 export class AuthService implements IAuthService {
-    private usersService: UsersService;
+    private usersService: IUsersService;
     private key_pair = {
         key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
         pub: fs.readFileSync(`${__dirname}/../config/rs256.key.pub`),
     };
 
-    constructor(@Inject() usersService: UsersService) {
+    constructor(@Inject(() => UsersService) usersService: IUsersService) {
         this.usersService = usersService;
     }
 
