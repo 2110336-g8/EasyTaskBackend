@@ -30,10 +30,10 @@ const backHostname: string = isDevelopment
       : process.env.BACK_HOSTNAME;
 const frontPort: number = isDevelopment
     ? process.env.FRONT_PORT_DEV === undefined
-        ? 5001
+        ? 8081
         : parseInt(process.env.FRONT_PORT_DEV, 10)
     : process.env.FRONT_PORT === undefined
-      ? 5000
+      ? 8000
       : parseInt(process.env.FRONT_PORT, 10);
 const frontHostname: string = isDevelopment
     ? process.env.FRONT_HOSTNAME_DEV === undefined
