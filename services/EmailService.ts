@@ -1,8 +1,9 @@
 import Mailjet, { Client } from 'node-mailjet';
 import { Service } from 'typedi';
+import { IOtp } from '../models/OtpModel';
 
 export interface IEmailService {
-    sendOtp: (email: string, otp: string) => Promise<boolean>;
+    sendOtp: (otp: IOtp) => Promise<boolean>;
 }
 
 @Service()
@@ -19,7 +20,7 @@ export class MailJetService {
         );
     }
 
-    async sendOtp(email: string, otp: string): Promise<boolean> {
+    async sendOtp(otp: IOtp): Promise<boolean> {
         try {
             const post = this.mailjet.post('send', { version: 'v3.1' });
             const sent = await post.request({
@@ -31,11 +32,16 @@ export class MailJetService {
                         },
                         To: [
                             {
-                                Email: email,
+                                Email: otp.email,
                             },
                         ],
                         Subject: 'Welcome to Easy Task!',
-                        TextPart: `Your OTP for verification is ${otp}`,
+                        TextPart: `Your OTP for verification is ${otp.otp}`,
+                        HtmlPart: `
+                            <p>Your OTP for email verification is</p>
+                            <h3>${otp.otp}</h3>
+                            <p>Reference: ${otp.reference}</p>
+                        `,
                     },
                 ],
             });

@@ -32,10 +32,7 @@ class AuthController {
             const { email } = req.body;
             const createdOtp = await this.otpService.createOtp(email);
 
-            const isSent = await this.emailService.sendOtp(
-                createdOtp.email,
-                createdOtp.otp,
-            );
+            const isSent = await this.emailService.sendOtp(createdOtp);
 
             if (!isSent) {
                 this.handleError(res, new Error());

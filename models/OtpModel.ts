@@ -3,6 +3,7 @@ import mongoose, { Document } from 'mongoose';
 export interface IOtp {
     email: string;
     otp: string;
+    reference: string;
     expiredAt: Date;
     isVerified: boolean;
     verifiedAt: Date;
@@ -33,6 +34,19 @@ const OtpSchema = new mongoose.Schema<IOtpDocument>(
             default: function (): string {
                 let otp = '';
                 const digit = '1234567890';
+                for (let i = 0; i < 6; i++) {
+                    otp += digit[Math.floor(Math.random() * digit.length)];
+                }
+                return otp;
+            },
+        },
+        reference: {
+            type: String,
+            require: [true, 'Reference string is required'],
+            default: function (): string {
+                let otp = '';
+                const digit =
+                    '1234567890ABCDEFFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
                 for (let i = 0; i < 6; i++) {
                     otp += digit[Math.floor(Math.random() * digit.length)];
                 }
