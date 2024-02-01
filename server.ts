@@ -63,7 +63,7 @@ app.use('*', (req: Request, res: Response) => {
 });
 
 const server = app.listen(backPort, function () {
-    console.log(`Server is running on {backHostname}:${backPort}`);
+    console.log(`Server is running on ${backHostname}:${backPort}`);
 });
 
 process.on('unhandledRejection', function (error, promise) {

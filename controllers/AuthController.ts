@@ -6,21 +6,26 @@ import { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { IOtpService, OtpService } from '../services/OtpService';
 import { CannotCreateUserError } from '../errors/UsersError';
+import { IEmailService, MailJetService } from '../services/EmailService';
+import { CannotSendEmailError } from '../errors/EmailError';
 
 @Service()
 class AuthController {
     private authService: IAuthService;
     private otpService: IOtpService;
     private userService: IUsersService;
+    private emailService: IEmailService;
 
     constructor(
         @Inject(() => AuthService) authService: IAuthService,
         @Inject(() => OtpService) otpService: IOtpService,
         @Inject(() => UsersService) userService: IUsersService,
+        @Inject(() => MailJetService) emailService: IEmailService,
     ) {
         this.authService = authService;
         this.otpService = otpService;
         this.userService = userService;
+        this.emailService = emailService;
     }
 
     sentOtp = async (req: Request, res: Response): Promise<void> => {
@@ -28,7 +33,10 @@ class AuthController {
             const { email } = req.body;
             const createdOtp = await this.otpService.createOtp(email);
 
-            // TODO : send Email
+            const isSent = await this.emailService.sendOtp(
+                createdOtp.email,
+                createdOtp.otp,
+            );
 
             res.status(201).json({
                 success: true,
@@ -135,6 +143,11 @@ class AuthController {
             });
         } else if (error instanceof ValidationError) {
             res.status(400).json({
+                error: error.name,
+                details: error.message,
+            });
+        } else if (error instanceof CannotSendEmailError) {
+            res.status(500).json({
                 error: error.name,
                 details: error.message,
             });
