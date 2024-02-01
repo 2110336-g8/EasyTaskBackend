@@ -1,15 +1,22 @@
 import { Request, Response } from 'express';
-import { UsersService as UsersService } from '../services/UsersService';
+import {
+    IUsersService,
+    UsersService as UsersService,
+} from '../services/UsersService';
+import { IUserDocument } from '../models/UserModel';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
-
+import { ImageService } from '../services/ImageService';
+import sharp from 'sharp';
 @Service()
 class UsersController {
-    private usersService: UsersService;
+    private usersService: IUsersService;
+    private imageService: ImageService;
 
-    constructor(@Inject() userService: UsersService) {
+    constructor(@Inject(() => UsersService) userService: IUsersService, @Inject() imageService: ImageService) {
         this.usersService = userService;
+        this.imageService = imageService;
     }
     // TO BE DELETE
     createUser = async (req: Request, res: Response): Promise<void> => {
