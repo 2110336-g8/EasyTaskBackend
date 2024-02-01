@@ -2,6 +2,8 @@ import { Request, Response } from 'express'
 import { UsersService as UsersService } from '../services/UsersService'
 import { NotFoundError, ValidationError } from '../errors/RepoError'
 import { Service, Inject } from 'typedi'
+import multer from 'multer'
+import { uploadFile, deleteFile, getObjectSignedUrl } from '../interfaces/aws_s3'
 
 @Service()
 class UsersController {
