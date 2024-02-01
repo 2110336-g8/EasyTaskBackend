@@ -1,19 +1,19 @@
-import mongoose, { Document, ObjectId, Types } from 'mongoose'
-import { compare, genSalt, hash } from 'bcrypt'
+import mongoose, { Document, ObjectId, Types } from 'mongoose';
+import { compare, genSalt, hash } from 'bcrypt';
 
 export interface IUser {
-    firstName: string
-    lastName: string
-    email: string
-    password: string
-    phoneNumber?: string
-    photoURL?: string
-    bankId?: ObjectId
-    bankAccNo?: string
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phoneNumber?: string;
+    photoURL?: string;
+    bankId?: ObjectId;
+    bankAccNo?: string;
 }
 
 interface IUserMethods {
-    isValidPassword: (password: string) => Promise<boolean>
+    isValidPassword: (password: string) => Promise<boolean>;
 }
 
 export interface IUserDocument extends IUser, IUserMethods, Document {}
@@ -36,7 +36,7 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
             required: [true, 'Email is required'],
             validate: {
                 validator: function (v: string) {
-                    return /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(v)
+                    return /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(v);
                 },
                 message: 'Invalid email format',
             },
@@ -50,7 +50,7 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
             type: String,
             validate: {
                 validator: function (v: string) {
-                    return /^[0-9]{10}$/.test(v)
+                    return /^[0-9]{10}$/.test(v);
                 },
                 message: 'Invalid phone number format',
             },
@@ -59,7 +59,7 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
             type: String,
             validate: {
                 validator: function (v: string) {
-                    return /^(ftp|http|https):\/\/[^ "]+$/.test(v)
+                    return /^(ftp|http|https):\/\/[^ "]+$/.test(v);
                 },
                 message: 'Invalid URL format for photo',
             },
@@ -71,7 +71,7 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
             type: String,
             validate: {
                 validator: function (v: string) {
-                    return /^[0-9]{10}$/.test(v)
+                    return /^[0-9]{10}$/.test(v);
                 },
                 message:
                     'Bank account number need to be all number with length 10',
@@ -81,26 +81,26 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
     {
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
-)
+);
 
 UserSchema.methods.isValidPassword = async function (
     password: string,
 ): Promise<boolean> {
-    const isValid = await compare(password, this.password)
-    return isValid
-}
+    const isValid = await compare(password, this.password);
+    return isValid;
+};
 
 UserSchema.methods.toJSON = function () {
-    const userObject: any = this.toObject()
-    delete userObject.password
-    return userObject
-}
+    const userObject: any = this.toObject();
+    delete userObject.password;
+    return userObject;
+};
 
 UserSchema.pre('save', async function (next) {
-    const salt = await genSalt(10)
-    const hashedPassword = await hash(this.password, salt)
-    this.password = hashedPassword
-    next()
-})
+    const salt = await genSalt(10);
+    const hashedPassword = await hash(this.password, salt);
+    this.password = hashedPassword;
+    next();
+});
 
-export const UserModel = mongoose.model<IUserDocument>('User', UserSchema)
+export const UserModel = mongoose.model<IUserDocument>('User', UserSchema);

@@ -1,6 +1,6 @@
 export interface ILoginInterface {
-    email: string
-    password: string
+    email: string;
+    password: string;
 }
 
 export const isValidLoginInterface = function (
@@ -8,5 +8,5 @@ export const isValidLoginInterface = function (
 ): obj is ILoginInterface {
     return (
         obj && typeof obj.email === 'string' && typeof obj.password === 'string'
-    )
-}
+    );
+};
