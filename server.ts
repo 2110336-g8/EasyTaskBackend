@@ -43,7 +43,7 @@ const frontHostname: string = isDevelopment
       ? 'localhost'
       : process.env.FRONT_HOSTNAME;
 const corsOption = {
-    origin: `${frontHostname}:${frontPort}`,
+    origin: `http://${frontHostname}:${frontPort}`,
     credentials: true,
 };
 connectDB();
