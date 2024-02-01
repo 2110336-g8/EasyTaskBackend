@@ -51,7 +51,7 @@ export abstract class BaseMongooseRepository<T> implements IRead<T>, IWrite<T> {
         }
     }
 
-    async delete(id: string): Promise<boolean> {
+    async deleteOne(id: string): Promise<boolean> {
         const result = await this._model.deleteOne({ _id: id })
         return result.deletedCount !== 0
     }

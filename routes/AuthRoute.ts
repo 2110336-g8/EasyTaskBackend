@@ -11,10 +11,12 @@ const authMiddleware = Container.get(AuthMiddleware)
 // router.route('/token/new').post(validateLoginRequest, newToken)
 // router.route('/token/validate').get(validateToken, checkValidateToken)
 
+// OTP
+router.route('/sendOtp').post(authController.sentOtp)
+router.route('/verifyOtp').post(authController.verifyOtp)
+
 // Register
-router
-    .route('/register')
-    .post(authController.loginUser, authController.newToken)
+router.route('/register').post(authController.registerUser)
 
 // Login and Logout
 router

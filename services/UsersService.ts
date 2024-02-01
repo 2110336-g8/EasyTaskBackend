@@ -1,30 +1,57 @@
 import { UsersRepository } from '../repositories/UsersRepo'
 import { IUserDocument } from '../models/UserModel'
-import { Service, Inject } from 'typedi'
-import { NotFoundError } from '../errors/RepoError'
+import { Service, Inject, Token } from 'typedi'
+import { OtpService } from './OtpService'
+import { CannotCreateUserError } from '../errors/UsersError'
+import { ValidationError } from '../errors/RepoError'
+import { OtpRepository } from '../repositories/OtpRepo'
 
 @Service()
 export class UsersService {
     private userRepository: UsersRepository
+    private otpRepository: OtpRepository
 
-    constructor(@Inject() userRepository: UsersRepository) {
+    constructor(
+        @Inject() userRepository: UsersRepository,
+        @Inject() otpRepository: OtpRepository,
+    ) {
         this.userRepository = userRepository
+        this.otpRepository = otpRepository
     }
 
     async createUser(userData: IUserDocument): Promise<IUserDocument> {
+        const otpDoc = await this.otpRepository.findOne({
+            email: userData.email,
+        })
+        if (!otpDoc) {
+            throw new CannotCreateUserError('Email is not verified')
+        }
+        if (!otpDoc.isVerified) {
+            throw new CannotCreateUserError('Email is not verified')
+        }
+
+        const existEmailUser = await this.getUserByEmail(userData.email)
+        if (existEmailUser) {
+            throw new CannotCreateUserError('Email is already used')
+        }
+
         try {
             const createdUser = await this.userRepository.create(userData)
             return createdUser
         } catch (error) {
-            throw error
+            if (error instanceof ValidationError)
+                throw new CannotCreateUserError(error.message)
+            else {
+                throw new Error('Unknown Error')
+            }
         }
     }
 
-    async getUserById(id: string): Promise<IUserDocument> {
+    async getUserById(id: string): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.findOne({ _id: id })
             if (!user) {
-                throw new NotFoundError()
+                return null
             }
             return user
         } catch (error) {
@@ -32,11 +59,11 @@ export class UsersService {
         }
     }
 
-    async getUserByPhone(phoneNumber: string): Promise<IUserDocument> {
+    async getUserByEmail(email: string): Promise<IUserDocument | null> {
         try {
-            const user = await this.userRepository.findOne({ phoneNumber })
+            const user = await this.userRepository.findOne({ email })
             if (!user) {
-                throw new NotFoundError()
+                return null
             }
             return user
         } catch (error) {
@@ -44,11 +71,14 @@ export class UsersService {
         }
     }
 
-    async updateUser(id: string, data: IUserDocument) {
+    async updateUser(
+        id: string,
+        data: IUserDocument,
+    ): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.update(id, data)
             if (!user) {
-                throw new NotFoundError()
+                null
             }
             return user
         } catch (error) {
@@ -60,5 +90,3 @@ export class UsersService {
         throw new Error('Not Implemented')
     }
 }
-
-export default UsersService

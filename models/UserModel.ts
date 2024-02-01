@@ -4,11 +4,10 @@ import { compare, genSalt, hash } from 'bcrypt'
 export interface IUser {
     firstName: string
     lastName: string
+    email: string
     password: string
-    phoneNumber: string
+    phoneNumber?: string
     photoURL?: string
-    gender: 'M' | 'F' | 'O'
-    citizenId: string
     bankId?: ObjectId
     bankAccNo?: string
 }
@@ -31,6 +30,17 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
             required: [true, 'Last name is required'],
             maxlength: [255, 'Last name cannot be longer than 255 characters'],
         },
+        email: {
+            type: String,
+            unique: true,
+            required: [true, 'Email is required'],
+            validate: {
+                validator: function (v: string) {
+                    return /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(v)
+                },
+                message: 'Invalid email format',
+            },
+        },
         password: {
             type: String,
             required: [true, 'Password is required'],
@@ -38,8 +48,6 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
         },
         phoneNumber: {
             type: String,
-            unique: true,
-            required: [true, 'Phone number is required'],
             validate: {
                 validator: function (v: string) {
                     return /^[0-9]{10}$/.test(v)
@@ -54,22 +62,6 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                     return /^(ftp|http|https):\/\/[^ "]+$/.test(v)
                 },
                 message: 'Invalid URL format for photo',
-            },
-        },
-        gender: {
-            type: String,
-            enum: ['M', 'F', 'O'],
-            required: [true, 'Gender is required'],
-        },
-        citizenId: {
-            type: String,
-            unique: true,
-            required: [true, 'Citizen ID is required'],
-            validate: {
-                validator: function (v: string) {
-                    return /^[0-9]{13}$/.test(v)
-                },
-                message: 'Citizen ID need to be all number with length 13',
             },
         },
         bankId: {

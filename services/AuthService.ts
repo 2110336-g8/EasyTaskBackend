@@ -2,10 +2,11 @@ import jwt from 'jsonwebtoken'
 import fs from 'fs'
 import { Inject, Service } from 'typedi'
 import { ILoginInterface } from '../models/AuthModel'
-import UsersService from './UsersService'
+import { UsersService } from './UsersService'
+import { IUserDocument } from '../models/UserModel'
 
 @Service()
-class AuthService {
+export class AuthService {
     private usersService: UsersService
     private key_pair = {
         key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
@@ -23,7 +24,7 @@ class AuthService {
         const expiryTime: number =
             Math.floor(Date.now() / 1000) + sessionMinutes * 60
         const subPayload = {
-            phoneNumber: payload.phoneNumber,
+            phoneNumber: payload.email,
         }
         return jwt.sign(subPayload, this.key_pair.key, {
             expiresIn: expiryTime,
@@ -37,18 +38,15 @@ class AuthService {
         })
     }
 
-    async verifyUser(login: ILoginInterface): Promise<boolean> {
+    async verifyUser(login: ILoginInterface): Promise<IUserDocument | null> {
         try {
-            const user = await this.usersService.getUserByPhone(
-                login.phoneNumber,
-            )
+            const user = await this.usersService.getUserByEmail(login.email)
+            if (!user) return null
+
             const isVerify = await user.isValidPassword(login.password)
-            return isVerify
+            return user
         } catch (error) {
-            console.error(error)
-            return false
+            return null
         }
     }
 }
-
-export default AuthService
