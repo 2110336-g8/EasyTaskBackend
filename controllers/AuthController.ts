@@ -1,22 +1,22 @@
 import { Inject, Service } from 'typedi';
 import { ILogin, IVerifyOtp } from '../models/AuthModel';
-import { AuthService } from '../services/AuthService';
-import { UsersService } from '../services/UsersService';
+import { AuthService, IAuthService } from '../services/AuthService';
+import { IUsersService, UsersService } from '../services/UsersService';
 import { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
-import { OtpService } from '../services/OtpService';
+import { IOtpService, OtpService } from '../services/OtpService';
 import { CannotCreateUserError } from '../errors/UsersError';
 
 @Service()
 class AuthController {
-    private authService: AuthService;
-    private otpService: OtpService;
-    private userService: UsersService;
+    private authService: IAuthService;
+    private otpService: IOtpService;
+    private userService: IUsersService;
 
     constructor(
-        @Inject() authService: AuthService,
-        @Inject() otpService: OtpService,
-        @Inject() userService: UsersService,
+        @Inject(() => AuthService) authService: IAuthService,
+        @Inject(() => OtpService) otpService: IOtpService,
+        @Inject(() => UsersService) userService: IUsersService,
     ) {
         this.authService = authService;
         this.otpService = otpService;

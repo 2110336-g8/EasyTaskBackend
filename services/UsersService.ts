@@ -7,8 +7,18 @@ import { OtpRepository } from '../repositories/OtpRepo';
 import { IRepository } from '../repositories/BaseRepo';
 import { IOtpDocument } from '../models/OtpModel';
 
+export interface IUsersService {
+    createUser: (userData: IUserDocument) => Promise<IUserDocument>;
+    getUserById: (id: string) => Promise<IUserDocument | null>;
+    getUserByEmail: (email: string) => Promise<IUserDocument | null>;
+    updateUser: (
+        id: string,
+        data: IUserDocument,
+    ) => Promise<IUserDocument | null>;
+}
+
 @Service()
-export class UsersService {
+export class UsersService implements IUsersService {
     private userRepository: IRepository<IUserDocument>;
     private otpRepository: IRepository<IOtpDocument>;
 
@@ -87,9 +97,5 @@ export class UsersService {
         } catch (error) {
             throw error;
         }
-    }
-
-    async deleteUser(id: string, password: string) {
-        throw new Error('Not Implemented');
     }
 }

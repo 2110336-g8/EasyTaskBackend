@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
-import TasksService from '../services/TasksService';
+import TasksService, { ITasksService } from '../services/TasksService';
 
 @Service()
 class TasksController {
-    private tasksService: TasksService;
+    private tasksService: ITasksService;
 
-    constructor(@Inject() tasksService: TasksService) {
+    constructor(@Inject(() => TasksService) tasksService: ITasksService) {
         this.tasksService = tasksService;
     }
 

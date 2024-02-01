@@ -1,14 +1,17 @@
 import { Request, Response } from 'express';
-import { UsersService as UsersService } from '../services/UsersService';
+import {
+    IUsersService,
+    UsersService as UsersService,
+} from '../services/UsersService';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 
 @Service()
 class UsersController {
-    private usersService: UsersService;
+    private usersService: IUsersService;
 
-    constructor(@Inject() userService: UsersService) {
+    constructor(@Inject(() => UsersService) userService: IUsersService) {
         this.usersService = userService;
     }
 

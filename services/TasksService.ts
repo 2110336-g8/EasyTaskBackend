@@ -3,8 +3,12 @@ import { IRepository } from '../repositories/BaseRepo';
 import { TasksRepository } from '../repositories/TasksRepo';
 import { Inject, Service } from 'typedi';
 
+export interface ITasksService {
+    createTask: (taskData: ITaskDocument) => Promise<ITaskDocument>;
+}
+
 @Service()
-class TaskService {
+class TaskService implements ITasksService {
     private tasksRepository: IRepository<ITaskDocument>;
 
     constructor(
