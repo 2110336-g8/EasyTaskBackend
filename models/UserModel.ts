@@ -2,14 +2,14 @@ import mongoose, { Document, ObjectId, Types } from 'mongoose';
 import { compare, genSalt, hash } from 'bcrypt';
 
 export interface IUser {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-    phoneNumber?: string;
-    photoURL?: string;
-    bankId?: ObjectId;
-    bankAccNo?: string;
+    firstName: string
+    lastName: string
+    email: string
+    password: string
+    phoneNumber?: string
+    imageKey?: string
+    bankId?: ObjectId
+    bankAccNo?: string
 }
 
 interface IUserMethods {
@@ -55,14 +55,8 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                 message: 'Invalid phone number format',
             },
         },
-        photoURL: {
+        imageKey: {
             type: String,
-            validate: {
-                validator: function (v: string) {
-                    return /^(ftp|http|https):\/\/[^ "]+$/.test(v);
-                },
-                message: 'Invalid URL format for photo',
-            },
         },
         bankId: {
             type: Types.ObjectId,
