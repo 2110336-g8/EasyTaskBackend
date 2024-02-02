@@ -67,6 +67,7 @@ export class AWSS3Service implements IAWSS3Service {
 
       const seconds: number = parseInt(process.env.IMAGE_EXPIRE_TIME ?? "3600"); // if there isn't this var in env, it will set to 1 hour
       const url = await getSignedUrl(this.s3Client, command, { expiresIn: seconds });
+      console.log(url);
 
       return url;
     } catch (error) {

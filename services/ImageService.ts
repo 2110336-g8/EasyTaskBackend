@@ -30,7 +30,7 @@ export class ImageService {
     ): Promise<IImageDocument> {
         try {
             // Upload the image to AWS S3
-            await this.awsS3Service.uploadFile(fileBuffer, ownerId, mimeType);
+            await this.awsS3Service.uploadFile(fileBuffer, imageKey, mimeType);
             // Save image details to the database
             const imageDoc = await this.imageRepository.create({
                 ownerId: ownerId,
@@ -58,12 +58,18 @@ export class ImageService {
                 throw new Error('Image not found for the given ownerId');
             }
             const key = imageDoc.imageKey;
+            console.log(key);
+            if( key === null || key === ""){
+                console.log('There is no profile image for this user');
+                throw new CannotGetImageError('Can not get the image');
+            }
             const imageUrl = await this.awsS3Service.getObjectSignedUrl(key)
 
             // const imageUrl = await this.awsS3Service.getObjectSignedUrl('65b541c5f264a6557e00f08c.jpg') ////uncomment this to test
             return imageUrl;
         } catch (error) {
-            throw new CannotGetImageError('Can not get the image');
+            console.error(error); // Log the error for debugging purposes
+            return null;
         }
     }
 
@@ -84,6 +90,7 @@ export class ImageService {
             await this.awsS3Service.deleteFile(key);
 
             // Delete image details from the database
+            console.log(imageDoc.id);
             const success = await this.imageRepository.deleteOne(imageDoc.id);
             return success;
         } catch (error) {

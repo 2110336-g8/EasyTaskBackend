@@ -6,6 +6,7 @@ import connectDB from './config/db';
 import router from './routes/AuthRoute';
 import taskRouter from './routes/TasksRoute';
 import cors from 'cors';
+import bodyParser from 'body-parser';
 
 // Load ENVs
 dotenv.config({ path: `${__dirname}/config/config.env` });
@@ -49,6 +50,8 @@ const corsOption = {
 connectDB();
 
 app.use(express.json());
+app.use(bodyParser.raw({type: ["image/jpeg", "image/png"], limit: '5mb'}))
+
 app.use(cors(corsOption));
 
 app.use('/v1/users', userRouter);
