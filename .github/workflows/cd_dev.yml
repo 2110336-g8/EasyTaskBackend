@@ -1,4 +1,4 @@
-name: Node.js CD All
+name: Node.js CD All 
 
 on:
   push:
@@ -20,13 +20,15 @@ jobs:
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
             cd /home/${{ secrets.USERNAME }}/${{ github.ref_name }}/
+
+            git reset --hard origin/${{ github.ref_name }}
             
             git pull origin ${{ github.ref_name }}
             
             npm install
             
-            pm2 describe backend >> /dev/null && (pm2 stop backend; pm2 delete backend)
+            pm2 describe backend-${{ github.ref_name }} >> /dev/null && (pm2 stop backend-${{ github.ref_name }}; pm2 delete backend-${{ github.ref_name }})
             
             npm run build
-            pm2 start npm --name "backend" -- run start
+            pm2 start npm --name "backend-${{ github.ref_name }}" -- run start
             pm2 save

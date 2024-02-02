@@ -6,20 +6,21 @@ import {
     CannotGetImageError,
     CannotDeleteImageError,
 } from '../errors/ImageError';
-import AWSS3Service from './AWSS3Service';
-import { IRepository } from '../repositories/BaseRepo'
+import { AWSS3Service, IBucketService } from './AWSS3Service';
+import { IRepository } from '../repositories/BaseRepo';
 @Service()
 export class ImageService {
-  private imageRepository: IRepository<IImageDocument>;
-  private awsS3Service: AWSS3Service;
+    private imageRepository: IRepository<IImageDocument>;
+    private awsS3Service: IBucketService;
 
-  constructor(
-    @Inject(() => ImageRepository) imageRepository: IRepository<IImageDocument>,
-    @Inject(() => AWSS3Service) awsS3Service: AWSS3Service,
-  ) {
-    this.imageRepository = imageRepository;
-    this.awsS3Service = awsS3Service;
-  }
+    constructor(
+        @Inject(() => ImageRepository)
+        imageRepository: IRepository<IImageDocument>,
+        @Inject(() => AWSS3Service) awsS3Service: IBucketService,
+    ) {
+        this.imageRepository = imageRepository;
+        this.awsS3Service = awsS3Service;
+    }
 
     async createImage(
         ownerId: string,
