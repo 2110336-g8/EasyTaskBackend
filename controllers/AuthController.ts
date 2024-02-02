@@ -44,6 +44,7 @@ class AuthController {
             res.status(201).json({
                 success: true,
                 messsage: `Sent OTP to ${createdOtp.email} successfully`,
+                ref: createdOtp.reference,
             });
         } catch (error) {
             this.handleError(res, error);
