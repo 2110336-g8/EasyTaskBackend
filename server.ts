@@ -42,11 +42,28 @@ const frontHostname: string = isDevelopment
     : process.env.FRONT_HOSTNAME === undefined
       ? 'localhost'
       : process.env.FRONT_HOSTNAME;
+
+// To add later!!!
+const allowedOrigins: string[] = ['*'];
+
 const corsOption = {
-    origin: `http://${frontHostname}:${frontPort}`,
+    origin: function (
+        requestOrigin: string | undefined,
+        callback: (err: Error | null, origin?: string) => void,
+    ) {
+        if (allowedOrigins.includes(<string>requestOrigin) || !requestOrigin) {
+            callback(null, requestOrigin);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
+    optionsSuccessStatus: 200,
 };
-connectDB();
+
+connectDB().then(function (r: any) {
+    console.log('DB Connected!');
+});
 
 app.use(express.json());
 app.use(cors(corsOption));
