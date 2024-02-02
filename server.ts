@@ -44,21 +44,26 @@ const frontHostname: string = isDevelopment
       : process.env.FRONT_HOSTNAME;
 
 // To add later!!!
-const allowedOrigins: string[] = ['*'];
+// const allowedOrigins: string[] = ['*'];
+//
+// const corsOption = {
+//     origin: function (
+//         requestOrigin: string | undefined,
+//         callback: (err: Error | null, origin?: string) => void,
+//     ) {
+//         if (allowedOrigins.includes(<string>requestOrigin) || !requestOrigin) {
+//             callback(null, requestOrigin);
+//         } else {
+//             callback(new Error('Not allowed by CORS'));
+//         }
+//     },
+//     credentials: true,
+//     optionsSuccessStatus: 200,
+// };
 
 const corsOption = {
-    origin: function (
-        requestOrigin: string | undefined,
-        callback: (err: Error | null, origin?: string) => void,
-    ) {
-        if (allowedOrigins.includes(<string>requestOrigin) || !requestOrigin) {
-            callback(null, requestOrigin);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: '*',
     credentials: true,
-    optionsSuccessStatus: 200,
 };
 
 connectDB().then(function (r: any) {
