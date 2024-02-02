@@ -1,12 +1,12 @@
 import { Service } from 'typedi';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
-import { IImageDocument, ImageModel } from '../models/ImageModel';
+import { IImage, IImageDocument, ImageModel } from '../models/ImageModel';
 
-export interface IImageRepository extends IRepository<IImageDocument> {}
+export interface IImageRepository extends IRepository<IImage> {}
 
 @Service()
 export class ImageRepository
-    extends BaseMongooseRepository<IImageDocument>
+    extends BaseMongooseRepository<IImage>
     implements IImageRepository
 {
     constructor() {

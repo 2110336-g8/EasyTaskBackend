@@ -55,7 +55,7 @@ class AuthController {
         const data: IVerifyOtp = req.body;
         const verifiedOtpDoc = await this.otpService.verifyOtp(data);
         if (!verifiedOtpDoc) {
-            res.status(403).json({
+            res.status(400).json({
                 error: 'Failed to verify OTP',
             });
             return;

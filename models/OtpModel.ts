@@ -9,11 +9,7 @@ export interface IOtp {
     verifiedAt: Date;
 }
 
-export interface IOtpMethods {
-    isValidOtp: (otp: string) => boolean;
-}
-
-export interface IOtpDocument extends IOtp, IOtpMethods, Document {}
+export interface IOtpDocument extends IOtp, Document {}
 
 const OtpSchema = new mongoose.Schema<IOtpDocument>(
     {
@@ -81,11 +77,5 @@ const OtpSchema = new mongoose.Schema<IOtpDocument>(
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
 );
-
-OtpSchema.methods.isValidOtp = function (otp: string): boolean {
-    const matched = otp === this.otp;
-    const expired = new Date().getTime() > this.expiredAt.getTime();
-    return matched && !expired;
-};
 
 export const OtpModel = mongoose.model<IOtpDocument>('Otp', OtpSchema);

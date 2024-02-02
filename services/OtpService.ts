@@ -65,11 +65,11 @@ export class OtpService implements IOtpService {
     }
 
     async verifyOtp(data: IVerifyOtp): Promise<IOtpDocument | null> {
-        const otpDoc = await this.getOtpByEmail(data.email);
+        const otpDoc = await this.otpRepository.isValidOtp(
+            data.email,
+            data.otp,
+        );
         if (!otpDoc) return null;
-
-        const valid = otpDoc.isValidOtp(data.otp);
-        if (!valid) return null;
 
         const id = otpDoc._id;
         try {
@@ -91,7 +91,7 @@ export class OtpService implements IOtpService {
     }
 
     async deleteTrashOtp() {
-        const otpDocs = await this.otpRepository.getAll();
+        const otpDocs = await this.otpRepository.findAll();
         otpDocs.forEach((e: IOtpDocument) => {
             const now = new Date();
             const toDelVerify = new Date();

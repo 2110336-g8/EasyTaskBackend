@@ -6,9 +6,7 @@ export interface IImage {
     purpose: string; // User or task
 }
 
-export interface IImageDocument extends IImage, Document {
-    createdAt: Date;
-}
+export interface IImageDocument extends IImage, Document {}
 
 const ImageSchema = new mongoose.Schema<IImageDocument>(
     {
@@ -27,8 +25,8 @@ const ImageSchema = new mongoose.Schema<IImageDocument>(
         },
     },
     {
-        timestamps: { createdAt: 'createdAt'},
-    }
+        timestamps: { createdAt: 'createdAt' },
+    },
 );
 
 export const ImageModel = mongoose.model<IImageDocument>('Image', ImageSchema);

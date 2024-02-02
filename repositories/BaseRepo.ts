@@ -1,27 +1,27 @@
-import { Model, QueryOptions, Error as MongooseError } from 'mongoose';
+import { Model, Document, Error as MongooseError } from 'mongoose';
 import { ValidationError } from '../errors/RepoError';
 import { MongoError } from 'mongodb';
 
 export interface IRepository<T> {
-    findOne(id: string): Promise<T | null>;
-    getAll(): Promise<T[]>;
-    create(item: T): Promise<T>;
-    update(id: string, item: T): Promise<T | null>;
+    findOne(id: string): Promise<(T & Document) | null>;
+    findAll(): Promise<(T & Document)[]>;
+    create(item: T): Promise<T & Document>;
+    update(id: string, item: T): Promise<(T & Document) | null>;
     deleteOne(id: string): Promise<boolean>;
 }
 
 export abstract class BaseMongooseRepository<T> implements IRepository<T> {
-    protected readonly _model: Model<T>;
+    protected readonly _model: Model<T & Document>;
 
-    constructor(model: Model<T>) {
+    constructor(model: Model<T & Document>) {
         this._model = model;
     }
 
-    async create(item: T): Promise<T> {
+    async create(item: T): Promise<T & Document> {
         const item_w_id: Omit<T, '_id'> = item;
         try {
             const createdItem = await this._model.create(item_w_id);
-            return createdItem.toJSON();
+            return createdItem;
         } catch (error) {
             if (error instanceof MongooseError.ValidationError) {
                 throw new ValidationError(error.message);
@@ -35,7 +35,7 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
         }
     }
 
-    async update(id: string, item: T): Promise<T | null> {
+    async update(id: string, item: T): Promise<(T & Document) | null> {
         try {
             const updatedItem = await this._model.findByIdAndUpdate(
                 id,
@@ -45,7 +45,7 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
                     runValidators: true,
                 },
             );
-            return updatedItem ? updatedItem.toJSON() : null;
+            return updatedItem;
         } catch (error) {
             if (error instanceof MongooseError.ValidationError) {
                 throw new ValidationError(error.message);
@@ -62,13 +62,13 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
         return result.deletedCount !== 0;
     }
 
-    async findOne(id: string): Promise<T | null> {
+    async findOne(id: string): Promise<(T & Document) | null> {
         const item = await this._model.findById(id);
-        return item ? (item as T) : null;
+        return item;
     }
 
-    async getAll(): Promise<T[]> {
+    async findAll(): Promise<(T & Document)[]> {
         const items = await this._model.find();
-        return items as T[];
+        return items;
     }
 }

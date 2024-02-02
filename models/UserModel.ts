@@ -2,21 +2,17 @@ import mongoose, { Document, ObjectId, Types } from 'mongoose';
 import { compare, genSalt, hash } from 'bcrypt';
 
 export interface IUser {
-    firstName: string
-    lastName: string
-    email: string
-    password: string
-    phoneNumber?: string
-    imageKey?: string
-    bankId?: ObjectId
-    bankAccNo?: string
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phoneNumber?: string;
+    imageKey?: string;
+    bankId?: ObjectId;
+    bankAccNo?: string;
 }
 
-interface IUserMethods {
-    isValidPassword: (password: string) => Promise<boolean>;
-}
-
-export interface IUserDocument extends IUser, IUserMethods, Document {}
+export interface IUserDocument extends IUser, Document {}
 
 const UserSchema = new mongoose.Schema<IUserDocument>(
     {
@@ -76,13 +72,6 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
 );
-
-UserSchema.methods.isValidPassword = async function (
-    password: string,
-): Promise<boolean> {
-    const isValid = await compare(password, this.password);
-    return isValid;
-};
 
 UserSchema.methods.toJSON = function () {
     const userObject: any = this.toObject();

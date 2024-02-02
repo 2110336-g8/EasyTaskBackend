@@ -1,5 +1,5 @@
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
-import { IUserDocument } from '../models/UserModel';
+import { IUser, IUserDocument } from '../models/UserModel';
 import { Service, Inject, Token } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
@@ -32,7 +32,7 @@ export class UsersService implements IUsersService {
         this.otpRepository = otpRepository;
     }
 
-    async createUser(userData: IUserDocument): Promise<IUserDocument> {
+    async createUser(userData: IUser): Promise<IUserDocument> {
         const otpDoc = await this.otpRepository.findOneByEmail(userData.email);
         if (!otpDoc) {
             throw new CannotCreateUserError('Email is not verified');
