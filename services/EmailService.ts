@@ -8,7 +8,7 @@ export interface IEmailService {
 }
 
 @Service()
-export class MailJetService {
+export class MailJetService implements IEmailService {
     private mailjet: Client;
 
     constructor() {
