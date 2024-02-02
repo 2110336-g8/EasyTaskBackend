@@ -25,7 +25,8 @@ export class OtpRepository
         if (!otpDoc) {
             return null;
         }
-        const isValid = otpDoc.otp === otp;
-        return isValid ? otpDoc : null;
+        const isMatched = otpDoc.otp === otp;
+        const isExpired = otpDoc.expiredAt.getTime() < new Date().getTime();
+        return isMatched && !isExpired ? otpDoc : null;
     }
 }

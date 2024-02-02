@@ -1,4 +1,5 @@
 import mongoose, { Document } from 'mongoose';
+import Constants from '../config/constants';
 
 export interface IOtp {
     email: string;
@@ -54,7 +55,7 @@ const OtpSchema = new mongoose.Schema<IOtpDocument>(
             require: [true, 'OTP expired time is required'],
             default: function (): Date {
                 let date = new Date();
-                date.setMinutes(date.getMinutes() + 5);
+                date.setMinutes(date.getMinutes() + Constants.OTP_EXP_MIN);
                 return date;
             },
         },

@@ -4,6 +4,7 @@ import { IOtpDocument } from '../models/OtpModel';
 import { CannotCreateOtpError } from '../errors/OtpError';
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
 import { IVerifyOtp } from '../models/AuthModel';
+import Constants from '../config/constants';
 
 export interface IOtpService {
     createOtp: (email: string) => Promise<IOtpDocument>;
@@ -38,7 +39,12 @@ export class OtpService implements IOtpService {
             if (existOtp) {
                 const expiredAt = existOtp.expiredAt.getTime();
                 const now = new Date().getTime();
-                if (expiredAt - now < 4 * 60 * 1000) {
+                if (
+                    expiredAt - now <
+                    (Constants.OTP_EXP_MIN - Constants.OTP_RESENDABLE_MIN) *
+                        60 *
+                        1000
+                ) {
                     await this.deleteOtp(email);
                 } else {
                     throw new CannotCreateOtpError(

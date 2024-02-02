@@ -4,8 +4,7 @@ import { Service, Inject, Token } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
 import { IOtpRepository, OtpRepository } from '../repositories/OtpRepo';
-import { IRepository } from '../repositories/BaseRepo';
-import { IOtpDocument } from '../models/OtpModel';
+import Constants from '../config/constants';
 
 export interface IUsersService {
     createUser: (userData: IUserDocument) => Promise<IUserDocument>;
@@ -37,7 +36,11 @@ export class UsersService implements IUsersService {
         if (!otpDoc) {
             throw new CannotCreateUserError('Email is not verified');
         }
-        if (!otpDoc.isVerified) {
+        if (
+            !otpDoc.isVerified ||
+            new Date().getTime() - otpDoc.verifiedAt.getTime() >
+                Constants.VERIFIED_CREATABLE_MIN * 60 * 1000
+        ) {
             throw new CannotCreateUserError('Email is not verified');
         }
 
