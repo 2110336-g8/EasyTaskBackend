@@ -37,6 +37,7 @@ describe('UsersService', () => {
         const otpDoc = {
             email: 'john.cena@gmail.com',
             isVerified: 'true',
+            verifiedAt: new Date(),
         };
 
         fakeUserRepo.create.mockResolvedValue(userDoc);
