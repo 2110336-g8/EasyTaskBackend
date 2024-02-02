@@ -1,59 +1,97 @@
-import {NextFunction, Request, Response} from "express";
-import {isValidLoginInterface} from "../models/AuthModel";
-import AuthService from "../services/AuthService";
+import { NextFunction, Request, Response } from 'express';
+import {
+    isValidILogin,
+    isValidISendOtp,
+    isValidIVerifyOtp,
+} from '../models/AuthModel';
+import { AuthService } from '../services/AuthService';
+import { Inject, Service } from 'typedi';
 
-/**
- * Middleware: Validate login information from client
- *
- * @param req
- * @param res
- * @param next
- */
-export const validateLoginRequest = async function (req: Request, res: Response, next: NextFunction) {
-    if (isValidLoginInterface(req.body)) {
-        next();
-    } else {
-        res.status(400).json({})
+@Service()
+class AuthMiddleware {
+    private authService: AuthService;
+
+    constructor(@Inject() authService: AuthService) {
+        this.authService = authService;
+    }
+
+    validateSendOtpRequest(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): void {
+        if (isValidISendOtp(req.body)) {
+            next();
+        } else {
+            res.status(400).json({
+                error: 'Invalid Request',
+                detalis: 'Email is required to send OTP',
+            });
+        }
+    }
+
+    validateVerifyOtpRequest(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): void {
+        if (isValidIVerifyOtp(req)) {
+            next();
+        } else {
+            res.status(400).json({
+                error: 'Email and OTP are required to send OTP',
+            });
+        }
+    }
+
+    validateLoginRequest(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): void {
+        if (isValidILogin(req.body)) {
+            next();
+        } else {
+            res.status(400).json({
+                error: 'Invalide Request',
+                details: 'Email and password are required to login',
+            });
+        }
+    }
+
+    validateToken(req: Request, res: Response, next: NextFunction): void {
+        const respondUnAuth = function (res: Response): void {
+            res.status(401).json({
+                error: 'Unauthorized',
+            });
+        };
+
+        const auth = req.headers['authorization'];
+
+        if (auth === undefined) {
+            respondUnAuth(res);
+            return;
+        }
+
+        const token = auth.split(' ')[1];
+
+        try {
+            const decodedToken = this.authService.decodeToken(token);
+
+            // @ts-ignore
+            if (Date.now() >= decodedToken.exp * 1000) {
+                // If expired
+                respondUnAuth(res);
+            } else {
+                // Token is valid, pass the token
+                res.locals.decodedToken = decodedToken;
+                next();
+            }
+        } catch (error) {
+            // Token is invalid (failed decode)
+            respondUnAuth(res);
+        }
     }
 }
 
-/**
- * Middleware: Check if the token is valid AND not expired
- *
- * @param req
- * @param res
- * @param next
- */
-export const validateToken = async function (req: Request, res: Response, next: NextFunction) {
-    const respond401 = function (res: Response) {
-        res.status(401).json({
-            message: 'Unauthorized'
-        });
-    }
-
-    const auth = req.headers['authorization'];
-
-    if (auth === undefined) {
-        respond401(res);
-        return;
-    }
-
-    const token = auth.split(' ')[1]
-
-    try {
-        const decodedToken = AuthService.decodeToken(token);
-
-        // @ts-ignore
-        if (Date.now() >= decodedToken.exp * 1000) {
-            // If expired
-            respond401(res);
-        } else {
-            // Token is valid
-            res.locals.decodedToken = decodedToken;
-            next();
-        }
-    } catch (error) {
-        // Token is invalid (failed decode)
-        respond401(res);
-    }
-};
+export default AuthMiddleware;

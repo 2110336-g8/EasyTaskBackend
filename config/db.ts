@@ -1,4 +1,4 @@
-import mongoose, { Connection } from "mongoose";
+import mongoose, { Connection } from 'mongoose';
 
 const connectDB = async (): Promise<void> => {
     mongoose.set('strictQuery', true);

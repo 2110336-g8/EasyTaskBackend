@@ -1,36 +1,57 @@
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import fs from 'fs';
-import {LoginInterface} from "../models/AuthModel";
+import { Inject, Service } from 'typedi';
+import { ILogin } from '../models/AuthModel';
+import { IUsersService, UsersService } from './UsersService';
+import { IUserDocument } from '../models/UserModel';
 
-const key_pair = {
-    key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
-    pub: fs.readFileSync(`${__dirname}/../config/rs256.key.pub`)
-};
+export interface IAuthService {
+    generateToken: (payload: ILogin, sessionMinutes?: number) => string;
+    decodeToken: (token: string) => string | JwtPayload;
+    verifyUser: (login: ILogin) => Promise<IUserDocument | null>;
+}
+@Service()
+export class AuthService implements IAuthService {
+    private usersService: IUsersService;
+    private key_pair = {
+        key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
+        pub: fs.readFileSync(`${__dirname}/../config/rs256.key.pub`),
+    };
 
-class AuthService {
-    static generateToken(payload: LoginInterface,
-                         sessionMinutes: number = 60): string {
-        const expiryTime: number = Math.floor(Date.now() / 1000) + sessionMinutes * 60;
-        const subpayload = {
-            phoneNumber: payload.phoneNumber
+    constructor(@Inject(() => UsersService) usersService: IUsersService) {
+        this.usersService = usersService;
+    }
+
+    generateToken(
+        payload: ILogin,
+        sessionMinutes: number = parseInt(process.env.JWT_EXP_MIN || '60'),
+    ): string {
+        const expiryTime: number =
+            Math.floor(Date.now() / 1000) + sessionMinutes * 60;
+        const subPayload = {
+            phoneNumber: payload.email,
         };
-        return jwt.sign(subpayload, key_pair.key, {
+        return jwt.sign(subPayload, this.key_pair.key, {
             expiresIn: expiryTime,
-            algorithm: 'RS256'
+            algorithm: 'RS256',
         });
     }
 
-    static decodeToken(token: string) {
-        return jwt.verify(token, key_pair.pub, {
-            algorithms: ['RS256']
+    decodeToken(token: string): string | JwtPayload {
+        return jwt.verify(token, this.key_pair.pub, {
+            algorithms: ['RS256'],
         });
     }
 
-    static verifyUser(login: LoginInterface): boolean {
-        // TODO: phoneNumber - password database lookup handling
+    async verifyUser(login: ILogin): Promise<IUserDocument | null> {
+        try {
+            const user = await this.usersService.getUserByEmail(login.email);
+            if (!user) return null;
 
-        return true;
+            const isVerify = await user.isValidPassword(login.password);
+            return isVerify ? user : null;
+        } catch (error) {
+            return null;
+        }
     }
 }
-
-export default AuthService;

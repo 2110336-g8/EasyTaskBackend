@@ -1,36 +1,99 @@
-import { Error as MongooseError } from 'mongoose';
-import { UserModel, User, UserDocument } from '../models/UserModel';
-import { ValidationError } from '../exceptions/UsersError';
-import { MongoError, MongoServerError } from 'mongodb';
+import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
+import { IUserDocument } from '../models/UserModel';
+import { Service, Inject, Token } from 'typedi';
+import { CannotCreateUserError } from '../errors/UsersError';
+import { ValidationError } from '../errors/RepoError';
+import { IOtpRepository, OtpRepository } from '../repositories/OtpRepo';
+import { IRepository } from '../repositories/BaseRepo';
+import { IOtpDocument } from '../models/OtpModel';
 
-class UserService {
-    static async postUser(userData: Omit<User, '_id'>): Promise<UserDocument> {
-        try {
-            const newUser: UserDocument = await UserModel.create(userData);
-            return newUser
-        } catch (error) {
-            if (error instanceof MongooseError.ValidationError) {
-                throw new ValidationError(error.message)
-            }
-            if ((error as MongoServerError).code == 11000) {
-                throw new ValidationError((error as MongoServerError).message)
-            } else {
-                throw new Error('Unknown Error')
-            }
-        }
-    }
-
-    static async updateUserProfile(userId: string, updatedData: any): Promise<any> {
-        // Assuming you have a method in UserModel to find and update a user by ID
-        const user = await UserModel.findByIdAndUpdate(userId, updatedData, { new: true });
-
-        if (!user) {
-            // Handle user not found scenario
-            throw new Error('User not found');
-        }
-
-        return user;
-    }
+export interface IUsersService {
+    createUser: (userData: IUserDocument) => Promise<IUserDocument>;
+    getUserById: (id: string) => Promise<IUserDocument | null>;
+    getUserByEmail: (email: string) => Promise<IUserDocument | null>;
+    updateUser: (
+        id: string,
+        data: IUserDocument,
+    ) => Promise<IUserDocument | null>;
 }
 
-export default UserService;
+@Service()
+export class UsersService implements IUsersService {
+    private userRepository: IUsersRepositorty;
+    private otpRepository: IOtpRepository;
+
+    constructor(
+        @Inject(() => UsersRepository)
+        userRepository: IUsersRepositorty,
+        @Inject(() => OtpRepository)
+        otpRepository: IOtpRepository,
+    ) {
+        this.userRepository = userRepository;
+        this.otpRepository = otpRepository;
+    }
+
+    async createUser(userData: IUserDocument): Promise<IUserDocument> {
+        const otpDoc = await this.otpRepository.findOneByEmail(userData.email);
+        if (!otpDoc) {
+            throw new CannotCreateUserError('Email is not verified');
+        }
+        if (!otpDoc.isVerified) {
+            throw new CannotCreateUserError('Email is not verified');
+        }
+
+        const existEmailUser = await this.getUserByEmail(userData.email);
+        if (existEmailUser) {
+            throw new CannotCreateUserError('Email is already used');
+        }
+
+        try {
+            const createdUser = await this.userRepository.create(userData);
+            return createdUser;
+        } catch (error) {
+            if (error instanceof ValidationError)
+                throw new CannotCreateUserError(error.message);
+            else {
+                throw new Error('Unknown Error');
+            }
+        }
+    }
+
+    async getUserById(id: string): Promise<IUserDocument | null> {
+        try {
+            const user = await this.userRepository.findOne(id);
+            if (!user) {
+                return null;
+            }
+            return user;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async getUserByEmail(email: string): Promise<IUserDocument | null> {
+        try {
+            const user = await this.userRepository.findOneByEmail(email);
+            if (!user) {
+                return null;
+            }
+            return user;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async updateUser(
+        id: string,
+        data: IUserDocument,
+    ): Promise<IUserDocument | null> {
+        try {
+            const user = await this.userRepository.update(id, data);
+            if (!user) {
+                null;
+            }
+            return user;
+        } catch (error) {
+            throw error;
+        }
+    }
+}

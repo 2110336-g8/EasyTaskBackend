@@ -1,10 +1,23 @@
 import express from 'express';
-import { createUser } from '../controllers/UsersController';
-import { updateUserProfile } from '../controllers/UsersController';
+import UsersController from '../controllers/UsersController';
+import Container from 'typedi';
 
 const router = express.Router();
 
-router.route('/').post(createUser);
-router.route('/update/:obj_id').patch(updateUserProfile);
+const usersController: UsersController = Container.get(UsersController);
 
-export default router;
+router.route('/').post(usersController.createUser);
+
+router
+    .route('/:id')
+    .get(usersController.getUserbyId)
+    .patch(usersController.updateUser);
+
+router 
+    .route('/:id/profile-image')
+    .get(usersController.getProfileImage)
+    .post(usersController.uploadProfileImage)
+    .delete(usersController.deleteProfileImage);
+
+export default router
+
