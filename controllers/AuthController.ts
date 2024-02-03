@@ -81,12 +81,7 @@ class AuthController {
                 user,
             });
         } catch (error) {
-            if (error instanceof CannotCreateUserError) {
-                res.status(403).json({
-                    error: error.name,
-                    details: error.message,
-                });
-            }
+            this.handleError(res, error);
         }
     };
 

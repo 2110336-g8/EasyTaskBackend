@@ -32,6 +32,11 @@ export class UsersService implements IUsersService {
     }
 
     async createUser(userData: IUser): Promise<IUserDocument> {
+        const existEmailUser = await this.getUserByEmail(userData.email);
+        if (existEmailUser) {
+            throw new CannotCreateUserError('Email is already used');
+        }
+
         const otpDoc = await this.otpRepository.findOneByEmail(userData.email);
         if (!otpDoc) {
             throw new CannotCreateUserError('Email is not verified');
@@ -44,17 +49,12 @@ export class UsersService implements IUsersService {
             throw new CannotCreateUserError('Email is not verified');
         }
 
-        const existEmailUser = await this.getUserByEmail(userData.email);
-        if (existEmailUser) {
-            throw new CannotCreateUserError('Email is already used');
-        }
-
         try {
             const createdUser = await this.userRepository.create(userData);
             return createdUser;
         } catch (error) {
             if (error instanceof ValidationError)
-                throw new CannotCreateUserError(error.message);
+                throw new ValidationError(error.message);
             else {
                 throw new Error('Unknown Error');
             }
