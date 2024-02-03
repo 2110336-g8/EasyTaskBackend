@@ -84,7 +84,7 @@ class AuthController {
             if (error instanceof CannotCreateUserError) {
                 res.status(403).json({
                     error: error.name,
-                    detalis: error.message,
+                    details: error.message,
                 });
             }
         }
