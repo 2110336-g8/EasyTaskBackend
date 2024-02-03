@@ -31,7 +31,7 @@ class UsersController {
             if (error instanceof CannotCreateUserError) {
                 res.status(400).json({
                     error: error.name,
-                    detalis: error.message,
+                    details: error.message,
                 });
             } else {
                 res.status(500).json({ error: 'Internal Server Error' });
@@ -111,35 +111,32 @@ class UsersController {
                 const fileExtension = metadata.format!.toLowerCase();
                 console.log(fileExtension);
 
-                 // Generate the imageKey using the userId and fileExtension
-            const key = `${userId}.${fileExtension}`;
-            console.log(key);
-            // Update the user's imageKey in your database
-            await this.usersService.updateUser(userId, {
-                imageKey: key,
-            } as IUserDocument);
+                // Generate the imageKey using the userId and fileExtension
+                const key = `${userId}.${fileExtension}`;
+                console.log(key);
+                // Update the user's imageKey in your database
+                await this.usersService.updateUser(userId, {
+                    imageKey: key,
+                } as IUserDocument);
 
-            // Upload the file to AWS S3 or your preferred storage
-            const uploadedFile = await this.imageService.createImage(
-                userId,
-                file.buffer,
-                file.mimeType,
-                key,
-                'User-Profile',
-            );
+                // Upload the file to AWS S3 or your preferred storage
+                const uploadedFile = await this.imageService.createImage(
+                    userId,
+                    file.buffer,
+                    file.mimeType,
+                    key,
+                    'User-Profile',
+                );
 
-            res.status(201).json({
-                message: 'Profile image uploaded successfully',
-            });
+                res.status(201).json({
+                    message: 'Profile image uploaded successfully',
+                });
             } catch (error) {
                 res.status(400).json({
                     error: 'Uploaded file is not a valid image',
                 });
                 return;
             }
-            
-            
-           
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
@@ -157,7 +154,9 @@ class UsersController {
             if (userProfileImageUrl) {
                 // Update the user's profile image URL in your database (optional)
                 await this.imageService.deleteImage(userId);
-                await this.usersService.updateUser(userId, {imageKey: ''} as IUserDocument);
+                await this.usersService.updateUser(userId, {
+                    imageKey: '',
+                } as IUserDocument);
 
                 res.status(200).json({
                     message: 'Profile image deleted successfully',

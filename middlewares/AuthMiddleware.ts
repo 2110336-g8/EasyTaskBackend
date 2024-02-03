@@ -25,7 +25,7 @@ class AuthMiddleware {
         } else {
             res.status(400).json({
                 error: 'Invalid Request',
-                detalis: 'Email is required to send OTP',
+                details: 'Email is required to send OTP',
             });
         }
     }
