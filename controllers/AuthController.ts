@@ -78,7 +78,7 @@ class AuthController {
                 success: true,
                 message: 'Register and logged in',
                 token,
-                user,
+                user: user.toJSON(),
             });
         } catch (error) {
             this.handleError(res, error);
@@ -97,7 +97,7 @@ class AuthController {
                 success: true,
                 message: 'Logged in',
                 token,
-                user,
+                user: user.toJSON(),
             });
         }
     };
