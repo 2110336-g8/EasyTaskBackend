@@ -3,9 +3,11 @@ import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import userRouter from './routes/UsersRoute';
 import connectDB from './config/db';
-import router from './routes/AuthRoute';
+import authRouter from './routes/AuthRoute';
 import taskRouter from './routes/TasksRoute';
 import cors from 'cors';
+import bodyParser from 'body-parser';
+import bankRouter from './routes/BankRoute';
 
 // Load ENVs
 dotenv.config({ path: `${__dirname}/config/config.env` });
@@ -42,18 +44,43 @@ const frontHostname: string = isDevelopment
     : process.env.FRONT_HOSTNAME === undefined
       ? 'localhost'
       : process.env.FRONT_HOSTNAME;
+
+// To add later!!!
+// const allowedOrigins: string[] = ['*'];
+//
+// const corsOption = {
+//     origin: function (
+//         requestOrigin: string | undefined,
+//         callback: (err: Error | null, origin?: string) => void,
+//     ) {
+//         if (allowedOrigins.includes(<string>requestOrigin) || !requestOrigin) {
+//             callback(null, requestOrigin);
+//         } else {
+//             callback(new Error('Not allowed by CORS'));
+//         }
+//     },
+//     credentials: true,
+//     optionsSuccessStatus: 200,
+// };
+
 const corsOption = {
-    origin: `http://${frontHostname}:${frontPort}`,
+    origin: '*',
     credentials: true,
 };
-connectDB();
+
+connectDB().then(function (r: any) {
+    console.log('DB Connected!');
+});
 
 app.use(express.json());
+app.use(bodyParser.raw({ type: ['image/jpeg', 'image/png'], limit: '5mb' }));
+
 app.use(cors(corsOption));
 
 app.use('/v1/users', userRouter);
-app.use('/v1/auth', router);
+app.use('/v1/auth', authRouter);
 app.use('/v1/tasks', taskRouter);
+app.use('/v1/banks', bankRouter);
 
 // Other paths are invalid, res 404
 app.use('*', (req: Request, res: Response) => {

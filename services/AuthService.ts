@@ -4,6 +4,7 @@ import { Inject, Service } from 'typedi';
 import { ILogin } from '../models/AuthModel';
 import { IUsersService, UsersService } from './UsersService';
 import { IUserDocument } from '../models/UserModel';
+import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
 
 export interface IAuthService {
     generateToken: (payload: ILogin, sessionMinutes?: number) => string;
@@ -12,14 +13,16 @@ export interface IAuthService {
 }
 @Service()
 export class AuthService implements IAuthService {
-    private usersService: IUsersService;
+    private usersRepository: IUsersRepositorty;
     private key_pair = {
         key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
         pub: fs.readFileSync(`${__dirname}/../config/rs256.key.pub`),
     };
 
-    constructor(@Inject(() => UsersService) usersService: IUsersService) {
-        this.usersService = usersService;
+    constructor(
+        @Inject(() => UsersRepository) usersService: IUsersRepositorty,
+    ) {
+        this.usersRepository = usersService;
     }
 
     generateToken(
@@ -45,11 +48,11 @@ export class AuthService implements IAuthService {
 
     async verifyUser(login: ILogin): Promise<IUserDocument | null> {
         try {
-            const user = await this.usersService.getUserByEmail(login.email);
-            if (!user) return null;
-
-            const isVerify = await user.isValidPassword(login.password);
-            return isVerify ? user : null;
+            const user = await this.usersRepository.isValidPassword(
+                login.email,
+                login.password,
+            );
+            return user;
         } catch (error) {
             return null;
         }

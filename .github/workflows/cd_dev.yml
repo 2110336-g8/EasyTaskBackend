@@ -20,6 +20,8 @@ jobs:
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
             cd /home/${{ secrets.USERNAME }}/${{ github.ref_name }}/
+
+            git reset --hard origin/${{ github.ref_name }}
             
             git pull origin ${{ github.ref_name }}
             

@@ -55,7 +55,7 @@ class AuthController {
         const data: IVerifyOtp = req.body;
         const verifiedOtpDoc = await this.otpService.verifyOtp(data);
         if (!verifiedOtpDoc) {
-            res.status(403).json({
+            res.status(400).json({
                 error: 'Failed to verify OTP',
             });
             return;
@@ -81,12 +81,7 @@ class AuthController {
                 user,
             });
         } catch (error) {
-            if (error instanceof CannotCreateUserError) {
-                res.status(403).json({
-                    error: error.name,
-                    detalis: error.message,
-                });
-            }
+            this.handleError(res, error);
         }
     };
 

@@ -1,21 +1,21 @@
 import { Inject, Service } from 'typedi';
 import { IImageRepository, ImageRepository } from '../repositories/ImageRepo';
-import { ImageModel, IImageDocument } from '../models/ImageModel';
+import { ImageModel, IImageDocument, IImage } from '../models/ImageModel';
 import {
     CannotCreateImageError,
     CannotGetImageError,
     CannotDeleteImageError,
 } from '../errors/ImageError';
-import AWSS3Service, { IBucketService } from './AWSS3Service';
+import { AWSS3Service, IBucketService } from './AWSS3Service';
 import { IRepository } from '../repositories/BaseRepo';
 @Service()
 export class ImageService {
-    private imageRepository: IRepository<IImageDocument>;
+    private imageRepository: IRepository<IImage>;
     private awsS3Service: IBucketService;
 
     constructor(
         @Inject(() => ImageRepository)
-        imageRepository: IRepository<IImageDocument>,
+        imageRepository: IRepository<IImage>,
         @Inject(() => AWSS3Service) awsS3Service: IBucketService,
     ) {
         this.imageRepository = imageRepository;
@@ -31,14 +31,13 @@ export class ImageService {
     ): Promise<IImageDocument> {
         try {
             // Upload the image to AWS S3
-            await this.awsS3Service.uploadFile(fileBuffer, ownerId, mimeType);
+            await this.awsS3Service.uploadFile(fileBuffer, imageKey, mimeType);
             // Save image details to the database
             const imageDoc = await this.imageRepository.create({
                 ownerId: ownerId,
                 imageKey: imageKey,
                 purpose: purpose,
-                createdAt: new Date(),
-            } as IImageDocument);
+            });
 
             return imageDoc;
         } catch (error) {
@@ -59,12 +58,18 @@ export class ImageService {
                 throw new Error('Image not found for the given ownerId');
             }
             const key = imageDoc.imageKey;
+            console.log(key);
+            if (key === null || key === '') {
+                console.log('There is no profile image for this user');
+                throw new CannotGetImageError('Can not get the image');
+            }
             const imageUrl = await this.awsS3Service.getObjectSignedUrl(key);
 
             // const imageUrl = await this.awsS3Service.getObjectSignedUrl('65b541c5f264a6557e00f08c.jpg') ////uncomment this to test
             return imageUrl;
         } catch (error) {
-            throw new CannotGetImageError('Can not get the image');
+            console.error(error); // Log the error for debugging purposes
+            return null;
         }
     }
 
@@ -85,6 +90,7 @@ export class ImageService {
             await this.awsS3Service.deleteFile(key);
 
             // Delete image details from the database
+            console.log(imageDoc.id);
             const success = await this.imageRepository.deleteOne(imageDoc.id);
             return success;
         } catch (error) {
