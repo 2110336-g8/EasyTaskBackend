@@ -30,6 +30,22 @@ class TasksController {
             }
         }
     };
+
+    getTasks = async (req:Request, res:Response) : Promise<void> => {
+        try {
+            const taskPage = req.body;
+            const taskPerPage = req.body.taskperPage;
+
+            const tasks = await this.tasksService.getTasks(taskPage, taskPerPage);
+            res.status(200).json({
+                success: true,
+                tasks,
+            });
+        }
+        catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
 }
 
 export default TasksController;

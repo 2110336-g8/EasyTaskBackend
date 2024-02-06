@@ -6,6 +6,6 @@ const taskService = Container.get(TaskController);
 
 const router = express.Router();
 
-router.route('/').post(taskService.createTask);
+router.route('/').post(taskService.createTask).get(taskService.getTasks);
 
 export default router;

@@ -4,6 +4,7 @@ import { TasksRepository } from '../repositories/TasksRepo';
 import { Inject, Service } from 'typedi';
 
 export interface ITasksService {
+    getTasks(taskPage: any, taskPerPage: any): unknown;
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
 }
 
@@ -22,6 +23,15 @@ class TaskService implements ITasksService {
             const task: ITaskDocument =
                 await this.tasksRepository.create(taskData);
             return task;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async getTasks(page: number, taskPerPage: number): Promise<ITaskDocument> {
+        try {
+            const tasks: ITaskDocument = await this.tasksRepository.findTaskByPage(page, taskPerPage);
+            return tasks;
         } catch (error) {
             throw error;
         }

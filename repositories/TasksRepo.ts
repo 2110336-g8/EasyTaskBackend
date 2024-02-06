@@ -13,4 +13,11 @@ export class TasksRepository
     constructor() {
         super(TaskModel);
     }
+
+    async findTaskByPage(page: number, taskPerPage: number): Promise<ITaskDocument[]> {
+        const tasks = await this._model.find().skip(page * taskPerPage).limit(taskPerPage);
+        return tasks;
+    }
 }
+
+
