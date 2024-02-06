@@ -4,13 +4,22 @@ import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
 
 export interface ITasksService {
+<<<<<<< HEAD
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
     getTaskList: (taskPage: number, taskPerPage: number) => Promise<ITaskDocument[]>;
+=======
+<<<<<<< HEAD
+    createTask: (taskData: ITaskDocument) => Promise<ITaskDocument>;
+>>>>>>> b405931 (add getTask Method 🐥)
     getTaskById: (id: string) => Promise<ITaskDocument | null>;
     updateTask: (
         id: string,
         updateData: Partial<ITask>,
     ) => Promise<ITaskDocument | null>;
+=======
+    getTasks(taskPage: any, taskPerPage: any): unknown;
+    createTask: (taskData: ITask) => Promise<ITaskDocument>;
+>>>>>>> 78d09ec (add getTask Method 🐥)
 }
 
 @Service()
@@ -54,6 +63,19 @@ export class TasksService implements ITasksService {
             return null;
         }
     }
+<<<<<<< HEAD
+=======
+
+    async getTasks(page: number, taskPerPage: number): Promise<ITaskDocument> {
+        try {
+            const tasks: ITaskDocument = await this.tasksRepository.findTaskByPage(page, taskPerPage);
+            return tasks;
+        } catch (error) {
+            throw error;
+        }
+    }
+}
+>>>>>>> 78d09ec (add getTask Method 🐥)
 
     async updateTask(
         id: string,

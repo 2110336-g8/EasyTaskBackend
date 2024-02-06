@@ -14,14 +14,16 @@ class TasksController {
         @Inject(() => ImageService) imageService: ImageService,
     ) {
         this.tasksService = tasksService;
-        this.imageService = imageService;
     }
 
     createTask = async (req: Request, res: Response): Promise<void> => {
         try {
             const data = req.body;
             const task = await this.tasksService.createTask(data);
-            res.status(201).json(task);
+            res.status(201).json({
+                success: true,
+                task,
+            });
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
@@ -42,7 +44,9 @@ class TasksController {
             const tasks = await this.tasksService.getTaskList(taskPage, taskPerPage);
             res.status(200).json({
                 success: true,
-                tasks,
+                currentPage: taskPage,
+                size: taskPerPage,
+                data: tasks,
             });
         }
         catch (error) {
@@ -91,8 +95,7 @@ class TasksController {
         }
     };
 
-    // upload 1 image
-    async uploadTaskImage(req: Request, res: Response): Promise<void> {
+    getAllTasks = async (req:Request, res:Response) : Promise<void> => {
         try {
             const taskId = req.params.id;
             const { seq } = req.body;

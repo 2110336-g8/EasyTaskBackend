@@ -6,7 +6,12 @@ const tasksController: TasksController = Container.get(TasksController);
 
 const router = express.Router();
 
+<<<<<<< HEAD
 router.route('/').post(tasksController.createTask).get(tasksController.getTasks);
+=======
+<<<<<<< HEAD
+router.route('/').post(tasksController.createTask);
+>>>>>>> b405931 (add getTask Method 🐥)
 
 router
     .route('/:id/task-image')
@@ -18,5 +23,8 @@ router
     .route('/:id/task-image/delete')
     .post(tasksController.deleteTaskImagesBySeqs)
     .delete(tasksController.deleteTaskAllImages);
+=======
+router.route('/').post(taskService.createTask).get(taskService.getTasks);
+>>>>>>> 78d09ec (add getTask Method 🐥)
 
 export default router;
