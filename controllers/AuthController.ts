@@ -120,8 +120,8 @@ class AuthController {
         res.cookie(cookieName, token, {
             httpOnly: true,
             expires: expirationDate,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            secure: process.env.ENVIRONMENT === 'production',
+            sameSite: 'none',
         });
     };
 
