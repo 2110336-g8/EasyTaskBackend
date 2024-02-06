@@ -1,5 +1,5 @@
 import mongoose, { Document, ObjectId, Types } from 'mongoose';
-import { compare, genSalt, hash } from 'bcrypt';
+import { genSalt, hash } from 'bcrypt';
 
 export interface IUser {
     firstName: string;
@@ -9,6 +9,7 @@ export interface IUser {
     phoneNumber?: string;
     imageKey?: string;
     bankId?: ObjectId;
+    bankAccName?: string;
     bankAccNo?: string;
 }
 
@@ -56,6 +57,21 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
         },
         bankId: {
             type: Types.ObjectId,
+            require: [
+                function (this: IUser) {
+                    return this.bankAccName || this.bankAccNo;
+                },
+                'bankId is required with bankAccName and bankAccNo',
+            ],
+        },
+        bankAccName: {
+            type: String,
+            require: [
+                function (this: IUser) {
+                    return this.bankAccNo || this.bankId;
+                },
+                'bankAccName is required with bankId and bankAccNo',
+            ],
         },
         bankAccNo: {
             type: String,
@@ -66,6 +82,12 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                 message:
                     'Bank account number need to be all number with length 10',
             },
+            require: [
+                function (this: IUser) {
+                    return this.bankAccName || this.bankId;
+                },
+                'bankAccNo is required with bankId and bankAccName',
+            ],
         },
     },
     {

@@ -64,24 +64,18 @@ export class UsersService implements IUsersService {
     async getUserById(id: string): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.findOne(id);
-            if (!user) {
-                return null;
-            }
             return user;
         } catch (error) {
-            throw error;
+            return null;
         }
     }
 
     async getUserByEmail(email: string): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.findOneByEmail(email);
-            if (!user) {
-                return null;
-            }
             return user;
         } catch (error) {
-            throw error;
+            return null;
         }
     }
 
@@ -91,12 +85,9 @@ export class UsersService implements IUsersService {
     ): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.update(id, data);
-            if (!user) {
-                null;
-            }
             return user;
         } catch (error) {
-            throw error;
+            return null;
         }
     }
 }
