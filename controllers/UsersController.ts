@@ -26,7 +26,7 @@ class UsersController {
         try {
             const data = req.body;
             const user = await this.usersService.createUser(data);
-            res.status(201).json(user);
+            res.status(201).json({ user: user.toJSON() });
         } catch (error) {
             if (error instanceof CannotCreateUserError) {
                 res.status(400).json({
@@ -43,7 +43,11 @@ class UsersController {
         try {
             const id = req.params.id;
             const user = await this.usersService.getUserById(id);
-            res.status(200).json(user);
+            if (!user) {
+                res.status(404).json({ error: 'User not found' });
+                return;
+            }
+            res.status(200).json({ user: user.toJSON() });
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
@@ -58,8 +62,9 @@ class UsersController {
                 res.status(404).json({
                     error: 'User not found',
                 });
+                return;
             }
-            res.status(200).json(user);
+            res.status(200).json({ user: user.toJSON() });
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
