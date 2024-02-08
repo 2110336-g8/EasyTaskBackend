@@ -23,7 +23,7 @@ class TasksController {
             if (error instanceof ValidationError) {
                 res.status(400).json({
                     error: error.name,
-                    detalis: error.message,
+                    details: error.message,
                 });
             } else {
                 res.status(500).json({ error: 'Internal Server Error' });

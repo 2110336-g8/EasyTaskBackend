@@ -1,6 +1,6 @@
 import { Inject, Service } from 'typedi';
 import { IImageRepository, ImageRepository } from '../repositories/ImageRepo';
-import { ImageModel, IImageDocument } from '../models/ImageModel';
+import { ImageModel, IImageDocument, IImage } from '../models/ImageModel';
 import {
     CannotCreateImageError,
     CannotGetImageError,
@@ -10,12 +10,12 @@ import { AWSS3Service, IBucketService } from './AWSS3Service';
 import { IRepository } from '../repositories/BaseRepo';
 @Service()
 export class ImageService {
-    private imageRepository: IRepository<IImageDocument>;
+    private imageRepository: IRepository<IImage>;
     private awsS3Service: IBucketService;
 
     constructor(
         @Inject(() => ImageRepository)
-        imageRepository: IRepository<IImageDocument>,
+        imageRepository: IRepository<IImage>,
         @Inject(() => AWSS3Service) awsS3Service: IBucketService,
     ) {
         this.imageRepository = imageRepository;
@@ -37,8 +37,7 @@ export class ImageService {
                 ownerId: ownerId,
                 imageKey: imageKey,
                 purpose: purpose,
-                createdAt: new Date(),
-            } as IImageDocument);
+            });
 
             return imageDoc;
         } catch (error) {
@@ -60,11 +59,11 @@ export class ImageService {
             }
             const key = imageDoc.imageKey;
             console.log(key);
-            if( key === null || key === ""){
+            if (key === null || key === '') {
                 console.log('There is no profile image for this user');
                 throw new CannotGetImageError('Can not get the image');
             }
-            const imageUrl = await this.awsS3Service.getObjectSignedUrl(key)
+            const imageUrl = await this.awsS3Service.getObjectSignedUrl(key);
 
             // const imageUrl = await this.awsS3Service.getObjectSignedUrl('65b541c5f264a6557e00f08c.jpg') ////uncomment this to test
             return imageUrl;

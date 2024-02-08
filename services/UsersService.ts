@@ -1,11 +1,10 @@
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
-import { IUserDocument } from '../models/UserModel';
+import { IUser, IUserDocument } from '../models/UserModel';
 import { Service, Inject, Token } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
 import { IOtpRepository, OtpRepository } from '../repositories/OtpRepo';
-import { IRepository } from '../repositories/BaseRepo';
-import { IOtpDocument } from '../models/OtpModel';
+import Constants from '../config/constants';
 
 export interface IUsersService {
     createUser: (userData: IUserDocument) => Promise<IUserDocument>;
@@ -32,18 +31,22 @@ export class UsersService implements IUsersService {
         this.otpRepository = otpRepository;
     }
 
-    async createUser(userData: IUserDocument): Promise<IUserDocument> {
+    async createUser(userData: IUser): Promise<IUserDocument> {
+        const existEmailUser = await this.getUserByEmail(userData.email);
+        if (existEmailUser) {
+            throw new CannotCreateUserError('Email is already used');
+        }
+
         const otpDoc = await this.otpRepository.findOneByEmail(userData.email);
         if (!otpDoc) {
             throw new CannotCreateUserError('Email is not verified');
         }
-        if (!otpDoc.isVerified) {
+        if (
+            !otpDoc.isVerified ||
+            new Date().getTime() - otpDoc.verifiedAt.getTime() >
+                Constants.VERIFIED_CREATABLE_MIN * 60 * 1000
+        ) {
             throw new CannotCreateUserError('Email is not verified');
-        }
-
-        const existEmailUser = await this.getUserByEmail(userData.email);
-        if (existEmailUser) {
-            throw new CannotCreateUserError('Email is already used');
         }
 
         try {
@@ -51,7 +54,7 @@ export class UsersService implements IUsersService {
             return createdUser;
         } catch (error) {
             if (error instanceof ValidationError)
-                throw new CannotCreateUserError(error.message);
+                throw new ValidationError(error.message);
             else {
                 throw new Error('Unknown Error');
             }
@@ -61,24 +64,18 @@ export class UsersService implements IUsersService {
     async getUserById(id: string): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.findOne(id);
-            if (!user) {
-                return null;
-            }
             return user;
         } catch (error) {
-            throw error;
+            return null;
         }
     }
 
     async getUserByEmail(email: string): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.findOneByEmail(email);
-            if (!user) {
-                return null;
-            }
             return user;
         } catch (error) {
-            throw error;
+            return null;
         }
     }
 
@@ -88,12 +85,9 @@ export class UsersService implements IUsersService {
     ): Promise<IUserDocument | null> {
         try {
             const user = await this.userRepository.update(id, data);
-            if (!user) {
-                null;
-            }
             return user;
         } catch (error) {
-            throw error;
+            return null;
         }
     }
 }

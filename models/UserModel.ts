@@ -1,22 +1,19 @@
 import mongoose, { Document, ObjectId, Types } from 'mongoose';
-import { compare, genSalt, hash } from 'bcrypt';
+import { genSalt, hash } from 'bcrypt';
 
 export interface IUser {
-    firstName: string
-    lastName: string
-    email: string
-    password: string
-    phoneNumber?: string
-    imageKey?: string
-    bankId?: ObjectId
-    bankAccNo?: string
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phoneNumber?: string;
+    imageKey?: string;
+    bankId?: ObjectId;
+    bankAccName?: string;
+    bankAccNo?: string;
 }
 
-interface IUserMethods {
-    isValidPassword: (password: string) => Promise<boolean>;
-}
-
-export interface IUserDocument extends IUser, IUserMethods, Document {}
+export interface IUserDocument extends IUser, Document {}
 
 const UserSchema = new mongoose.Schema<IUserDocument>(
     {
@@ -60,6 +57,21 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
         },
         bankId: {
             type: Types.ObjectId,
+            require: [
+                function (this: IUser) {
+                    return this.bankAccName || this.bankAccNo;
+                },
+                'bankId is required with bankAccName and bankAccNo',
+            ],
+        },
+        bankAccName: {
+            type: String,
+            require: [
+                function (this: IUser) {
+                    return this.bankAccNo || this.bankId;
+                },
+                'bankAccName is required with bankId and bankAccNo',
+            ],
         },
         bankAccNo: {
             type: String,
@@ -70,19 +82,18 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                 message:
                     'Bank account number need to be all number with length 10',
             },
+            require: [
+                function (this: IUser) {
+                    return this.bankAccName || this.bankId;
+                },
+                'bankAccNo is required with bankId and bankAccName',
+            ],
         },
     },
     {
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
 );
-
-UserSchema.methods.isValidPassword = async function (
-    password: string,
-): Promise<boolean> {
-    const isValid = await compare(password, this.password);
-    return isValid;
-};
 
 UserSchema.methods.toJSON = function () {
     const userObject: any = this.toObject();

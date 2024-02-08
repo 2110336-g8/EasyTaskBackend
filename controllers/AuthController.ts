@@ -55,7 +55,7 @@ class AuthController {
         const data: IVerifyOtp = req.body;
         const verifiedOtpDoc = await this.otpService.verifyOtp(data);
         if (!verifiedOtpDoc) {
-            res.status(403).json({
+            res.status(400).json({
                 error: 'Failed to verify OTP',
             });
             return;
@@ -78,15 +78,10 @@ class AuthController {
                 success: true,
                 message: 'Register and logged in',
                 token,
-                user,
+                user: user.toJSON(),
             });
         } catch (error) {
-            if (error instanceof CannotCreateUserError) {
-                res.status(403).json({
-                    error: error.name,
-                    detalis: error.message,
-                });
-            }
+            this.handleError(res, error);
         }
     };
 
@@ -102,7 +97,7 @@ class AuthController {
                 success: true,
                 message: 'Logged in',
                 token,
-                user,
+                user: user.toJSON(),
             });
         }
     };
@@ -125,8 +120,8 @@ class AuthController {
         res.cookie(cookieName, token, {
             httpOnly: true,
             expires: expirationDate,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            secure: process.env.ENVIRONMENT === 'production',
+            sameSite: 'none',
         });
     };
 

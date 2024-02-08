@@ -1,4 +1,5 @@
 import mongoose, { Document } from 'mongoose';
+import Constants from '../config/constants';
 
 export interface IOtp {
     email: string;
@@ -9,11 +10,7 @@ export interface IOtp {
     verifiedAt: Date;
 }
 
-export interface IOtpMethods {
-    isValidOtp: (otp: string) => boolean;
-}
-
-export interface IOtpDocument extends IOtp, IOtpMethods, Document {}
+export interface IOtpDocument extends IOtp, Document {}
 
 const OtpSchema = new mongoose.Schema<IOtpDocument>(
     {
@@ -58,7 +55,7 @@ const OtpSchema = new mongoose.Schema<IOtpDocument>(
             require: [true, 'OTP expired time is required'],
             default: function (): Date {
                 let date = new Date();
-                date.setMinutes(date.getMinutes() + 5);
+                date.setMinutes(date.getMinutes() + Constants.OTP_EXP_MIN);
                 return date;
             },
         },
@@ -81,11 +78,5 @@ const OtpSchema = new mongoose.Schema<IOtpDocument>(
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
 );
-
-OtpSchema.methods.isValidOtp = function (otp: string): boolean {
-    const matched = otp === this.otp;
-    const expired = new Date().getTime() > this.expiredAt.getTime();
-    return matched && !expired;
-};
 
 export const OtpModel = mongoose.model<IOtpDocument>('Otp', OtpSchema);
