@@ -23,7 +23,7 @@ export class TasksService implements ITasksService {
     ) {
         this.taskRepository = taskRepository;
     }
-    
+
     async createTask(taskData: ITask): Promise<ITaskDocument> {
         try {
             const task: ITaskDocument =
