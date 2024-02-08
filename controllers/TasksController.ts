@@ -1,7 +1,7 @@
 import e, { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
-import TasksService, { ITasksService } from '../services/TasksService';
+import { TasksService, ITasksService } from '../services/TasksService';
 import { ImageService } from '../services/ImageService';
 import sharp from 'sharp';
 @Service()
@@ -21,10 +21,7 @@ class TasksController {
         try {
             const data = req.body;
             const task = await this.tasksService.createTask(data);
-            res.status(201).json({
-                success: true,
-                task,
-            });
+            res.status(201).json(task);
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
@@ -52,7 +49,7 @@ class TasksController {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
-    
+
     // image ---------------------------------------------------------------------------------
     getTaskImages = async (req: Request, res: Response): Promise<void> => {
         try {

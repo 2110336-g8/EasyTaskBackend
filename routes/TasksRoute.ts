@@ -1,11 +1,11 @@
 import express from 'express';
 import Container from 'typedi';
-import TaskController from '../controllers/TasksController';
+import TasksController from '../controllers/TasksController';
 
-const taskService = Container.get(TaskController);
+const tasksController: TasksController = Container.get(TasksController);
 
 const router = express.Router();
 
-router.route('/').post(taskService.createTask).get(taskService.getTasks);
+router.route('/').post(tasksController.createTask).get(tasksController.getTasks);
 
 export default router;
