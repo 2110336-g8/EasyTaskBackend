@@ -1,31 +1,32 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
-import { IRepository } from '../repositories/BaseRepo';
-import { TasksRepository } from '../repositories/TasksRepo';
+import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { Inject, Service } from 'typedi';
+import { ValidationError } from '../errors/RepoError';
 
 export interface ITasksService {
-    createTask: (taskData: ITask) => Promise<ITaskDocument>;
+    createTask: (taskData: ITaskDocument) => Promise<ITaskDocument>;
 }
 
 @Service()
-class TaskService implements ITasksService {
-    private tasksRepository: IRepository<ITask>;
+export class TasksService implements ITasksService {
+    private taskRepository: ITasksRepository;
 
     constructor(
         @Inject(() => TasksRepository)
-        taskRepository: IRepository<ITask>,
+        taskRepository: ITasksRepository,
     ) {
-        this.tasksRepository = taskRepository;
+        this.taskRepository = taskRepository;
     }
     async createTask(taskData: ITask): Promise<ITaskDocument> {
         try {
             const task: ITaskDocument =
-                await this.tasksRepository.create(taskData);
+                await this.taskRepository.create(taskData);
             return task;
         } catch (error) {
-            throw error;
+            if (error instanceof ValidationError) throw error;
+            else {
+                throw new Error('Unknown Error');
+            }
         }
     }
 }
-
-export default TaskService;

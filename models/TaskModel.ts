@@ -13,14 +13,9 @@ export interface ITask {
     endDate: Date;
     workers: number; //
     customerID: Types.ObjectId;
-    verifiedFlag: boolean;
     hiredWorkers: Array<{
         workerID: Types.ObjectId;
         status: 'In Progress' | 'Completed' | 'Cancel';
-        reviewFromCustomer?: string;
-        ratingFromCustomer?: number;
-        reviewFromWorker?: string;
-        ratingFromWorker?: number;
     }>;
 }
 
@@ -56,7 +51,7 @@ const TaskSchema = new Schema<ITaskDocument>(
         },
         wages: {
             type: Number,
-            required: [true, 'Phone number is required'],
+            required: [true, 'Wage is required'],
         },
         workers: {
             type: Number,
@@ -75,11 +70,6 @@ const TaskSchema = new Schema<ITaskDocument>(
             required: [true, 'Customer ID is required'],
             ref: 'User',
         },
-        verifiedFlag: {
-            type: Boolean,
-            required: [true, 'Verification is required'],
-            default: false,
-        },
         hiredWorkers: {
             type: [
                 {
@@ -93,18 +83,6 @@ const TaskSchema = new Schema<ITaskDocument>(
                         enum: ['In Progress', 'Completed', 'Cancel'],
                         required: [true, 'Status is required'],
                         default: 'In Progress',
-                    },
-                    reviewFromCustomer: {
-                        type: String,
-                    },
-                    ratingFromCustomer: {
-                        type: Number,
-                    },
-                    reviewFromWorker: {
-                        type: String,
-                    },
-                    ratingFromWorker: {
-                        type: Number,
                     },
                 },
             ],
