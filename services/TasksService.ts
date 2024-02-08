@@ -1,20 +1,20 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
 import { IRepository } from '../repositories/BaseRepo';
-import { TasksRepository } from '../repositories/TasksRepo';
+import { ITaskRepository, TasksRepository } from '../repositories/TasksRepo';
 import { Inject, Service } from 'typedi';
 
 export interface ITasksService {
-    getTasks(taskPage: any, taskPerPage: any): unknown;
+    getTaskList(taskPage: any, taskPerPage: any): unknown;
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
 }
 
 @Service()
 class TaskService implements ITasksService {
-    private tasksRepository: IRepository<ITask>;
+    private tasksRepository: ITaskRepository;
 
     constructor(
         @Inject(() => TasksRepository)
-        taskRepository: IRepository<ITask>,
+        taskRepository: ITaskRepository,
     ) {
         this.tasksRepository = taskRepository;
     }
@@ -28,9 +28,9 @@ class TaskService implements ITasksService {
         }
     }
 
-    async getTasks(page: number, taskPerPage: number): Promise<ITaskDocument> {
+    async getTaskList(page: number, taskPerPage: number): Promise<ITaskDocument[]> {
         try {
-            const tasks: ITaskDocument = await this.tasksRepository.findTaskByPage(page, taskPerPage);
+            const tasks: ITaskDocument[] = await this.tasksRepository.findTaskByPage(page, taskPerPage);
             return tasks;
         } catch (error) {
             throw error;

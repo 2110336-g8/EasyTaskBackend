@@ -3,7 +3,9 @@ import { ITask, ITaskDocument, TaskModel } from '../models/TaskModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
 
-export interface ITaskRepository extends IRepository<ITask> {}
+export interface ITaskRepository extends IRepository<ITask> {
+    findTaskByPage(page: number, taskPerPage: number): Promise<ITaskDocument[]>;
+}
 
 @Service()
 export class TasksRepository
