@@ -75,6 +75,7 @@ class UsersController {
     getProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {
             const userId = req.params.id;
+        
             // Retrieve the user's profile image URL from your database
             console.log('get image by owner id');
             const userProfileImageUrl =
