@@ -21,10 +21,7 @@ class TasksController {
         try {
             const data = req.body;
             const task = await this.tasksService.createTask(data);
-            res.status(201).json({
-                success: true,
-                task,
-            });
+            res.status(201).json(task);
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
@@ -77,17 +74,11 @@ class TasksController {
         }
     };
 
-    uploadTaskImage = async (req: Request, res: Response): Promise<void> => {
+    async updateTaskImage(req: Request, res: Response): Promise<void> {
         try {
             const taskId = req.params.id;
             const { seq } = req.body;
             const file = req.body;
-            // console.log(req.body);
-            if (!file) {
-                console.log('no file');
-                res.status(400).json({ error: 'No file uploaded' });
-                return;
-            }
 
             if (!file || !seq) {
                 res.status(400).json({ error: 'Invalid input' });
@@ -97,19 +88,29 @@ class TasksController {
             // Generate a random number between 1 and 100000 (adjust the range as needed)
             const randomNum = Math.floor(Math.random() * 100000) + 1;
 
-            // Use sharp to check if the file is an image
             try {
                 const metadata = await sharp(file.buffer).metadata();
-
-                // Extract the file extension from the originalname (e.g., '.jpg')
                 const fileExtension = metadata.format!.toLowerCase();
-
-                // Generate the imageKey using the taskId, seq, randomNum, and fileExtension
                 const key = `${taskId}_${randomNum}.${fileExtension}`;
 
-                // Update the task's imageKeys in your database
-                await this.tasksService.updateTask(taskId, {
-                    $push: { imageKeys: { seq, imageKey: key } },
+                // Retrieve the existing task
+                const existingTask =
+                    await this.tasksService.getTaskById(taskId);
+
+                if (!existingTask) {
+                    res.status(404).json({ error: 'Task not found' });
+                    return;
+                }
+
+                // Get the current imageKeys array
+                const currentImageKeys = existingTask.imageKeys || [];
+
+                // Update the array with the new image information
+                currentImageKeys.push({ seq, imageKey: key });
+
+                // Update the task with the modified imageKeys
+                const updatedTask = await this.tasksService.updateTask(taskId, {
+                    imageKeys: currentImageKeys,
                 });
 
                 // Upload the file to AWS S3 or your preferred storage
@@ -132,7 +133,7 @@ class TasksController {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
-    };
+    }
 
     deleteTaskImagesBySeqs = async (
         req: Request,
