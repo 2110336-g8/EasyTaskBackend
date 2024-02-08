@@ -5,7 +5,7 @@ export interface ITask {
     title: string;
     category?: string;
     description?: string;
-    images?: string;
+    imageKeys?: Array<{ seq: number; imageKey: string }>;
     location?: string;
     state: 'New' | 'In Progress' | 'Completed' | 'Cancel';
     wages: number; // smallest unit
@@ -40,8 +40,19 @@ const TaskSchema = new Schema<ITaskDocument>(
         description: {
             type: String,
         },
-        images: {
-            type: String,
+        imageKeys: {
+            type: [
+                {
+                    seq: {
+                        type: Number,
+                        required: [true, 'Sequence number is required'],
+                    },
+                    imageKey: {
+                        type: String,
+                        required: [true, 'Image key is required'],
+                    },
+                },
+            ],
         },
         location: {
             type: String,

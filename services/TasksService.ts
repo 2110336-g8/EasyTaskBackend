@@ -5,6 +5,7 @@ import { Inject, Service } from 'typedi';
 
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
+    getTaskById: (id: string) => Promise<ITaskDocument | null>;
 }
 
 @Service()
@@ -24,6 +25,14 @@ class TaskService implements ITasksService {
             return task;
         } catch (error) {
             throw error;
+        }
+    }
+    async getTaskById(id: string): Promise<ITaskDocument | null> {
+        try {
+            const task = await this.tasksRepository.findOne(id);
+            return task;
+        } catch (error) {
+            return null;
         }
     }
 }
