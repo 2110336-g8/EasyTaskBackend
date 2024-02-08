@@ -1,7 +1,7 @@
 import e, { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
-import TasksService, { ITasksService } from '../services/TasksService';
+import { TasksService, ITasksService } from '../services/TasksService';
 import { ImageService } from '../services/ImageService';
 import sharp from 'sharp';
 @Service()
@@ -74,7 +74,8 @@ class TasksController {
         }
     };
 
-    async updateTaskImage(req: Request, res: Response): Promise<void> {
+    // upload 1 image
+    async uploadTaskImage(req: Request, res: Response): Promise<void> {
         try {
             const taskId = req.params.id;
             const { seq } = req.body;
@@ -135,6 +136,55 @@ class TasksController {
         }
     }
 
+    // Change the sequence number in imageKeys (image that have seq = oldSeq to be newSeq)
+    changeImageSeq = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const taskId = req.params.id;
+            const { oldSeq, newSeq } = req.body;
+
+            if (!oldSeq || !newSeq) {
+                res.status(400).json({ error: 'Invalid input' });
+                return;
+            }
+
+            const task = await this.tasksService.getTaskById(taskId);
+
+            if (!task) {
+                res.status(404).json({ error: 'Task not found' });
+                return;
+            }
+
+            const imageKeys = task.imageKeys;
+
+            if (imageKeys) {
+                // Update the sequence number in imageKeys array
+                const updatedImageKeys = imageKeys.map(imageKey => {
+                    if (imageKey.seq === oldSeq) {
+                        return { ...imageKey, seq: newSeq };
+                    } else {
+                        return imageKey;
+                    }
+                });
+
+                // Update the task with the modified imageKeys
+                await this.tasksService.updateTask(taskId, {
+                    imageKeys: updatedImageKeys,
+                });
+
+                res.status(200).json({ success: true });
+            } else {
+                // Handle the case where imageKeys is undefined
+                res.status(404).json({
+                    error: 'ImageKeys not found for the task',
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
+    //delete every image that have seq number in the seqs list input
     deleteTaskImagesBySeqs = async (
         req: Request,
         res: Response,

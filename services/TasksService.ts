@@ -4,8 +4,12 @@ import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
 
 export interface ITasksService {
-    createTask: (taskData: ITask) => Promise<ITaskDocument>;
+    createTask: (taskData: ITaskDocument) => Promise<ITaskDocument>;
     getTaskById: (id: string) => Promise<ITaskDocument | null>;
+    updateTask: (
+        id: string,
+        updateData: Partial<ITask>,
+    ) => Promise<ITaskDocument | null>;
 }
 
 @Service()
@@ -35,6 +39,27 @@ export class TasksService implements ITasksService {
             const task = await this.taskRepository.findOne(id);
             return task;
         } catch (error) {
+            return null;
+        }
+    }
+
+    async updateTask(
+        id: string,
+        updateData: Partial<ITask>,
+    ): Promise<ITaskDocument | null> {
+        try {
+            // Ensure that the required properties are not undefined
+            if (updateData.title === undefined || updateData) {
+                throw new Error('Title is required for task update');
+            }
+
+            const updatedTask = await this.taskRepository.update(
+                id,
+                updateData,
+            );
+            return updatedTask;
+        } catch (error) {
+            console.error(error);
             return null;
         }
     }
