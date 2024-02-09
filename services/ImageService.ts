@@ -23,23 +23,14 @@ export class ImageService {
     }
 
     async createImage(
-        ownerId: string,
         fileBuffer: Buffer,
         mimeType: string,
         imageKey: string,
-        purpose: string,
-    ): Promise<IImageDocument> {
+    ): Promise<boolean> {
         try {
             // Upload the image to AWS S3
             await this.awsS3Service.uploadFile(fileBuffer, imageKey, mimeType);
-            // Save image details to the database
-            const imageDoc = await this.imageRepository.create({
-                ownerId: ownerId,
-                imageKey: imageKey,
-                purpose: purpose,
-            });
-
-            return imageDoc;
+            return true;
         } catch (error) {
             throw new CannotCreateImageError(
                 'There is the error when creating image',
@@ -47,24 +38,14 @@ export class ImageService {
         }
     }
 
-    async getImageByOwnerId(ownerId: string): Promise<string | null> {
+    async getImageByKey(imageKey: string): Promise<string | null> {
         try {
-            // Find the image document based on the ownerId using findById
-            const imageDoc: IImageDocument | null = await ImageModel.findOne({
-                ownerId,
-            });
-
-            if (!imageDoc) {
-                throw new Error('Image not found for the given ownerId');
-            }
-            const key = imageDoc.imageKey;
-            console.log(key);
-            if (key === null || key === '') {
+            if (imageKey === null || imageKey === '') {
                 console.log('There is no profile image for this user');
                 throw new CannotGetImageError('Can not get the image');
             }
-            const imageUrl = await this.awsS3Service.getObjectSignedUrl(key);
-
+            const imageUrl =
+                await this.awsS3Service.getObjectSignedUrl(imageKey);
             // const imageUrl = await this.awsS3Service.getObjectSignedUrl('65b541c5f264a6557e00f08c.jpg') ////uncomment this to test
             return imageUrl;
         } catch (error) {

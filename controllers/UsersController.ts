@@ -79,15 +79,22 @@ class UsersController {
     // image ---------------------------------------------------------------------------------
     getProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const userId = req.params.id;
-            // Retrieve the user's profile image URL from your database
-            console.log('get image by owner id');
-            const userProfileImageUrl =
-                await this.imageService.getImageByOwnerId(userId);
+            const id = req.params.id;
+            const user = await this.usersService.getUserById(id);
+            if (!user) {
+                res.status(404).json({ error: 'User not found' });
+                return;
+            }
+            const imageKey = user.imageKey;
+            console.log('Image Key:', imageKey);
+
+            const imageUrl = await this.imageService.getImageByKey(
+                String(imageKey),
+            );
 
             // If the image URL exists, redirect to the image
-            if (userProfileImageUrl) {
-                res.status(200).json(userProfileImageUrl);
+            if (imageUrl) {
+                res.status(200).json(imageUrl);
             } else {
                 res.status(404).json({ error: 'Profile image not found' });
             }
@@ -126,11 +133,9 @@ class UsersController {
 
                 // Upload the file to AWS S3 or your preferred storage
                 const uploadedFile = await this.imageService.createImage(
-                    userId,
                     file.buffer,
                     file.mimeType,
                     key,
-                    'User-Profile',
                 );
 
                 res.status(201).json({
@@ -150,24 +155,27 @@ class UsersController {
 
     deleteProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const userId = req.params.id;
+            const id = req.params.id;
+            const user = await this.usersService.getUserById(id);
+            if (!user) {
+                res.status(404).json({ error: 'User not found' });
+                return;
+            }
+            const imageKey = user.imageKey;
+            console.log('Image Key:', imageKey);
 
-            // Retrieve the user's profile image URL from your database
-            const userProfileImageUrl =
-                await this.imageService.getImageByOwnerId(userId);
-
-            if (userProfileImageUrl) {
-                // Update the user's profile image URL in your database (optional)
-                await this.imageService.deleteImage(userId);
-                await this.usersService.updateUser(userId, {
+            if (imageKey === null || imageKey === '') {
+                res.status(200).json({
+                    message: 'There is no profile image for this user',
+                });
+            } else {
+                await this.imageService.deleteImage(String(imageKey));
+                await this.usersService.updateUser(id, {
                     imageKey: '',
                 } as IUserDocument);
-
                 res.status(200).json({
                     message: 'Profile image deleted successfully',
                 });
-            } else {
-                res.status(404).json({ error: 'Profile image not found' });
             }
         } catch (error) {
             console.error(error);

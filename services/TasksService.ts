@@ -1,31 +1,66 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
-import { IRepository } from '../repositories/BaseRepo';
-import { TasksRepository } from '../repositories/TasksRepo';
+import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { Inject, Service } from 'typedi';
+import { ValidationError } from '../errors/RepoError';
 
 export interface ITasksService {
-    createTask: (taskData: ITask) => Promise<ITaskDocument>;
+    createTask: (taskData: ITaskDocument) => Promise<ITaskDocument>;
+    getTaskById: (id: string) => Promise<ITaskDocument | null>;
+    updateTask: (
+        id: string,
+        updateData: Partial<ITask>,
+    ) => Promise<ITaskDocument | null>;
 }
 
 @Service()
-class TaskService implements ITasksService {
-    private tasksRepository: IRepository<ITask>;
+export class TasksService implements ITasksService {
+    private taskRepository: ITasksRepository;
 
     constructor(
         @Inject(() => TasksRepository)
-        taskRepository: IRepository<ITask>,
+        taskRepository: ITasksRepository,
     ) {
-        this.tasksRepository = taskRepository;
+        this.taskRepository = taskRepository;
     }
     async createTask(taskData: ITask): Promise<ITaskDocument> {
         try {
             const task: ITaskDocument =
-                await this.tasksRepository.create(taskData);
+                await this.taskRepository.create(taskData);
             return task;
         } catch (error) {
-            throw error;
+            if (error instanceof ValidationError) throw error;
+            else {
+                throw new Error('Unknown Error');
+            }
+        }
+    }
+    async getTaskById(id: string): Promise<ITaskDocument | null> {
+        try {
+            const task = await this.taskRepository.findOne(id);
+            return task;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async updateTask(
+        id: string,
+        updateData: Partial<ITask>,
+    ): Promise<ITaskDocument | null> {
+        try {
+            // Ensure that the required properties are not undefined
+            if (updateData.title === undefined || updateData) {
+                throw new Error('Title is required for task update');
+            }
+
+            const updatedTask = await this.taskRepository.update(
+                id,
+                updateData,
+            );
+            return updatedTask;
+        } catch (error) {
+            console.error(error);
+            return null;
         }
     }
 }
-
-export default TaskService;
