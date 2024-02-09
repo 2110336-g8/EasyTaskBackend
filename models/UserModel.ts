@@ -57,37 +57,41 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
         },
         bankId: {
             type: Types.ObjectId,
-            require: [
-                function (this: IUser) {
-                    return this.bankAccName || this.bankAccNo;
+            required: function (this: IUser) {
+                return !!(this.bankAccName || this.bankAccNo);
+            },
+            validate: {
+                validator: function (this: IUser) {
+                    return !!(this.bankAccName || this.bankAccNo);
                 },
-                'bankId is required with bankAccName and bankAccNo',
-            ],
+                message: 'bankId is required with bankAccName and bankAccNo',
+            },
         },
         bankAccName: {
             type: String,
-            require: [
-                function (this: IUser) {
-                    return this.bankAccNo || this.bankId;
+            required: function (this: IUser) {
+                return !!(this.bankAccNo || this.bankId);
+            },
+            validate: {
+                validator: function (this: IUser) {
+                    return !!(this.bankAccNo || this.bankId);
                 },
-                'bankAccName is required with bankId and bankAccNo',
-            ],
+                message: 'bankAccName is required with bankId and bankAccNo',
+            },
         },
         bankAccNo: {
             type: String,
             validate: {
-                validator: function (v: string) {
+                validator: function (this: IUser, v: string) {
                     return /^[0-9]{10}$/.test(v);
                 },
                 message:
-                    'Bank account number need to be all number with length 10',
+                    'Bank account number needs to be all numbers with length 10',
             },
-            require: [
-                function (this: IUser) {
-                    return this.bankAccName || this.bankId;
-                },
-                'bankAccNo is required with bankId and bankAccName',
-            ],
+            required: function (this: IUser) {
+                return !!(this.bankAccName || this.bankId);
+            },
+            message: 'bankAccNo is required with bankId and bankAccName',
         },
     },
     {
