@@ -2,10 +2,12 @@ import express from 'express';
 import AuthController from '../controllers/AuthController';
 import Container from 'typedi';
 import AuthMiddleware from '../middlewares/AuthMiddleware';
+import { UserMiddleware } from '../middlewares/UserMiddleware';
 
 const router = express.Router();
 const authController = Container.get(AuthController);
 const authMiddleware = Container.get(AuthMiddleware);
+const userMiddleware = Container.get(UserMiddleware);
 
 // For token generation
 // router.route('/token/new').post(validateLoginRequest, newToken)
@@ -16,7 +18,9 @@ router.route('/sendOtp').post(authController.sentOtp);
 router.route('/verifyOtp').post(authController.verifyOtp);
 
 // Register
-router.route('/register').post(authController.registerUser);
+router
+    .route('/register')
+    .post(userMiddleware.validateCreateBankData, authController.registerUser);
 
 // Login and Logout
 router
