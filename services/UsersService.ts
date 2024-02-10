@@ -87,7 +87,7 @@ export class UsersService implements IUsersService {
             const user = await this.userRepository.update(id, data);
             return user;
         } catch (error) {
-            return null;
+            throw error;
         }
     }
 }

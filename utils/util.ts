@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { CannotConvertImgError } from '../errors/UtilsError';
 
 export async function convertImageToBase64(imgPath: string): Promise<string> {
     try {
@@ -6,7 +7,6 @@ export async function convertImageToBase64(imgPath: string): Promise<string> {
         const base64Image = Buffer.from(data).toString('base64');
         return base64Image;
     } catch (error) {
-        console.log(error);
-        throw error;
+        throw new CannotConvertImgError();
     }
 }
