@@ -11,20 +11,6 @@ export class BanksController {
         this.banksService = banksService;
     }
 
-    createBank = async (req: Request, res: Response) => {
-        try {
-            const data = req.body;
-            const bank = await this.banksService.createBank(data);
-            res.status(201).json({
-                success: true,
-                bank,
-            });
-        } catch (error) {
-            console.error(error);
-            this.handleError(res, error);
-        }
-    };
-
     getBank = async (req: Request, res: Response) => {
         try {
             const id = req.params.id;
@@ -46,10 +32,10 @@ export class BanksController {
 
     getBanks = async (req: Request, res: Response) => {
         try {
-            const bank = await this.banksService.getBanks();
+            const banks = await this.banksService.getBanks();
             res.status(200).json({
                 success: true,
-                bank,
+                banks,
             });
         } catch (error) {
             this.handleError(res, error);
