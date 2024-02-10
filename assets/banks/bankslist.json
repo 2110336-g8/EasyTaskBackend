@@ -1,0 +1,59 @@
+{
+    "banks": [
+        {
+            "id": "0",
+            "name": "Kasikorn Bank",
+            "imgPath": "assets/banks/img/KBank.png"
+        },
+        {
+            "id": "1",
+            "name": "Bangkok Bank",
+            "imgPath": "assets/banks/img/BangkokBank.png"
+        },
+        {
+            "id": "2",
+            "name": "CIMB",
+            "imgPath": "assets/banks/img/CIMB.png"
+        },
+        {
+            "id": "3",
+            "name": "Krungsri",
+            "imgPath": "assets/banks/img/Krungsri.png"
+        },
+        {
+            "id": "4",
+            "name": "Krungthai",
+            "imgPath": "assets/banks/img/Krungthai.png"
+        },
+        {
+            "id": "5",
+            "name": "LH Bank",
+            "imgPath": "assets/banks/img/LHBank.png"
+        },
+        {
+            "id": "6",
+            "name": "SCB",
+            "imgPath": "assets/banks/img/SCB.png"
+        },
+        {
+            "id": "7",
+            "name": "TMBThanachart",
+            "imgPath": "assets/banks/img/TMB.png"
+        },
+        {
+            "id": "8",
+            "name": "UOB",
+            "imgPath": "assets/banks/img/UOB.png"
+        },
+        {
+            "id": "9",
+            "name": "GHBA",
+            "imgPath": "assets/banks/img/GHBA.png"
+        },
+        {
+            "id": "10",
+            "name": "Citibank N.A.",
+            "imgPath": "assets/banks/img/CitiBank.png"
+        }
+    ]
+}
