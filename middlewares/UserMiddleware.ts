@@ -23,9 +23,9 @@ export class UserMiddleware {
         }
         if (!(data.bankAccName && data.bankId && data.bankAccNo)) {
             res.status(400).json({
-                error: 'Invalid updating bank data',
+                error: 'Validation Error',
                 details:
-                    'bankId, bankAccName, and bankAccNo are required together or nothing',
+                    'User validation failed: bankId, bankAccName, and bankAccNo are required together or nothing',
             });
             return;
         }
