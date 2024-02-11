@@ -4,6 +4,7 @@ import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
 import { ImageService } from '../services/ImageService';
 import sharp from 'sharp';
+
 @Service()
 class TasksController {
     private tasksService: ITasksService;
@@ -33,6 +34,22 @@ class TasksController {
             }
         }
     };
+
+    getTasks = async (req:Request, res:Response) => {
+        try {
+            const taskPage = parseInt(req.params.page) || 1;
+            const taskPerPage = parseInt(req.query.size as string) || 8;
+
+            const tasks = await this.tasksService.getTaskList(taskPage, taskPerPage);
+            res.status(200).json({
+                success: true,
+                currentPage: taskPage,
+                size: taskPerPage,
+                tasks,
+            });
+        }
+        catch (error) {
+          
     // image ---------------------------------------------------------------------------------
     getTaskImages = async (req: Request, res: Response): Promise<void> => {
         try {

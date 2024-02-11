@@ -4,7 +4,8 @@ import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
 
 export interface ITasksService {
-    createTask: (taskData: ITaskDocument) => Promise<ITaskDocument>;
+    createTask: (taskData: ITask) => Promise<ITaskDocument>;
+    getTaskList: (taskPage: number, taskPerPage: number) => Promise<ITaskDocument[]>;
     getTaskById: (id: string) => Promise<ITaskDocument | null>;
     updateTask: (
         id: string,
@@ -22,6 +23,7 @@ export class TasksService implements ITasksService {
     ) {
         this.taskRepository = taskRepository;
     }
+
     async createTask(taskData: ITask): Promise<ITaskDocument> {
         try {
             const task: ITaskDocument =
@@ -32,8 +34,18 @@ export class TasksService implements ITasksService {
             else {
                 throw new Error('Unknown Error');
             }
+    }
+
+    async getTaskList(page: number, taskPerPage: number): Promise<ITaskDocument[]> {
+        try {
+            const taskList: ITaskDocument[] = 
+                await this.taskRepository.findTasksByPage(page, taskPerPage);
+            return taskList;
+        } catch (error) {
+            return [];
         }
     }
+  
     async getTaskById(id: string): Promise<ITaskDocument | null> {
         try {
             const task = await this.taskRepository.findOne(id);

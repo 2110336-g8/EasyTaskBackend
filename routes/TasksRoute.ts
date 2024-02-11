@@ -6,7 +6,7 @@ const tasksController: TasksController = Container.get(TasksController);
 
 const router = express.Router();
 
-router.route('/').post(tasksController.createTask);
+router.route('/').post(tasksController.createTask).get(tasksController.getTasks);
 
 router
     .route('/:id/task-image')
