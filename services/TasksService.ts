@@ -1,9 +1,14 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
+<<<<<<< HEAD
 import { ITaskRepository, TasksRepository } from '../repositories/TasksRepo';
+=======
+import { IRepository } from '../repositories/BaseRepo';
+import { TasksRepository } from '../repositories/TasksRepo';
+>>>>>>> 22f550d (Refactor tasks pagination and update tasks service)
 import { Inject, Service } from 'typedi';
-import { ValidationError } from '../errors/RepoError';
 
 export interface ITasksService {
+<<<<<<< HEAD
 <<<<<<< HEAD
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
     getTaskList: (taskPage: number, taskPerPage: number) => Promise<ITaskDocument[]>;
@@ -18,27 +23,39 @@ export interface ITasksService {
     ) => Promise<ITaskDocument | null>;
 =======
     getTasks(taskPage: any, taskPerPage: any): unknown;
+=======
+>>>>>>> 22f550d (Refactor tasks pagination and update tasks service)
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
->>>>>>> 78d09ec (add getTask Method 🐥)
+    getTasks: (taskPage: number, taskPerPage: number) => Promise<ITaskDocument>;
 }
 
 @Service()
+<<<<<<< HEAD
 export class TasksService implements ITasksService {
     private taskRepository: ITaskRepository;
 
     constructor(
         @Inject(() => TasksRepository)
         taskRepository: ITaskRepository,
+=======
+class TaskService implements ITasksService {
+    private tasksRepository: IRepository<ITask>;
+
+    constructor(
+        @Inject(() => TasksRepository)
+        taskRepository: IRepository<ITask>,
+>>>>>>> 22f550d (Refactor tasks pagination and update tasks service)
     ) {
-        this.taskRepository = taskRepository;
+        this.tasksRepository = taskRepository;
     }
 
     async createTask(taskData: ITask): Promise<ITaskDocument> {
         try {
             const task: ITaskDocument =
-                await this.taskRepository.create(taskData);
+                await this.tasksRepository.create(taskData);
             return task;
         } catch (error) {
+<<<<<<< HEAD
             if (error instanceof ValidationError) throw error;
             else {
                 throw new Error('Unknown Error');
@@ -61,40 +78,21 @@ export class TasksService implements ITasksService {
             return task;
         } catch (error) {
             return null;
+=======
+            throw error;
+>>>>>>> 22f550d (Refactor tasks pagination and update tasks service)
         }
     }
-<<<<<<< HEAD
-=======
 
     async getTasks(page: number, taskPerPage: number): Promise<ITaskDocument> {
         try {
-            const tasks: ITaskDocument = await this.tasksRepository.findTaskByPage(page, taskPerPage);
+            const tasks: ITaskDocument = 
+            await this.tasksRepository.findTaskByPage(page, taskPerPage);
             return tasks;
         } catch (error) {
             throw error;
         }
     }
 }
->>>>>>> 78d09ec (add getTask Method 🐥)
 
-    async updateTask(
-        id: string,
-        updateData: Partial<ITask>,
-    ): Promise<ITaskDocument | null> {
-        try {
-            // Ensure that the required properties are not undefined
-            if (updateData.title === undefined || updateData) {
-                throw new Error('Title is required for task update');
-            }
-
-            const updatedTask = await this.taskRepository.update(
-                id,
-                updateData,
-            );
-            return updatedTask;
-        } catch (error) {
-            console.error(error);
-            return null;
-        }
-    }
-}
+export default TaskService;
