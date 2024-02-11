@@ -17,7 +17,7 @@ export class TasksRepository
 
     async findTasksByPage(page: number, taskPerPage: number): Promise<ITaskDocument[]> {
         const tasks = 
-            await this._model.find();
+            await this._model.find().skip((page - 1) * taskPerPage).limit(taskPerPage);
             console.log(tasks); 
         return tasks;
     }
