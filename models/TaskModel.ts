@@ -17,6 +17,8 @@ export interface ITask {
         workerID: Types.ObjectId;
         status: 'In Progress' | 'Completed' | 'Cancel';
     }>;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface ITaskDocument extends ITask, Document {}

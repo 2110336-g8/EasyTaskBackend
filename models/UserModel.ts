@@ -56,38 +56,31 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
             type: String,
         },
         bankId: {
-            type: Types.ObjectId,
-            require: [
-                function (this: IUser) {
-                    return this.bankAccName || this.bankAccNo;
+            type: String,
+            validate: {
+                validator: function (v: string) {
+                    try {
+                        const id: number = parseInt(v);
+                        return id >= 0 && id <= 10;
+                    } catch (error) {
+                        return false;
+                    }
                 },
-                'bankId is required with bankAccName and bankAccNo',
-            ],
+                message: 'bankId must be a string of number between 0-10.',
+            },
         },
         bankAccName: {
             type: String,
-            require: [
-                function (this: IUser) {
-                    return this.bankAccNo || this.bankId;
-                },
-                'bankAccName is required with bankId and bankAccNo',
-            ],
         },
         bankAccNo: {
             type: String,
             validate: {
-                validator: function (v: string) {
+                validator: function (this: IUser, v: string) {
                     return /^[0-9]{10}$/.test(v);
                 },
                 message:
-                    'Bank account number need to be all number with length 10',
+                    'Bank account number must be string with length 10 and all are number',
             },
-            require: [
-                function (this: IUser) {
-                    return this.bankAccName || this.bankId;
-                },
-                'bankAccNo is required with bankId and bankAccName',
-            ],
         },
     },
     {

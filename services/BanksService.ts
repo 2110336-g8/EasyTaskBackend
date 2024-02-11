@@ -1,48 +1,55 @@
-import { Inject, Service } from 'typedi';
-import { IBank, IBankDocument } from '../models/BankModel';
-import { BanksRepository, IBanksRepository } from '../repositories/BanksRepo';
-import { ValidationError } from '../errors/RepoError';
+import { Service } from 'typedi';
+import { IBank } from '../models/BankModel';
+import data from '../assets/banks/bankslist.json';
+import { convertImageToBase64 } from '../utils/util';
+import { CannotConvertImgError } from '../errors/UtilsError';
 
 export interface IBanksService {
-    createBank: (data: IBank) => Promise<IBankDocument>;
-    getBank: (id: string) => Promise<IBankDocument | null>;
-    getBanks: () => Promise<IBankDocument[]>;
+    getBank: (id: string) => Promise<IBank | null>;
+    getBanks: () => Promise<IBank[]>;
 }
 
 @Service()
 export class BanksService implements IBanksService {
-    private banksRepository: IBanksRepository;
-    constructor(
-        @Inject(() => BanksRepository) banksRepository: IBanksRepository,
-    ) {
-        this.banksRepository = banksRepository;
-    }
-
-    async createBank(data: IBank): Promise<IBankDocument> {
+    async getBank(id: string): Promise<IBank | null> {
         try {
-            const bank = await this.banksRepository.create(data);
-            return bank;
-        } catch (error) {
-            if (error instanceof ValidationError) {
+            const bank = data.banks.find(bank => bank.id === id);
+            if (!bank) return null;
+
+            const imgPath = bank.imgPath;
+            try {
+                const base64Image = await convertImageToBase64(imgPath);
+                return {
+                    id: bank.id,
+                    name: bank.name,
+                    url: 'data:image/png;base64,' + base64Image,
+                };
+            } catch (error) {
                 throw error;
             }
-            throw new Error('Unknown Error');
-        }
-    }
-
-    async getBank(id: string): Promise<IBankDocument | null> {
-        try {
-            const bank = await this.banksRepository.findOne(id);
-            return bank;
         } catch (error) {
             return null;
         }
     }
 
-    async getBanks(): Promise<IBankDocument[]> {
+    async getBanks(): Promise<IBank[]> {
         try {
-            const bank = await this.banksRepository.findAll();
-            return bank;
+            const banks: IBank[] = await Promise.all(
+                data.banks.map(async bank => {
+                    const imgPath = bank.imgPath;
+                    try {
+                        const base64Image = await convertImageToBase64(imgPath);
+                        return {
+                            id: bank.id,
+                            name: bank.name,
+                            url: 'data:image/png;base64,' + base64Image,
+                        };
+                    } catch (error) {
+                        throw error;
+                    }
+                }),
+            );
+            return banks;
         } catch (error) {
             return [];
         }

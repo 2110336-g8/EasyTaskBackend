@@ -8,7 +8,7 @@ const tasksController: TasksController = Container.get(TasksController);
 const router = express.Router();
 const upload = multer();
 
-router.route('/').post(tasksController.createTask);
+router.route('/').post(tasksController.createTask).get(tasksController.getTasks);
 
 router
     .route('/:id/task-image')
