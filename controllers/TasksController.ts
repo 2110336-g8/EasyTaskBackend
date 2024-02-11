@@ -49,6 +49,10 @@ class TasksController {
             });
         }
         catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
           
     // image ---------------------------------------------------------------------------------
     getTaskImages = async (req: Request, res: Response): Promise<void> => {

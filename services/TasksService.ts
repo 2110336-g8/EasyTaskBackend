@@ -34,7 +34,8 @@ export class TasksService implements ITasksService {
             else {
                 throw new Error('Unknown Error');
             }
-    }
+        }
+    }   
 
     async getTaskList(page: number, taskPerPage: number): Promise<ITaskDocument[]> {
         try {
