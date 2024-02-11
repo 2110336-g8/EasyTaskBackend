@@ -96,13 +96,13 @@ class TasksController {
     };
 
     // upload 1 image
-    async uploadTaskImage(req: Request, res: Response): Promise<void> {
+    uploadTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const taskId = req.params.id;
+            const taskID = req.params.id;
             const { seq } = req.body;
-            const file = req.body;
+            const file = req.file;
 
-            if (!file || !seq) {
+            if (!file || isNaN(Number(seq))) {
                 res.status(400).json({ error: 'Invalid input' });
                 return;
             }
@@ -113,27 +113,24 @@ class TasksController {
             try {
                 const metadata = await sharp(file.buffer).metadata();
                 const fileExtension = metadata.format!.toLowerCase();
-                const key = `${taskId}_${randomNum}.${fileExtension}`;
+                const key = `${taskID}_${randomNum}.${fileExtension}`;
 
-                // Retrieve the existing task
-                const existingTask =
-                    await this.tasksService.getTaskById(taskId);
+                const task = await this.tasksService.getTaskById(taskID);
 
-                if (!existingTask) {
+                if (!task) {
                     res.status(404).json({ error: 'Task not found' });
                     return;
                 }
 
                 // Get the current imageKeys array
-                const currentImageKeys = existingTask.imageKeys || [];
+                const currentImageKeys = task.imageKeys || [];
 
                 // Update the array with the new image information
                 currentImageKeys.push({ seq, imageKey: key });
 
-                // Update the task with the modified imageKeys
-                const updatedTask = await this.tasksService.updateTask(taskId, {
-                    imageKeys: currentImageKeys,
-                });
+                task.imageKeys = currentImageKeys;
+
+                await this.tasksService.updateTask(taskID, task);
 
                 // Upload the file to AWS S3 or your preferred storage
                 await this.imageService.createImage(
@@ -147,7 +144,7 @@ class TasksController {
                 });
             } catch (error) {
                 res.status(400).json({
-                    error: 'Uploaded file is not a valid image',
+                    error,
                 });
                 return;
             }
@@ -155,20 +152,20 @@ class TasksController {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
-    }
+    };
 
     // Change the sequence number in imageKeys (image that have seq = oldSeq to be newSeq)
     changeImageSeq = async (req: Request, res: Response): Promise<void> => {
         try {
-            const taskId = req.params.id;
+            const taskID = req.params.id;
             const { oldSeq, newSeq } = req.body;
 
-            if (!oldSeq || !newSeq) {
+            if (typeof oldSeq !== 'number' || typeof newSeq !== 'number') {
                 res.status(400).json({ error: 'Invalid input' });
                 return;
             }
 
-            const task = await this.tasksService.getTaskById(taskId);
+            const task = await this.tasksService.getTaskById(taskID);
 
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
@@ -179,18 +176,13 @@ class TasksController {
 
             if (imageKeys) {
                 // Update the sequence number in imageKeys array
-                const updatedImageKeys = imageKeys.map(imageKey => {
+                task.imageKeys = imageKeys.map(imageKey => {
                     if (imageKey.seq === oldSeq) {
                         return { ...imageKey, seq: newSeq };
-                    } else {
-                        return imageKey;
                     }
+                    return imageKey;
                 });
-
-                // Update the task with the modified imageKeys
-                await this.tasksService.updateTask(taskId, {
-                    imageKeys: updatedImageKeys,
-                });
+                await this.tasksService.updateTask(taskID, task);
 
                 res.status(200).json({ success: true });
             } else {
@@ -211,15 +203,21 @@ class TasksController {
         res: Response,
     ): Promise<void> => {
         try {
-            const taskId = req.params.id;
+            const taskID = req.params.id;
             const { seqs } = req.body;
 
-            if (!seqs || !Array.isArray(seqs)) {
-                res.status(400).json({ error: 'Invalid input' });
+            if (
+                !seqs ||
+                !Array.isArray(seqs) ||
+                seqs.some(seq => isNaN(Number(seq)))
+            ) {
+                res.status(400).json({
+                    error: 'Invalid input or non-numeric seq in the array',
+                });
                 return;
             }
 
-            const task = await this.tasksService.getTaskById(taskId);
+            const task = await this.tasksService.getTaskById(taskID);
 
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
@@ -229,15 +227,24 @@ class TasksController {
             const imageKeys = task.imageKeys;
 
             if (imageKeys) {
+                // Filter out the imageKeys with seqs to be deleted
+                const remainingImageKeys = imageKeys.filter(
+                    imageKey => !seqs.includes(imageKey.seq),
+                );
+
+                // Delete images from AWS S3 bucket
                 for (const imageKey of imageKeys) {
                     if (seqs.includes(imageKey.seq)) {
                         const key = imageKey.imageKey;
-                        // Delete image from AWS S3 bucket
                         await this.imageService.deleteImage(String(key));
                     }
                 }
 
-                res.status(200).json(true);
+                // Update the task with the remaining imageKeys
+                task.imageKeys = remainingImageKeys;
+                await this.tasksService.updateTask(taskID, task);
+
+                res.status(200).json(remainingImageKeys);
             } else {
                 // Handle the case where imageKeys is undefined
                 res.status(404).json({
@@ -263,12 +270,27 @@ class TasksController {
             }
             const imageKeys = task.imageKeys;
 
-            if (imageKeys) {
+            if (imageKeys && imageKeys.length > 0) {
                 for (const imageKey of imageKeys) {
                     const key = imageKey.imageKey;
-                    //delete image from aws s3 bucket
-                    await this.imageService.deleteImage(String(key));
+
+                    try {
+                        // Delete image from AWS S3 bucket
+                        await this.imageService.deleteImage(String(key));
+                    } catch (deleteError) {
+                        console.error(
+                            `Error deleting image with key ${key}:`,
+                            deleteError,
+                        );
+                        // Continue with the deletion process even if one image deletion fails
+                    }
                 }
+
+                // Clear the imageKeys array in the task
+                task.imageKeys = [];
+
+                // Update the task to remove all imageKeys
+                await this.tasksService.updateTask(id, task);
 
                 res.status(200).json(true);
             } else {
