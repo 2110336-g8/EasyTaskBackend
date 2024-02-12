@@ -19,20 +19,20 @@ export class UsersRepository
     constructor() {
         super(UserModel);
     }
-    async findOneByEmail(email: string): Promise<IUserDocument | null> {
+    findOneByEmail = async (email: string): Promise<IUserDocument | null> => {
         const result = await this._model.findOne({ email });
         return result;
-    }
+    };
 
-    async isValidPassword(
+    isValidPassword = async (
         email: string,
         password: string,
-    ): Promise<IUserDocument | null> {
+    ): Promise<IUserDocument | null> => {
         const user = await this._model.findOne({ email });
         if (!user) {
             return null;
         }
         const isValid = await compare(password, user.password);
         return isValid ? user : null;
-    }
+    };
 }

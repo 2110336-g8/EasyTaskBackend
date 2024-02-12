@@ -4,22 +4,22 @@ import {
     isValidISendOtp,
     isValidIVerifyOtp,
 } from '../models/AuthModel';
-import { AuthService } from '../services/AuthService';
+import { AuthService, IAuthService } from '../services/AuthService';
 import { Inject, Service } from 'typedi';
 
 @Service()
 class AuthMiddleware {
-    private authService: AuthService;
+    private authService: IAuthService;
 
-    constructor(@Inject() authService: AuthService) {
+    constructor(@Inject(() => AuthService) authService: IAuthService) {
         this.authService = authService;
     }
 
-    validateSendOtpRequest(
+    validateSendOtpRequest = (
         req: Request,
         res: Response,
         next: NextFunction,
-    ): void {
+    ): void => {
         if (isValidISendOtp(req.body)) {
             next();
         } else {
@@ -28,13 +28,13 @@ class AuthMiddleware {
                 details: 'Email is required to send OTP',
             });
         }
-    }
+    };
 
-    validateVerifyOtpRequest(
+    validateVerifyOtpRequest = (
         req: Request,
         res: Response,
         next: NextFunction,
-    ): void {
+    ): void => {
         if (isValidIVerifyOtp(req)) {
             next();
         } else {
@@ -42,13 +42,13 @@ class AuthMiddleware {
                 error: 'Email and OTP are required to send OTP',
             });
         }
-    }
+    };
 
-    validateLoginRequest(
+    validateLoginRequest = (
         req: Request,
         res: Response,
         next: NextFunction,
-    ): void {
+    ): void => {
         if (isValidILogin(req.body)) {
             next();
         } else {
@@ -57,9 +57,9 @@ class AuthMiddleware {
                 details: 'Email and password are required to login',
             });
         }
-    }
+    };
 
-    validateToken(req: Request, res: Response, next: NextFunction): void {
+    validateToken = (req: Request, res: Response, next: NextFunction): void => {
         const respondUnAuth = function (res: Response): void {
             res.status(401).json({
                 error: 'Unauthorized',
@@ -74,10 +74,10 @@ class AuthMiddleware {
         }
 
         const token = auth.split(' ')[1];
+        console.log(token);
 
         try {
             const decodedToken = this.authService.decodeToken(token);
-
             // @ts-ignore
             if (Date.now() >= decodedToken.exp * 1000) {
                 // If expired
@@ -89,9 +89,10 @@ class AuthMiddleware {
             }
         } catch (error) {
             // Token is invalid (failed decode)
+            console.log('Fail to Decode:', error);
             respondUnAuth(res);
         }
-    }
+    };
 }
 
 export default AuthMiddleware;

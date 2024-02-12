@@ -25,10 +25,10 @@ export class AuthService implements IAuthService {
         this.usersRepository = usersService;
     }
 
-    generateToken(
+    generateToken = (
         payload: ILogin,
         sessionMinutes: number = parseInt(process.env.JWT_EXP_MIN || '60'),
-    ): string {
+    ): string => {
         const expiryTime: number =
             Math.floor(Date.now() / 1000) + sessionMinutes * 60;
         const subPayload = {
@@ -38,15 +38,15 @@ export class AuthService implements IAuthService {
             expiresIn: expiryTime,
             algorithm: 'RS256',
         });
-    }
+    };
 
-    decodeToken(token: string): string | JwtPayload {
+    decodeToken = (token: string): string | JwtPayload => {
         return jwt.verify(token, this.key_pair.pub, {
             algorithms: ['RS256'],
         });
-    }
+    };
 
-    async verifyUser(login: ILogin): Promise<IUserDocument | null> {
+    verifyUser = async (login: ILogin): Promise<IUserDocument | null> => {
         try {
             const user = await this.usersRepository.isValidPassword(
                 login.email,
@@ -56,5 +56,5 @@ export class AuthService implements IAuthService {
         } catch (error) {
             return null;
         }
-    }
+    };
 }
