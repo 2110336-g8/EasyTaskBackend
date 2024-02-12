@@ -22,22 +22,22 @@ class UsersController {
         this.imageService = imageService;
     }
     // TO BE DELETE
-    createUser = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const data = req.body;
-            const user = await this.usersService.createUser(data);
-            res.status(201).json({ user: user.toJSON() });
-        } catch (error) {
-            if (error instanceof CannotCreateUserError) {
-                res.status(400).json({
-                    error: error.name,
-                    details: error.message,
-                });
-            } else {
-                res.status(500).json({ error: 'Internal Server Error' });
-            }
-        }
-    };
+    // createUser = async (req: Request, res: Response): Promise<void> => {
+    //     try {
+    //         const data = req.body;
+    //         const user = await this.usersService.createUser(data);
+    //         res.status(201).json({ user: user.toJSON() });
+    //     } catch (error) {
+    //         if (error instanceof CannotCreateUserError) {
+    //             res.status(400).json({
+    //                 error: error.name,
+    //                 details: error.message,
+    //             });
+    //         } else {
+    //             res.status(500).json({ error: 'Internal Server Error' });
+    //         }
+    //     }
+    // };
 
     getUserbyId = async (req: Request, res: Response): Promise<void> => {
         try {
