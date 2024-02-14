@@ -74,6 +74,7 @@ connectDB().then(function (r: any) {
 
 app.use(express.json());
 app.use(bodyParser.raw({ type: ['image/jpeg', 'image/png'], limit: '5mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 app.use(cors(corsOption));
 

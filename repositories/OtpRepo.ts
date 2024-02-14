@@ -15,12 +15,15 @@ export class OtpRepository
     constructor() {
         super(OtpModel);
     }
-    async findOneByEmail(email: string): Promise<IOtpDocument | null> {
+    findOneByEmail = async (email: string): Promise<IOtpDocument | null> => {
         const result = await this._model.findOne({ email });
         return result;
-    }
+    };
 
-    async isValidOtp(email: string, otp: string): Promise<IOtpDocument | null> {
+    isValidOtp = async (
+        email: string,
+        otp: string,
+    ): Promise<IOtpDocument | null> => {
         const otpDoc = await this._model.findOne({ email });
         if (!otpDoc) {
             return null;
@@ -28,5 +31,5 @@ export class OtpRepository
         const isMatched = otpDoc.otp === otp;
         const isExpired = otpDoc.expiredAt.getTime() < new Date().getTime();
         return isMatched && !isExpired ? otpDoc : null;
-    }
+    };
 }

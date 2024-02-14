@@ -1,32 +1,23 @@
 import { Inject, Service } from 'typedi';
-import { IImageRepository, ImageRepository } from '../repositories/ImageRepo';
-import { ImageModel, IImageDocument, IImage } from '../models/ImageModel';
 import {
     CannotCreateImageError,
     CannotGetImageError,
     CannotDeleteImageError,
 } from '../errors/ImageError';
 import { AWSS3Service, IBucketService } from './AWSS3Service';
-import { IRepository } from '../repositories/BaseRepo';
 @Service()
 export class ImageService {
-    private imageRepository: IRepository<IImage>;
     private awsS3Service: IBucketService;
 
-    constructor(
-        @Inject(() => ImageRepository)
-        imageRepository: IRepository<IImage>,
-        @Inject(() => AWSS3Service) awsS3Service: IBucketService,
-    ) {
-        this.imageRepository = imageRepository;
+    constructor(@Inject(() => AWSS3Service) awsS3Service: IBucketService) {
         this.awsS3Service = awsS3Service;
     }
 
-    async createImage(
+    createImage = async (
         fileBuffer: Buffer,
         mimeType: string,
         imageKey: string,
-    ): Promise<boolean> {
+    ): Promise<boolean> => {
         try {
             // Upload the image to AWS S3
             await this.awsS3Service.uploadFile(fileBuffer, imageKey, mimeType);
@@ -36,9 +27,9 @@ export class ImageService {
                 'There is the error when creating image',
             );
         }
-    }
+    };
 
-    async getImageByKey(imageKey: string): Promise<string | null> {
+    getImageByKey = async (imageKey: string): Promise<string | null> => {
         try {
             if (imageKey === null || imageKey === '') {
                 console.log('There is no profile image for this user');
@@ -52,30 +43,14 @@ export class ImageService {
             console.error(error); // Log the error for debugging purposes
             return null;
         }
-    }
+    };
 
-    async deleteImage(ownerId: string): Promise<boolean> {
+    deleteImage = async (imageKey: string): Promise<boolean> => {
         try {
-            // Find the image document based on the ownerId
-            const imageDoc: IImageDocument | null = await ImageModel.findOne({
-                ownerId,
-            });
-
-            if (!imageDoc) {
-                throw new Error('Image not found for the given ownerId');
-            }
-
-            // Extract imageKey from the found image document
-            const key = imageDoc.imageKey;
-            // Delete image from AWS S3
-            await this.awsS3Service.deleteFile(key);
-
-            // Delete image details from the database
-            console.log(imageDoc.id);
-            const success = await this.imageRepository.deleteOne(imageDoc.id);
-            return success;
+            await this.awsS3Service.deleteFile(imageKey);
+            return true;
         } catch (error) {
             throw new CannotDeleteImageError('Can not delete the image');
         }
-    }
+    };
 }

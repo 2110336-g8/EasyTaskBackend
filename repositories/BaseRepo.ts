@@ -17,7 +17,7 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
         this._model = model;
     }
 
-    async create(item: T): Promise<T & Document> {
+    create = async (item: T): Promise<T & Document> => {
         const item_w_id: Omit<T, '_id'> = item;
         try {
             const createdItem = await this._model.create(item_w_id);
@@ -33,9 +33,9 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
                 throw new Error('Unknown Error');
             }
         }
-    }
+    };
 
-    async update(id: string, item: T): Promise<(T & Document) | null> {
+    update = async (id: string, item: T): Promise<(T & Document) | null> => {
         try {
             const updatedItem = await this._model.findByIdAndUpdate(
                 id,
@@ -55,20 +55,20 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
                 throw new Error('Unknown Error');
             }
         }
-    }
+    };
 
-    async deleteOne(id: string): Promise<boolean> {
+    deleteOne = async (id: string): Promise<boolean> => {
         const result = await this._model.deleteOne({ _id: id });
         return result.deletedCount !== 0;
-    }
+    };
 
-    async findOne(id: string): Promise<(T & Document) | null> {
+    findOne = async (id: string): Promise<(T & Document) | null> => {
         const item = await this._model.findById(id);
         return item;
-    }
+    };
 
-    async findAll(): Promise<(T & Document)[]> {
+    findAll = async (): Promise<(T & Document)[]> => {
         const items = await this._model.find();
         return items;
-    }
+    };
 }

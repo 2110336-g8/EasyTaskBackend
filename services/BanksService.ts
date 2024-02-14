@@ -11,7 +11,7 @@ export interface IBanksService {
 
 @Service()
 export class BanksService implements IBanksService {
-    async getBank(id: string): Promise<IBank | null> {
+    getBank = async (id: string): Promise<IBank | null> => {
         try {
             const bank = data.banks.find(bank => bank.id === id);
             if (!bank) return null;
@@ -30,9 +30,9 @@ export class BanksService implements IBanksService {
         } catch (error) {
             return null;
         }
-    }
+    };
 
-    async getBanks(): Promise<IBank[]> {
+    getBanks = async (): Promise<IBank[]> => {
         try {
             const banks: IBank[] = await Promise.all(
                 data.banks.map(async bank => {
@@ -53,5 +53,5 @@ export class BanksService implements IBanksService {
         } catch (error) {
             return [];
         }
-    }
+    };
 }

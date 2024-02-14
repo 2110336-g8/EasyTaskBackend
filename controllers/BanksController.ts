@@ -42,7 +42,7 @@ export class BanksController {
         }
     };
 
-    private handleError(res: Response, error: any) {
+    private handleError = (res: Response, error: any) => {
         if (error instanceof ValidationError) {
             res.status(400).json({
                 error: error.name,
@@ -53,5 +53,5 @@ export class BanksController {
                 error: 'Internal server error',
             });
         }
-    }
+    };
 }

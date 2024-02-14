@@ -28,7 +28,7 @@ export class OtpService implements IOtpService {
         this.usersRepository = usersRepository;
     }
 
-    async createOtp(email: string): Promise<IOtpDocument> {
+    createOtp = async (email: string): Promise<IOtpDocument> => {
         try {
             const existOtp = await this.getOtpByEmail(email);
             const existEmailUser =
@@ -59,18 +59,18 @@ export class OtpService implements IOtpService {
         } catch (error) {
             throw error;
         }
-    }
+    };
 
-    async getOtpByEmail(email: string): Promise<IOtpDocument | null> {
+    getOtpByEmail = async (email: string): Promise<IOtpDocument | null> => {
         try {
             const otpDoc = await this.otpRepository.findOneByEmail(email);
             return otpDoc;
         } catch (error) {
             return null;
         }
-    }
+    };
 
-    async verifyOtp(data: IVerifyOtp): Promise<IOtpDocument | null> {
+    verifyOtp = async (data: IVerifyOtp): Promise<IOtpDocument | null> => {
         const otpDoc = await this.otpRepository.isValidOtp(
             data.email,
             data.otp,
@@ -87,16 +87,16 @@ export class OtpService implements IOtpService {
         } catch (error) {
             return null;
         }
-    }
+    };
 
-    async deleteOtp(email: string): Promise<boolean> {
+    deleteOtp = async (email: string): Promise<boolean> => {
         const otpDoc = await this.getOtpByEmail(email);
         if (!otpDoc) return false;
         const success = await this.otpRepository.deleteOne(otpDoc._id);
         return success;
-    }
+    };
 
-    async deleteTrashOtp() {
+    deleteTrashOtp = async () => {
         const otpDocs = await this.otpRepository.findAll();
         otpDocs.forEach((e: IOtpDocument) => {
             const now = new Date();
@@ -114,5 +114,5 @@ export class OtpService implements IOtpService {
             }
             this.otpRepository.deleteOne(e._id);
         });
-    }
+    };
 }
