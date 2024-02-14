@@ -25,9 +25,11 @@ export class OtpRepository
         otp: string,
     ): Promise<IOtpDocument | null> => {
         const otpDoc = await this._model.findOne({ email });
-        if (!otpDoc) {
+
+        if (!otpDoc || otpDoc.isVerified) {
             return null;
         }
+
         const isMatched = otpDoc.otp === otp;
         const isExpired = otpDoc.expiredAt.getTime() < new Date().getTime();
         return isMatched && !isExpired ? otpDoc : null;
