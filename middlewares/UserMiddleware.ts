@@ -83,4 +83,21 @@ export class UserMiddleware {
     //     }
     //     next();
     // };
+
+    // put all validation for updating user into this function, including updating bank?
+    validateUpdateUserData = async (
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const data: IUser = req.body;
+        if (data.email) {
+            res.status(400).json({
+                error: 'Validation Error',
+                details: 'User validation failed: cannot update email',
+            });
+            return;
+        }
+        next();
+    };
 }
