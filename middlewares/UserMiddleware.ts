@@ -83,6 +83,8 @@ export class UserMiddleware {
     //     }
     //     next();
     // };
+
+    // put all validation for updating user into this function, including updating bank?
     validateUpdateUserData = async (
         req: Request,
         res: Response,

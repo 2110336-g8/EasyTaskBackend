@@ -58,7 +58,6 @@ export class TasksService implements ITasksService {
             const task = await this.taskRepository.findOne(id);
             return task;
         } catch (error) {
-            console.log(error);
             return null;
         }
     };
