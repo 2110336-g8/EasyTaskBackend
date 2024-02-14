@@ -35,25 +35,41 @@ class TasksController {
         }
     };
 
-    getTasks = async (req:Request, res:Response) => {
+    getTasks = async (req: Request, res: Response) => {
         try {
             const taskPage = parseInt(req.params.page) || 1;
             const taskPerPage = parseInt(req.query.size as string) || 8;
 
-            const tasks = await this.tasksService.getTaskList(taskPage, taskPerPage);
+            const tasks = await this.tasksService.getTaskList(
+                taskPage,
+                taskPerPage,
+            );
             res.status(200).json({
                 success: true,
                 currentPage: taskPage,
                 size: taskPerPage,
                 tasks,
             });
-        }
-        catch (error) {
+        } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
-          
+
+    getTaskbyId = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
+            const task = await this.tasksService.getTaskById(id);
+            if (!task) {
+                res.status(404).json({ error: 'Task not found' });
+                return;
+            }
+            res.status(200).json({ task: task.toJSON() });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
     // image ---------------------------------------------------------------------------------
     getTaskImages = async (req: Request, res: Response): Promise<void> => {
         try {

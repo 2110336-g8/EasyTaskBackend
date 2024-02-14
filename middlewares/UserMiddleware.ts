@@ -83,4 +83,19 @@ export class UserMiddleware {
     //     }
     //     next();
     // };
+    validateUpdateUserData = async (
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const data: IUser = req.body;
+        if (data.email) {
+            res.status(400).json({
+                error: 'Validation Error',
+                details: 'User validation failed: cannot update email',
+            });
+            return;
+        }
+        next();
+    };
 }
