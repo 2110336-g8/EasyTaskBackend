@@ -37,8 +37,8 @@ class TasksController {
 
     getTasks = async (req: Request, res: Response) => {
         try {
-            const taskPage = parseInt(req.params.page) || 1;
-            const taskPerPage = parseInt(req.query.size as string) || 8;
+            const taskPage = parseInt(req.body.page) || 1;
+            const taskPerPage = parseInt(req.body.size) || 8;
 
             const tasks = await this.tasksService.getTaskList(
                 taskPage,
