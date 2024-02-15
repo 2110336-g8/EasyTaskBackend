@@ -35,17 +35,15 @@ class TasksController {
         }
     };
 
-    getTasks = async (req:  Request, res:  Response) => {
+    getTasks = async (req: Request, res: Response) => {
         try {
             const taskPage = req.body.page;
             const taskPerPage = req.body.size;
 
             const tasks = await this.tasksService.getTaskList(
-                
                 taskPage,
-               
+
                 taskPerPage,
-            ,
             );
             res.status(200).json({
                 success: true,
