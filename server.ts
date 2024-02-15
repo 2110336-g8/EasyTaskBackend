@@ -8,9 +8,16 @@ import taskRouter from './routes/TasksRoute';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import bankRouter from './routes/BankRoute';
+import Container from 'typedi';
+import AuthMiddleware from './middlewares/AuthMiddleware';
 
 // Load ENVs
 dotenv.config({ path: `${__dirname}/config/config.env` });
+
+// Connect DB
+connectDB().then(function (r: any) {
+    console.log('DB Connected!');
+});
 
 // Parameters
 const app = express();
@@ -68,9 +75,7 @@ const corsOption = {
     credentials: true,
 };
 
-connectDB().then(function (r: any) {
-    console.log('DB Connected!');
-});
+const authMiddleware = Container.get(AuthMiddleware);
 
 app.use(express.json());
 app.use(bodyParser.raw({ type: ['image/jpeg', 'image/png'], limit: '5mb' }));
@@ -78,10 +83,10 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cors(corsOption));
 
-app.use('/v1/users', userRouter);
 app.use('/v1/auth', authRouter);
-app.use('/v1/tasks', taskRouter);
 app.use('/v1/banks', bankRouter);
+app.use('/v1/users', authMiddleware.validateToken, userRouter);
+app.use('/v1/tasks', authMiddleware.validateToken, taskRouter);
 
 // Other paths are invalid, res 404
 app.use('*', (req: Request, res: Response) => {
