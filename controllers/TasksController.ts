@@ -35,25 +35,27 @@ class TasksController {
         }
     };
 
-    getTasks = async (req:Request, res:Response) => {
+    getTasks = async (req: Request, res: Response) => {
         try {
             const taskPage = parseInt(req.params.page) || 1;
             const taskPerPage = parseInt(req.query.size as string) || 8;
 
-            const tasks = await this.tasksService.getTaskList(taskPage, taskPerPage);
+            const tasks = await this.tasksService.getTaskList(
+                taskPage,
+                taskPerPage,
+            );
             res.status(200).json({
                 success: true,
                 currentPage: taskPage,
                 size: taskPerPage,
                 tasks,
             });
-        }
-        catch (error) {
+        } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
-          
+
     // image ---------------------------------------------------------------------------------
     getTaskImages = async (req: Request, res: Response): Promise<void> => {
         try {
@@ -124,6 +126,16 @@ class TasksController {
 
                 // Get the current imageKeys array
                 const currentImageKeys = task.imageKeys || [];
+
+                // Check if the same seq already exists in the array
+                const seqExists = currentImageKeys.some(
+                    image => image.seq === seq,
+                );
+
+                if (seqExists) {
+                    res.status(400).json({ error: 'Image seq already exists' });
+                    return;
+                }
 
                 // Update the array with the new image information
                 currentImageKeys.push({ seq, imageKey: key });
