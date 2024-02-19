@@ -43,17 +43,16 @@ class TasksController {
             const taskPerPage = Number(data.limit) || 8;
 
             const tasks = await this.tasksService.getTaskList(
-                
                 taskPage,
-               
+
                 taskPerPage,
-            ,
             );
+            const count = await this.tasksService.countTasks();
             res.status(200).json({
                 success: true,
                 page: taskPage,
                 limit: taskPerPage,
-                count: tasks.length,
+                count: count,
                 tasks,
             });
         } catch (error) {
