@@ -13,11 +13,11 @@ export class ImageService {
         this.awsS3Service = awsS3Service;
     }
 
-    async createImage(
+    createImage = async (
         fileBuffer: Buffer,
         mimeType: string,
         imageKey: string,
-    ): Promise<boolean> {
+    ): Promise<boolean> => {
         try {
             // Upload the image to AWS S3
             await this.awsS3Service.uploadFile(fileBuffer, imageKey, mimeType);
@@ -27,9 +27,9 @@ export class ImageService {
                 'There is the error when creating image',
             );
         }
-    }
+    };
 
-    async getImageByKey(imageKey: string): Promise<string | null> {
+    getImageByKey = async (imageKey: string): Promise<string | null> => {
         try {
             if (imageKey === null || imageKey === '') {
                 console.log('There is no profile image for this user');
@@ -43,14 +43,14 @@ export class ImageService {
             console.error(error); // Log the error for debugging purposes
             return null;
         }
-    }
+    };
 
-    async deleteImage(imageKey: string): Promise<boolean> {
+    deleteImage = async (imageKey: string): Promise<boolean> => {
         try {
             await this.awsS3Service.deleteFile(imageKey);
             return true;
         } catch (error) {
             throw new CannotDeleteImageError('Can not delete the image');
         }
-    }
+    };
 }
