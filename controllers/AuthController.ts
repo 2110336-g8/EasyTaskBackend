@@ -134,7 +134,7 @@ class AuthController {
         });
     };
 
-    private handleError(res: Response, error: any) {
+    private handleError = (res: Response, error: any) => {
         if (
             error instanceof CannotCreateUserError ||
             error instanceof CannotCreateOtpError
@@ -158,7 +158,7 @@ class AuthController {
                 error: 'Internal server error',
             });
         }
-    }
+    };
 
     private respondUnAuth(res: Response) {
         res.status(401).json({

@@ -21,7 +21,7 @@ export class MailJetService implements IEmailService {
         );
     }
 
-    async sendOtp(otp: IOtp): Promise<boolean> {
+    sendOtp = async (otp: IOtp): Promise<boolean> => {
         try {
             const post = this.mailjet.post('send', { version: 'v3.1' });
             const sent = await post.request({
@@ -50,5 +50,5 @@ export class MailJetService implements IEmailService {
         } catch (error) {
             throw new CannotSendEmailError((error as Error).message);
         }
-    }
+    };
 }

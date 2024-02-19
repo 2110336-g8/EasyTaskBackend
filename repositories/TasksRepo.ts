@@ -7,7 +7,6 @@ export interface ITasksRepository extends IRepository<ITask> {
         page: number,
         taskPerPage: number,
     ) => Promise<ITaskDocument[]>;
-    countAllTasks: () => Promise<number | null>;
 }
 
 @Service()
@@ -29,10 +28,5 @@ export class TasksRepository
             .limit(taskPerPage);
         console.log(tasks);
         return tasks;
-    }
-
-    async countAllTasks(): Promise<number> {
-        const count = await this._model.countDocuments();
-        return count;
     }
 }

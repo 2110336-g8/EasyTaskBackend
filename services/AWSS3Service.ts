@@ -46,11 +46,11 @@ export class AWSS3Service implements IBucketService {
         });
     }
 
-    async uploadFile(
+    uploadFile = async (
         fileBuffer: Buffer,
         fileName: string,
         mimetype: string,
-    ): Promise<any> {
+    ): Promise<any> => {
         const uploadParams = {
             Bucket: process.env.AWS_BUCKET_NAME,
             Body: fileBuffer,
@@ -59,18 +59,18 @@ export class AWSS3Service implements IBucketService {
         };
 
         return this.s3Client.send(new PutObjectCommand(uploadParams));
-    }
+    };
 
-    async deleteFile(imageKey: string): Promise<any> {
+    deleteFile = async (imageKey: string): Promise<any> => {
         const deleteParams = {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: imageKey,
         };
 
         return this.s3Client.send(new DeleteObjectCommand(deleteParams));
-    }
+    };
 
-    async getObjectSignedUrl(imageKey: string): Promise<string> {
+    getObjectSignedUrl = async (imageKey: string): Promise<string> => {
         try {
             const params = {
                 Bucket: process.env.AWS_BUCKET_NAME,
@@ -93,7 +93,7 @@ export class AWSS3Service implements IBucketService {
             console.error(error);
             throw new Error('Error getting signed URL');
         }
-    }
+    };
 }
 
 export default AWSS3Service;

@@ -1,6 +1,6 @@
 import { UsersRepository } from '../../repositories/UsersRepo';
 import { UsersService } from '../../services/UsersService';
-import { fakeRepo } from '../repositoryTest/FakeRepo';
+import { fakeRepo } from '../mocks/FakeRepo';
 
 describe('UsersService', () => {
     const fakeUserRepo = {

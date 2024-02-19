@@ -22,7 +22,7 @@ class TasksController {
         try {
             const data = req.body;
             const task = await this.tasksService.createTask(data);
-            res.status(201).json(task);
+            res.status(201).json({ task: task.toJSON() });
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
@@ -43,8 +43,11 @@ class TasksController {
             const taskPerPage = Number(data.limit) || 8;
 
             const tasks = await this.tasksService.getTaskList(
+                
                 taskPage,
+               
                 taskPerPage,
+            ,
             );
             const count = await this.tasksService.countTasks();
             res.status(200).json({
@@ -56,6 +59,20 @@ class TasksController {
             });
         } catch (error) {
             console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
+    getTaskbyId = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
+            const task = await this.tasksService.getTaskById(id);
+            if (!task) {
+                res.status(404).json({ error: 'Task not found' });
+                return;
+            }
+            res.status(200).json({ task: task.toJSON() });
+        } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };

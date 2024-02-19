@@ -1,16 +1,10 @@
 import { IUserDocument } from '../../models/UserModel';
 import { UsersRepository } from '../../repositories/UsersRepo';
+import { fakeModel } from '../mocks/FakeModel';
 
 describe('UsersRepository', () => {
     const userRepo = new UsersRepository();
-    const mockUserModel = {
-        create: jest.fn(),
-        findById: jest.fn(),
-        findOne: jest.fn(),
-        find: jest.fn(),
-        findByIdAndUpdate: jest.fn(),
-        deleteOne: jest.fn(),
-    };
+    const mockUserModel = fakeModel;
     Reflect.set(userRepo, '_model', mockUserModel);
 
     afterEach(() => {

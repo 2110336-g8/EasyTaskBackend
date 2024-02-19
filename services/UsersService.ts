@@ -31,7 +31,7 @@ export class UsersService implements IUsersService {
         this.otpRepository = otpRepository;
     }
 
-    async createUser(userData: IUser): Promise<IUserDocument> {
+    createUser = async (userData: IUser): Promise<IUserDocument> => {
         const existEmailUser = await this.getUserByEmail(userData.email);
         if (existEmailUser) {
             throw new CannotCreateUserError('Email is already used');
@@ -59,35 +59,35 @@ export class UsersService implements IUsersService {
                 throw new Error('Unknown Error');
             }
         }
-    }
+    };
 
-    async getUserById(id: string): Promise<IUserDocument | null> {
+    getUserById = async (id: string): Promise<IUserDocument | null> => {
         try {
             const user = await this.userRepository.findOne(id);
             return user;
         } catch (error) {
             return null;
         }
-    }
+    };
 
-    async getUserByEmail(email: string): Promise<IUserDocument | null> {
+    getUserByEmail = async (email: string): Promise<IUserDocument | null> => {
         try {
             const user = await this.userRepository.findOneByEmail(email);
             return user;
         } catch (error) {
             return null;
         }
-    }
+    };
 
-    async updateUser(
+    updateUser = async (
         id: string,
         data: IUserDocument,
-    ): Promise<IUserDocument | null> {
+    ): Promise<IUserDocument | null> => {
         try {
             const user = await this.userRepository.update(id, data);
             return user;
         } catch (error) {
             throw error;
         }
-    }
+    };
 }

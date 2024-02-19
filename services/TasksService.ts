@@ -28,7 +28,7 @@ export class TasksService implements ITasksService {
         this.taskRepository = taskRepository;
     }
 
-    async createTask(taskData: ITask): Promise<ITaskDocument> {
+    createTask = async (taskData: ITask): Promise<ITaskDocument> => {
         try {
             const task: ITaskDocument =
                 await this.taskRepository.create(taskData);
@@ -39,7 +39,7 @@ export class TasksService implements ITasksService {
                 throw new Error('Unknown Error');
             }
         }
-    }
+    };
 
     async getTaskList(
         page: number,
@@ -54,30 +54,19 @@ export class TasksService implements ITasksService {
         }
     }
 
-    async countTasks(): Promise<number | null> {
-        try {
-            const count = await this.taskRepository.countAllTasks();
-            return count;
-        } catch (error) {
-            console.error(error);
-            return null;
-        }
-    }
-
     async getTaskById(id: string): Promise<ITaskDocument | null> {
         try {
             const task = await this.taskRepository.findOne(id);
             return task;
         } catch (error) {
-            console.log(error);
             return null;
         }
     }
 
-    async updateTask(
+    updateTask = async (
         id: string,
         updateData: ITask,
-    ): Promise<ITaskDocument | null> {
+    ): Promise<ITaskDocument | null> => {
         try {
             if (updateData) {
                 const updatedTask = await this.taskRepository.update(
@@ -92,5 +81,5 @@ export class TasksService implements ITasksService {
             console.error(error);
             return null;
         }
-    }
+    };
 }
