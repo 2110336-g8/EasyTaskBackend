@@ -35,10 +35,12 @@ class TasksController {
         }
     };
 
-    getTasks = async (req: Request, res: Response) => {
+    getTasksPage = async (req: Request, res: Response) => {
         try {
-            const taskPage = parseInt(req.params.page) || 1;
-            const taskPerPage = parseInt(req.query.size as string) || 8;
+            const data = req.body;
+
+            const taskPage = Number(data.page) || 1;
+            const taskPerPage = Number(data.limit) || 8;
 
             const tasks = await this.tasksService.getTaskList(
                 taskPage,
@@ -46,8 +48,9 @@ class TasksController {
             );
             res.status(200).json({
                 success: true,
-                currentPage: taskPage,
-                size: taskPerPage,
+                page: taskPage,
+                limit: taskPerPage,
+                count: tasks.length,
                 tasks,
             });
         } catch (error) {
@@ -127,7 +130,6 @@ class TasksController {
                 // Get the current imageKeys array
                 const currentImageKeys = task.imageKeys || [];
 
-                // Check if the same seq already exists in the array
                 const seqExists = currentImageKeys.some(
                     image => image.seq === seq,
                 );
