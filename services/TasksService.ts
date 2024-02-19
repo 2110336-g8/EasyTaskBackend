@@ -41,10 +41,10 @@ export class TasksService implements ITasksService {
         }
     };
 
-    async getTaskList(
+    getTaskList = async (
         page: number,
         taskPerPage: number,
-    ): Promise<ITaskDocument[]> {
+    ): Promise<ITaskDocument[]> => {
         try {
             const taskList: ITaskDocument[] =
                 await this.taskRepository.findTasksByPage(page, taskPerPage);
@@ -52,16 +52,26 @@ export class TasksService implements ITasksService {
         } catch (error) {
             return [];
         }
+    };
+
+    async countTasks(): Promise<number | null> {
+        try {
+            const count = await this.taskRepository.countAllTasks();
+            return count;
+        } catch (error) {
+            console.error(error);
+            return null;
+        }
     }
 
-    async getTaskById(id: string): Promise<ITaskDocument | null> {
+    getTaskById = async (id: string): Promise<ITaskDocument | null> => {
         try {
             const task = await this.taskRepository.findOne(id);
             return task;
         } catch (error) {
             return null;
         }
-    }
+    };
 
     updateTask = async (
         id: string,

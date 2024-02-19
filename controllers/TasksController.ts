@@ -43,11 +43,9 @@ class TasksController {
             const taskPerPage = Number(data.limit) || 8;
 
             const tasks = await this.tasksService.getTaskList(
-                
                 taskPage,
-               
+
                 taskPerPage,
-            ,
             );
             const count = await this.tasksService.countTasks();
             res.status(200).json({
