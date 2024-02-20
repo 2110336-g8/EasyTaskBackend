@@ -36,6 +36,7 @@ class TasksController {
     };
 
     getTasksPage = async (req: Request, res: Response) => {
+        console.log(req.user);
         try {
             const data = req.body;
 
@@ -235,7 +236,6 @@ class TasksController {
         try {
             const taskID = req.params.id;
             const { seqs } = req.body;
-
             if (
                 !seqs ||
                 !Array.isArray(seqs) ||

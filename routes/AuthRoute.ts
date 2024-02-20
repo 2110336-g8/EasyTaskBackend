@@ -23,13 +23,11 @@ router
     .post(userMiddleware.validateCreateUserData, authController.registerUser);
 
 // Login and Logout
-router
-    .route('/login')
-    .post(
-        authMiddleware.validateLoginRequest,
-        authController.loginUser,
-        authController.newToken,
-    );
+router.route('/login').post(
+    authMiddleware.validateLoginRequest,
+    authController.loginUser,
+    // authController.newToken,
+);
 router.route('/logout').post(authController.logoutUser);
 
 export default router;

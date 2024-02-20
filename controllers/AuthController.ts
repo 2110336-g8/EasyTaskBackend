@@ -72,7 +72,7 @@ class AuthController {
         try {
             const user = await this.userService.createUser(data);
             await this.otpService.deleteOtp(user.email);
-            const token = this.authService.generateToken(data);
+            const token = this.authService.generateToken(user._id);
             this.setJwtCookie(res, token);
             res.status(201).json({
                 success: true,
@@ -91,7 +91,7 @@ class AuthController {
         if (!user) {
             this.respondUnAuth(res);
         } else {
-            const token = this.authService.generateToken(data);
+            const token = this.authService.generateToken(user._id);
             this.setJwtCookie(res, token);
             res.status(200).json({
                 success: true,
@@ -125,14 +125,15 @@ class AuthController {
         });
     };
 
-    newToken = async (req: Request, res: Response): Promise<void> => {
-        const data: ILogin = req.body;
+    // newToken = async (req: Request, res: Response): Promise<void> => {
+    //     const data: ILogin = req.body;
+    //     const use: IU
 
-        res.status(200).json({
-            success: true,
-            token: this.authService.generateToken(data, 60),
-        });
-    };
+    //     res.status(200).json({
+    //         success: true,
+    //         token: this.authService.generateToken(data, 60),
+    //     });
+    // };
 
     private handleError = (res: Response, error: any) => {
         if (
