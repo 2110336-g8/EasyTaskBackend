@@ -14,6 +14,7 @@ export interface ITasksService {
         id: string,
         updateData: ITask,
     ) => Promise<ITaskDocument | null>;
+    countTasks: () => Promise<number | null>;
 }
 
 @Service()
@@ -52,6 +53,16 @@ export class TasksService implements ITasksService {
             return [];
         }
     };
+
+    async countTasks(): Promise<number | null> {
+        try {
+            const count = await this.taskRepository.countAllTasks();
+            return count;
+        } catch (error) {
+            console.error(error);
+            return null;
+        }
+    }
 
     getTaskById = async (id: string): Promise<ITaskDocument | null> => {
         try {
