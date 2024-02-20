@@ -28,7 +28,7 @@ export class UsersRepository
         email: string,
         password: string,
     ): Promise<IUserDocument | null> => {
-        const user = await this._model.findOne({ email });
+        const user = await this._model.findOne({ email }).select('+password');
         if (!user) {
             return null;
         }

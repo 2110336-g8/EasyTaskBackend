@@ -7,7 +7,7 @@ import { IUserDocument } from '../models/UserModel';
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
 
 export interface IAuthService {
-    generateToken: (payload: ILogin, sessionMinutes?: number) => string;
+    generateToken: (id: string, sessionMinutes?: number) => string;
     decodeToken: (token: string) => string | JwtPayload;
     verifyUser: (login: ILogin) => Promise<IUserDocument | null>;
 }
@@ -26,13 +26,13 @@ export class AuthService implements IAuthService {
     }
 
     generateToken = (
-        payload: ILogin,
+        id: string,
         sessionMinutes: number = parseInt(process.env.JWT_EXP_MIN || '60'),
     ): string => {
         const expiryTime: number =
             Math.floor(Date.now() / 1000) + sessionMinutes * 60;
         const subPayload = {
-            email: payload.email,
+            id,
         };
         return jwt.sign(subPayload, this.key_pair.key, {
             expiresIn: expiryTime,

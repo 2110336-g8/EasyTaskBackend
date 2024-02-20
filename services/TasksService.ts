@@ -5,13 +5,14 @@ import { Inject, Service } from 'typedi';
 import { NotFoundError, ValidationError } from '../errors/RepoError';
 import categoryData from '../assets/categories/categorieslist.json';
 import { ICategory } from '../models/CategoryModel';
-
+import { FilterQuery } from 'mongoose';
 export interface ITasksService {
     createTask: (taskData: ITask, email: string) => Promise<ITaskDocument>;
     getTaskList: (
         taskPage: number,
         taskPerPage: number,
-    ) => Promise<ITaskDocument[]>;
+        filter?: FilterQuery<ITaskDocument>,
+    ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
     getTaskById: (id: string) => Promise<ITaskDocument | null>;
     updateTask: (
         id: string,
@@ -62,18 +63,23 @@ export class TasksService implements ITasksService {
         }
     };
 
-    getTaskList = async (
+    async getTaskList(
         page: number,
         taskPerPage: number,
-    ): Promise<ITaskDocument[]> => {
+        filter: FilterQuery<ITaskDocument> = {},
+    ): Promise<{ tasks: ITaskDocument[]; count: number }> {
         try {
-            const taskList: ITaskDocument[] =
-                await this.taskRepository.findTasksByPage(page, taskPerPage);
-            return taskList;
+            const result = await this.taskRepository.findTasksByPage(
+                page,
+                taskPerPage,
+                filter,
+            );
+            return result;
         } catch (error) {
-            return [];
+            console.error(error);
+            return { tasks: [], count: 0 };
         }
-    };
+    }
 
     async countTasks(): Promise<number | null> {
         try {
