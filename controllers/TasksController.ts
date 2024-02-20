@@ -20,7 +20,8 @@ class TasksController {
 
     createTask = async (req: Request, res: Response): Promise<void> => {
         try {
-            const data = req.body;
+            var data = req.body;
+            data.customerId = req.user._id;
             const task = await this.tasksService.createTask(data);
             res.status(201).json({ task: task.toJSON() });
         } catch (error) {
@@ -350,6 +351,20 @@ class TasksController {
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
+    getCategories = async (req: Request, res: Response) => {
+        try {
+            const categories = await this.tasksService.getCategories();
+            res.status(200).json({
+                success: true,
+                categories,
+            });
+        } catch (error) {
+            res.status(500).json({
+                error: 'Internal server error',
+            });
         }
     };
 }
