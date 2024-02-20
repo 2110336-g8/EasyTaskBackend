@@ -42,12 +42,30 @@ class TasksController {
             const taskPage = Number(data.page) || 1;
             const taskPerPage = Number(data.limit) || 8;
 
-            const tasks = await this.tasksService.getTaskList(
-                taskPage,
+            let filter: any = {};
+            if (data.filter) {
+                let workers_q: { $eq?: number; $gt?: number } = { $gt: 1 };
+                if (data.filter.individual) {
+                    workers_q = { $eq: 1 };
+                }
+                filter = {
+                    category: { $in: data.filter.category || [] },
+                    workers: workers_q,
+                    startingWage: { $gte: data.filter.startingWage || 0 },
+                    endingWage: {
+                        $lte: data.filter.endingWage || Number.MAX_SAFE_INTEGER,
+                    },
+                };
+            }
 
+            const result = await this.tasksService.getTaskList(
+                taskPage,
                 taskPerPage,
+                filter,
             );
-            const count = await this.tasksService.countTasks();
+
+            const { tasks, count } = result;
+
             res.status(200).json({
                 success: true,
                 page: taskPage,
