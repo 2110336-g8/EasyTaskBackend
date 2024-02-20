@@ -146,8 +146,8 @@ class TasksController {
                 // Get the current imageKeys array
                 const currentImageKeys = task.imageKeys || [];
 
-                const seqExists = currentImageKeys.some(
-                    image => image.seq === seq,
+                const seqExists = currentImageKeys.find(
+                    image => Number(image.seq) === Number(seq),
                 );
 
                 if (seqExists) {
