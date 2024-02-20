@@ -22,7 +22,7 @@ class TasksController {
         try {
             const data = req.body;
             const task = await this.tasksService.createTask(data);
-            res.status(201).json(task);
+            res.status(201).json({ task: task.toJSON() });
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
@@ -35,25 +35,46 @@ class TasksController {
         }
     };
 
-    getTasks = async (req:Request, res:Response) => {
+    getTasksPage = async (req: Request, res: Response) => {
         try {
-            const taskPage = parseInt(req.params.page) || 1;
-            const taskPerPage = parseInt(req.query.size as string) || 8;
+            const data = req.body;
 
-            const tasks = await this.tasksService.getTaskList(taskPage, taskPerPage);
+            const taskPage = Number(data.page) || 1;
+            const taskPerPage = Number(data.limit) || 8;
+
+            const tasks = await this.tasksService.getTaskList(
+                taskPage,
+
+                taskPerPage,
+            );
+            const count = await this.tasksService.countTasks();
             res.status(200).json({
                 success: true,
-                currentPage: taskPage,
-                size: taskPerPage,
+                page: taskPage,
+                limit: taskPerPage,
+                count: count,
                 tasks,
             });
-        }
-        catch (error) {
+        } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
-          
+
+    getTaskbyId = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
+            const task = await this.tasksService.getTaskById(id);
+            if (!task) {
+                res.status(404).json({ error: 'Task not found' });
+                return;
+            }
+            res.status(200).json({ task: task.toJSON() });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
     // image ---------------------------------------------------------------------------------
     getTaskImages = async (req: Request, res: Response): Promise<void> => {
         try {
@@ -124,6 +145,15 @@ class TasksController {
 
                 // Get the current imageKeys array
                 const currentImageKeys = task.imageKeys || [];
+
+                const seqExists = currentImageKeys.some(
+                    image => image.seq === seq,
+                );
+
+                if (seqExists) {
+                    res.status(400).json({ error: 'Image seq already exists' });
+                    return;
+                }
 
                 // Update the array with the new image information
                 currentImageKeys.push({ seq, imageKey: key });
