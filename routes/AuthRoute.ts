@@ -20,7 +20,7 @@ router.route('/verifyOtp').post(authController.verifyOtp);
 // Register
 router
     .route('/register')
-    .post(userMiddleware.validateCreateBankData, authController.registerUser);
+    .post(userMiddleware.validateCreateUserData, authController.registerUser);
 
 // Login and Logout
 router
