@@ -20,8 +20,9 @@ class TasksController {
 
     createTask = async (req: Request, res: Response): Promise<void> => {
         try {
+            const email = res.locals.decodedToken.email;
             const data = req.body;
-            const task = await this.tasksService.createTask(data);
+            const task = await this.tasksService.createTask(data, email);
             res.status(201).json({ task: task.toJSON() });
         } catch (error) {
             if (error instanceof ValidationError) {
@@ -332,6 +333,20 @@ class TasksController {
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
+    getCategories = async (req: Request, res: Response) => {
+        try {
+            const categories = await this.tasksService.getCategories();
+            res.status(200).json({
+                success: true,
+                categories,
+            });
+        } catch (error) {
+            res.status(500).json({
+                error: 'Internal server error',
+            });
         }
     };
 }

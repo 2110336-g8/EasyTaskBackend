@@ -32,7 +32,7 @@ export class AuthService implements IAuthService {
         const expiryTime: number =
             Math.floor(Date.now() / 1000) + sessionMinutes * 60;
         const subPayload = {
-            phoneNumber: payload.email,
+            email: payload.email,
         };
         return jwt.sign(subPayload, this.key_pair.key, {
             expiresIn: expiryTime,

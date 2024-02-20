@@ -74,7 +74,6 @@ class AuthMiddleware {
         }
 
         const token = auth.split(' ')[1];
-        console.log(token);
 
         try {
             const decodedToken = this.authService.decodeToken(token);
