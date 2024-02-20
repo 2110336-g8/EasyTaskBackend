@@ -36,18 +36,37 @@ class TasksController {
     };
 
     getTasksPage = async (req: Request, res: Response) => {
+        console.log(req.user);
         try {
             const data = req.body;
 
             const taskPage = Number(data.page) || 1;
             const taskPerPage = Number(data.limit) || 8;
 
-            const tasks = await this.tasksService.getTaskList(
-                taskPage,
+            let filter: any = {};
+            if (data.filter) {
+                let workers_q: { $eq?: number; $gt?: number } = { $gt: 1 };
+                if (data.filter.individual) {
+                    workers_q = { $eq: 1 };
+                }
+                filter = {
+                    category: { $in: data.filter.category || [] },
+                    workers: workers_q,
+                    startingWage: { $gte: data.filter.startingWage || 0 },
+                    endingWage: {
+                        $lte: data.filter.endingWage || Number.MAX_SAFE_INTEGER,
+                    },
+                };
+            }
 
+            const result = await this.tasksService.getTaskList(
+                taskPage,
                 taskPerPage,
+                filter,
             );
-            const count = await this.tasksService.countTasks();
+
+            const { tasks, count } = result;
+
             res.status(200).json({
                 success: true,
                 page: taskPage,
@@ -146,8 +165,8 @@ class TasksController {
                 // Get the current imageKeys array
                 const currentImageKeys = task.imageKeys || [];
 
-                const seqExists = currentImageKeys.some(
-                    image => image.seq === seq,
+                const seqExists = currentImageKeys.find(
+                    image => Number(image.seq) === Number(seq),
                 );
 
                 if (seqExists) {
@@ -235,7 +254,6 @@ class TasksController {
         try {
             const taskID = req.params.id;
             const { seqs } = req.body;
-
             if (
                 !seqs ||
                 !Array.isArray(seqs) ||
