@@ -20,9 +20,9 @@ class TasksController {
 
     createTask = async (req: Request, res: Response): Promise<void> => {
         try {
-            const email = res.locals.decodedToken.email;
-            const data = req.body;
-            const task = await this.tasksService.createTask(data, email);
+            var data = req.body;
+            data.customerId = req.user._id;
+            const task = await this.tasksService.createTask(data);
             res.status(201).json({ task: task.toJSON() });
         } catch (error) {
             if (error instanceof ValidationError) {

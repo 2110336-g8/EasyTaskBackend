@@ -2,12 +2,12 @@ import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
 import { Inject, Service } from 'typedi';
-import { NotFoundError, ValidationError } from '../errors/RepoError';
+import { ValidationError } from '../errors/RepoError';
 import categoryData from '../assets/categories/categorieslist.json';
 import { ICategory } from '../models/CategoryModel';
 import { FilterQuery } from 'mongoose';
 export interface ITasksService {
-    createTask: (taskData: ITask, email: string) => Promise<ITaskDocument>;
+    createTask: (taskData: ITask) => Promise<ITaskDocument>;
     getTaskList: (
         taskPage: number,
         taskPerPage: number,
@@ -37,26 +37,13 @@ export class TasksService implements ITasksService {
         this.userRepository = userRepository;
     }
 
-    createTask = async (
-        taskData: ITask,
-        email: string,
-    ): Promise<ITaskDocument> => {
+    createTask = async (taskData: ITask): Promise<ITaskDocument> => {
         try {
-            const existEmailUser =
-                await this.userRepository.findOneByEmail(email);
-            if (!existEmailUser) {
-                throw new NotFoundError('User not found');
-            }
-            taskData.customerId = existEmailUser._id;
             const task: ITaskDocument =
                 await this.taskRepository.create(taskData);
             return task;
         } catch (error) {
-            if (
-                error instanceof ValidationError ||
-                error instanceof NotFoundError
-            )
-                throw error;
+            if (error instanceof ValidationError) throw error;
             else {
                 throw new Error('Unknown Error');
             }
