@@ -2,13 +2,14 @@ import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
-
+import { FilterQuery } from 'mongoose';
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
     getTaskList: (
         taskPage: number,
         taskPerPage: number,
-    ) => Promise<ITaskDocument[]>;
+        filter?: FilterQuery<ITaskDocument>,
+    ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
     getTaskById: (id: string) => Promise<ITaskDocument | null>;
     updateTask: (
         id: string,
@@ -41,18 +42,23 @@ export class TasksService implements ITasksService {
         }
     };
 
-    getTaskList = async (
+    async getTaskList(
         page: number,
         taskPerPage: number,
-    ): Promise<ITaskDocument[]> => {
+        filter: FilterQuery<ITaskDocument> = {},
+    ): Promise<{ tasks: ITaskDocument[]; count: number }> {
         try {
-            const taskList: ITaskDocument[] =
-                await this.taskRepository.findTasksByPage(page, taskPerPage);
-            return taskList;
+            const result = await this.taskRepository.findTasksByPage(
+                page,
+                taskPerPage,
+                filter,
+            );
+            return result;
         } catch (error) {
-            return [];
+            console.error(error);
+            return { tasks: [], count: 0 };
         }
-    };
+    }
 
     async countTasks(): Promise<number | null> {
         try {
