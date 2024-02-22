@@ -1,20 +1,25 @@
 import mongoose, { Document, Types, Schema } from 'mongoose';
 import { ValidationError } from '../errors/RepoError';
+import categoryData from '../assets/categories/categorieslist.json';
 
 export interface ITask {
     title: string;
-    category?: string;
+    category: number;
     description?: string;
     imageKeys?: Array<{ seq: number; imageKey: string }>;
-    location?: string;
-    state: 'New' | 'In Progress' | 'Completed' | 'Cancel';
+    location?: {
+        name: string;
+        latitude: number;
+        longitude: number;
+    };
+    state: 'Open' | 'In Progress' | 'Completed' | 'Cancel';
     wages: number; // smallest unit
     startDate: Date;
     endDate: Date;
     workers: number; //
-    customerID: Types.ObjectId;
+    customerId: Types.ObjectId;
     hiredWorkers: Array<{
-        workerID: Types.ObjectId;
+        workerId: Types.ObjectId;
         status: 'In Progress' | 'Completed' | 'Cancel';
     }>;
     createdAt: Date;
@@ -31,8 +36,15 @@ const TaskSchema = new Schema<ITaskDocument>(
             maxlength: [255, 'Title cannot be longer than 255 characters'],
         },
         category: {
-            type: String,
-            maxlength: [255, 'Category cannot be longer than 255 characters'],
+            type: Number,
+            required: [true, 'Category is required'],
+            default: 0,
+            validate: {
+                validator: function (value: number) {
+                    return value >= 0 && value < categoryData.categories.length;
+                },
+                message: 'Invalid category',
+            },
         },
         description: {
             type: String,
@@ -52,23 +64,56 @@ const TaskSchema = new Schema<ITaskDocument>(
             ],
         },
         location: {
-            type: String,
-            maxlength: [255, 'Location cannot be longer than 255 characters'],
+            type: {
+                name: {
+                    type: String,
+                    maxlength: [
+                        255,
+                        'Location name cannot be longer than 255 characters',
+                    ],
+                    required: [true, 'Location name is required'],
+                },
+                latitude: {
+                    type: Number,
+                    min: -90,
+                    max: 90,
+                    required: [true, 'Latitude of location is required'],
+                },
+                longitude: {
+                    type: Number,
+                    min: -180,
+                    max: 180,
+                    required: [true, 'Longitude of location is required'],
+                },
+            },
+            _id: false,
         },
         state: {
             type: String,
-            enum: ['New', 'In Progress', 'Completed', 'Cancel'],
+            enum: ['Open', 'In Progress', 'Completed', 'Cancel', 'Expired'],
             required: [true, 'State is required'],
             maxlength: [255, 'State cannot be longer than 255 characters'],
-            default: 'New',
+            default: 'Open',
         },
         wages: {
             type: Number,
             required: [true, 'Wage is required'],
+            validate: {
+                validator: function (value: number) {
+                    return value >= 0;
+                },
+                message: 'Wages cannot be negative',
+            },
         },
         workers: {
             type: Number,
             required: [true, 'Worker number is required'],
+            validate: {
+                validator: function (value: number) {
+                    return value > 0;
+                },
+                message: 'Minimum worker number is one',
+            },
         },
         startDate: {
             type: Date,
@@ -78,17 +123,17 @@ const TaskSchema = new Schema<ITaskDocument>(
             type: Date,
             required: [true, 'Enddate is required'],
         },
-        customerID: {
+        customerId: {
             type: Schema.Types.ObjectId,
-            required: [true, 'Customer ID is required'],
+            required: [true, 'Customer Id is required'],
             ref: 'User',
         },
         hiredWorkers: {
             type: [
                 {
-                    workerID: {
+                    workerId: {
                         type: Schema.Types.ObjectId,
-                        required: [true, 'WorkerID is required'],
+                        required: [true, 'WorkerId is required'],
                         ref: 'User',
                     },
                     status: {
@@ -110,21 +155,21 @@ const TaskSchema = new Schema<ITaskDocument>(
 TaskSchema.pre('save', function (next) {
     const task = this as ITaskDocument;
 
-    // Check uniqueness of workerIDs within the same task
-    // Check if customerID is equal to any workerID
-    const workerIDs = new Set();
+    // Check uniqueness of workerIds within the same task
+    // Check if customerId is equal to any workerId
+    const workerIds = new Set();
     for (const worker of task.hiredWorkers) {
-        if (workerIDs.has(worker.workerID.toString())) {
+        if (workerIds.has(worker.workerId.toString())) {
             const error = new ValidationError(
-                `Duplicate workerID '${worker.workerID}' within the same task.`,
+                `Duplicate workerId '${worker.workerId}' within the same task.`,
             );
             return next(error);
         }
-        workerIDs.add(worker.workerID.toString());
+        workerIds.add(worker.workerId.toString());
 
-        if (task.customerID.toString() === worker.workerID.toString()) {
+        if (task.customerId.toString() === worker.workerId.toString()) {
             const error = new ValidationError(
-                `customerID '${task.customerID}' cannot be equal to any workerID within the same task.`,
+                `customerId '${task.customerId}' cannot be equal to any workerId within the same task.`,
             );
             return next(error);
         }
