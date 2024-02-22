@@ -1,36 +1,12 @@
 {
     "categories": [
-        {
-            "id": "0",
-            "name": "General"
-        },
-        {
-            "id": "1",
-            "name": "Graphic Design"
-        },
-        {
-            "id": "2",
-            "name": "Marketing"
-        },
-        {
-            "id": "3",
-            "name": "Translation"
-        },
-        {
-            "id": "4",
-            "name": "Consultant"
-        },
-        {
-            "id": "5",
-            "name": "Programming and Tech"
-        },
-        {
-            "id": "6",
-            "name": "Images and Sound"
-        },
-        {
-            "id": "7",
-            "name": "Management"
-        }
+        "General", 
+        "Graphic Design",
+        "Marketing",
+        "Translation",
+        "Consultant",
+        "Programming and Tech",
+        "Images and Sound",
+        "Management"
     ]
 }

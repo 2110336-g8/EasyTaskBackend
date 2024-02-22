@@ -4,7 +4,7 @@ import categoryData from '../assets/categories/categorieslist.json';
 
 export interface ITask {
     title: string;
-    category: number;
+    category: string;
     description?: string;
     imageKeys?: Array<{ seq: number; imageKey: string }>;
     location?: {
@@ -36,12 +36,12 @@ const TaskSchema = new Schema<ITaskDocument>(
             maxlength: [255, 'Title cannot be longer than 255 characters'],
         },
         category: {
-            type: Number,
-            required: [true, 'Category is required'],
-            default: 0,
+            type: String,
+            // required: [true, 'Category is required'],
+            default: categoryData.categories[0],
             validate: {
-                validator: function (value: number) {
-                    return value >= 0 && value < categoryData.categories.length;
+                validator: function (value: string) {
+                    return categoryData.categories.includes(value);
                 },
                 message: 'Invalid category',
             },
