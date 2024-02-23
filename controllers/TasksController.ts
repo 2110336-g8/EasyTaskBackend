@@ -45,22 +45,35 @@ class TasksController {
             const taskPerPage = Number(data.limit) || 8;
 
             let filter: any = {};
-            if (data.filter) {
+            if (data.filter != null) {
                 let workers_q: { $eq?: number; $gt?: number } = { $gt: 1 };
-                if (data.filter.individual) {
-                    workers_q = { $eq: 1 };
+                if (data.filter.individual != null) {
+                    if (data.filter.individual == true) {
+                        workers_q = { $eq: 1 };
+                    }
+                    filter.workers = workers_q;
                 }
-                filter = {
-                    category: { $in: data.filter.category || [] },
-                    workers: workers_q,
-                    wages: {
-                        $gte: Number(data.filter.startingWage) || 0,
-                        $lte:
-                            Number(data.filter.endingWage) ||
-                            Number.MAX_SAFE_INTEGER,
-                    },
-                };
-                console.log(filter);
+                if (data.filter.category != null) {
+                    filter.category = { $in: data.filter.category || [] };
+                }
+
+                if (data.filter.wages && Array.isArray(data.filter.wages)) {
+                    let wage_filter = [];
+
+                    for (let wage_range of data.filter.wages) {
+                        let start = Number(wage_range[0]);
+                        let end = Number(wage_range[1]);
+
+                        wage_filter.push({
+                            $and: [
+                                { wages: { $gte: start } },
+                                { wages: { $lte: end } },
+                            ],
+                        });
+                    }
+
+                    filter.$or = wage_filter;
+                }
             }
 
             const result = await this.tasksService.getTaskList(
