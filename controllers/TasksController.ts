@@ -53,11 +53,14 @@ class TasksController {
                 filter = {
                     category: { $in: data.filter.category || [] },
                     workers: workers_q,
-                    startingWage: { $gte: data.filter.startingWage || 0 },
-                    endingWage: {
-                        $lte: data.filter.endingWage || Number.MAX_SAFE_INTEGER,
+                    wages: {
+                        $gte: Number(data.filter.startingWage) || 0,
+                        $lte:
+                            Number(data.filter.endingWage) ||
+                            Number.MAX_SAFE_INTEGER,
                     },
                 };
+                console.log(filter);
             }
 
             const result = await this.tasksService.getTaskList(
