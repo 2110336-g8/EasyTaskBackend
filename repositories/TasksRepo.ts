@@ -1,7 +1,7 @@
 import { ITask, ITaskDocument, TaskModel } from '../models/TaskModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
 
 export interface ITasksRepository extends IRepository<ITask> {
     findTasksByPage: (
@@ -10,6 +10,12 @@ export interface ITasksRepository extends IRepository<ITask> {
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
     countAllTasks: () => Promise<number | null>;
+    findOneWithGeneralInfo: (id: string) => Promise<ITaskDocument | null>;
+    updateApplicants: (
+        taskId: string,
+        userId: string,
+        timestamps: Date,
+    ) => Promise<ITaskDocument | null>;
 }
 
 @Service()
@@ -40,4 +46,70 @@ export class TasksRepository
         const count = await this._model.countDocuments();
         return count;
     }
+
+    findOneWithGeneralInfo = async (
+        id: string,
+    ): Promise<ITaskDocument | null> => {
+        try {
+            const task = await this._model.findById(id).select({
+                applicants: 0,
+                hiredWorkers: 0,
+            });
+            return task;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    updateApplicants = async (
+        taskId: string,
+        userId: string,
+        timestamps: Date,
+    ): Promise<ITaskDocument | null> => {
+        try {
+            // Check if there is an existing applicant with the same userId
+            const existingApplicant = await this._model.findOne(
+                { _id: taskId, 'applicants.userId': userId },
+                { 'applicants.$': 1 },
+            );
+
+            // If an applicant with the same userId exists and its status is "Pending" or "Accepted", return null
+            if (
+                existingApplicant &&
+                ['Pending', 'Accepted'].includes(
+                    existingApplicant.applicants[0].status,
+                )
+            ) {
+                console.error(
+                    'Update failed: An applicant with the same userId already exists with status "Pending" or "Accepted"',
+                );
+                return null;
+            }
+
+            // If no existing applicant with the same userId or its status is not "Pending" or "Accepted", proceed with the update
+            const updatedTask = await this._model.findOneAndUpdate(
+                { _id: taskId },
+                {
+                    $push: {
+                        applicants: {
+                            userId: userId,
+                            createdAt: timestamps,
+                        },
+                    },
+                },
+                { new: true },
+            );
+            if (!updatedTask) {
+                console.error(
+                    'Update failed: Document not found or constraint violated',
+                );
+                return null;
+            }
+
+            return updatedTask;
+        } catch (error) {
+            console.error('Error updating applicants:', error);
+            throw error;
+        }
+    };
 }
