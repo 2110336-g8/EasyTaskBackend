@@ -66,12 +66,15 @@ class TasksController {
                         let start = Number(wage_range[0]);
                         let end = Number(wage_range[1]);
 
-                        wage_filter.push({
-                            $and: [
-                                { wages: { $gte: start } },
-                                { wages: { $lte: end } },
-                            ],
-                        });
+                        let wageCondition: any = {};
+
+                        if (start !== -1) {
+                            wageCondition.$gte = start;
+                        }
+                        if (end !== -1) {
+                            wageCondition.$lte = end;
+                        }
+                        wage_filter.push({ wages: wageCondition });
                     }
 
                     filter.$or = filter.$or || []; // Ensure $or is an array
