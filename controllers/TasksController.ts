@@ -4,7 +4,6 @@ import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
 import { ImageService } from '../services/ImageService';
 import sharp from 'sharp';
-
 @Service()
 class TasksController {
     private tasksService: ITasksService;
@@ -44,20 +43,64 @@ class TasksController {
             const taskPage = Number(data.page) || 1;
             const taskPerPage = Number(data.limit) || 8;
 
+            // search tasks'title and tasks' location
             let filter: any = {};
-            if (data.filter) {
+
+            // filter
+            if (data.filter != null) {
                 let workers_q: { $eq?: number; $gt?: number } = { $gt: 1 };
-                if (data.filter.individual) {
-                    workers_q = { $eq: 1 };
+                if (data.filter.individual != null) {
+                    if (data.filter.individual == true) {
+                        workers_q = { $eq: 1 };
+                    }
+                    filter.workers = workers_q;
                 }
-                filter = {
-                    category: { $in: data.filter.category || [] },
-                    workers: workers_q,
-                    startingWage: { $gte: data.filter.startingWage || 0 },
-                    endingWage: {
-                        $lte: data.filter.endingWage || Number.MAX_SAFE_INTEGER,
-                    },
-                };
+                if (data.filter.category != null) {
+                    filter.category = { $in: data.filter.category || [] };
+                }
+
+                if (data.filter.wages && Array.isArray(data.filter.wages)) {
+                    let wage_filter = [];
+
+                    for (let wage_range of data.filter.wages) {
+                        let start = Number(wage_range[0]);
+                        let end = Number(wage_range[1]);
+
+                        let wageCondition: any = {};
+
+                        if (start !== -1) {
+                            wageCondition.$gte = start;
+                        }
+                        if (end !== -1) {
+                            wageCondition.$lte = end;
+                        }
+                        wage_filter.push({ wages: wageCondition });
+                    }
+
+                    filter.$or = filter.$or || []; // Ensure $or is an array
+                    filter.$or.push(...wage_filter);
+                }
+            }
+
+            // Search name on tasks' title and tasks' location name
+            if (data.name) {
+                filter.$and = filter.$and || []; // Ensure $and is an array
+                filter.$and.push({
+                    $or: [
+                        {
+                            title: {
+                                $regex: `.*${data.name}.*`,
+                                $options: 'i',
+                            },
+                        },
+                        {
+                            'location.name': {
+                                $regex: `.*${data.name}.*`,
+                                $options: 'i',
+                            },
+                        },
+                    ],
+                });
             }
 
             const result = await this.tasksService.getTaskList(

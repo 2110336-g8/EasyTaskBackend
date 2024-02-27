@@ -4,7 +4,6 @@ import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
 import categoryData from '../assets/categories/categorieslist.json';
-import { ICategory } from '../models/CategoryModel';
 import { FilterQuery } from 'mongoose';
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
@@ -19,7 +18,7 @@ export interface ITasksService {
         updateData: ITask,
     ) => Promise<ITaskDocument | null>;
     countTasks: () => Promise<number | null>;
-    getCategories: () => Promise<ICategory[]>;
+    getCategories: () => Promise<String[]>;
 }
 
 @Service()
@@ -107,20 +106,9 @@ export class TasksService implements ITasksService {
         }
     };
 
-    getCategories = async (): Promise<ICategory[]> => {
+    getCategories = async (): Promise<String[]> => {
         try {
-            const categories: ICategory[] = await Promise.all(
-                categoryData.categories.map(async category => {
-                    try {
-                        return {
-                            id: category.id,
-                            name: category.name,
-                        };
-                    } catch (error) {
-                        throw error;
-                    }
-                }),
-            );
+            const categories: String[] = categoryData.categories;
             return categories;
         } catch (error) {
             return [];
