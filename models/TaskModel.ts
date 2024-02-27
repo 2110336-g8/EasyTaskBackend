@@ -2,9 +2,11 @@ import mongoose, { Document, Types, Schema } from 'mongoose';
 import { ClientSession } from 'mongoose';
 import { ValidationError } from '../errors/RepoError';
 import categoryData from '../assets/categories/categorieslist.json';
+import categoryData from '../assets/categories/categorieslist.json';
 
 export interface ITask {
     title: string;
+    category: string;
     category: string;
     description?: string;
     imageKeys?: Array<{ seq: number; imageKey: string }>;
@@ -44,6 +46,14 @@ const TaskSchema = new Schema<ITaskDocument>(
         },
         category: {
             type: String,
+            // required: [true, 'Category is required'],
+            default: categoryData.categories[0],
+            validate: {
+                validator: function (value: string) {
+                    return categoryData.categories.includes(value);
+                },
+                message: 'Invalid category',
+            },
             // required: [true, 'Category is required'],
             default: categoryData.categories[0],
             validate: {
@@ -114,10 +124,22 @@ const TaskSchema = new Schema<ITaskDocument>(
                 },
                 message: 'Wages cannot be negative',
             },
+            validate: {
+                validator: function (value: number) {
+                    return value >= 0;
+                },
+                message: 'Wages cannot be negative',
+            },
         },
         workers: {
             type: Number,
             required: [true, 'Worker number is required'],
+            validate: {
+                validator: function (value: number) {
+                    return value > 0;
+                },
+                message: 'Minimum worker number is one',
+            },
             validate: {
                 validator: function (value: number) {
                     return value > 0;
@@ -134,7 +156,9 @@ const TaskSchema = new Schema<ITaskDocument>(
             required: [true, 'Enddate is required'],
         },
         customerId: {
+        customerId: {
             type: Schema.Types.ObjectId,
+            required: [true, 'Customer Id is required'],
             required: [true, 'Customer Id is required'],
             ref: 'User',
         },

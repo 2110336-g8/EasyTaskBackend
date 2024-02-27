@@ -5,6 +5,7 @@ import { CannotApplyTaskError } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
 import categoryData from '../assets/categories/categorieslist.json';
+import categoryData from '../assets/categories/categorieslist.json';
 import { FilterQuery } from 'mongoose';
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
@@ -31,14 +32,18 @@ export interface ITasksService {
 export class TasksService implements ITasksService {
     private taskRepository: ITasksRepository;
     private userRepository: IUsersRepositorty;
+    private userRepository: IUsersRepositorty;
 
     constructor(
         @Inject(() => TasksRepository)
         taskRepository: ITasksRepository,
         @Inject(() => UsersRepository)
         userRepository: IUsersRepositorty,
+        @Inject(() => UsersRepository)
+        userRepository: IUsersRepositorty,
     ) {
         this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
         this.userRepository = userRepository;
     }
 
