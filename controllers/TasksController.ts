@@ -43,9 +43,10 @@ class TasksController {
             const taskPage = Number(data.page) || 1;
             const taskPerPage = Number(data.limit) || 8;
 
-            //search tasks'title and tasks' location
+            // search tasks'title and tasks' location
             let filter: any = {};
-            //filter
+
+            // filter
             if (data.filter != null) {
                 let workers_q: { $eq?: number; $gt?: number } = { $gt: 1 };
                 if (data.filter.individual != null) {
@@ -73,20 +74,30 @@ class TasksController {
                         });
                     }
 
-                    filter.$or = wage_filter;
+                    filter.$or = filter.$or || []; // Ensure $or is an array
+                    filter.$or.push(...wage_filter);
                 }
             }
-            // search name on tasks'title and tasks'location name
+
+            // Search name on tasks' title and tasks' location name
             if (data.name) {
-                filter.$or = [
-                    { title: { $regex: `.*${data.name}.*`, $options: 'i' } },
-                    {
-                        'location.name': {
-                            $regex: `.*${data.name}.*`,
-                            $options: 'i',
+                filter.$and = filter.$and || []; // Ensure $and is an array
+                filter.$and.push({
+                    $or: [
+                        {
+                            title: {
+                                $regex: `.*${data.name}.*`,
+                                $options: 'i',
+                            },
                         },
-                    },
-                ];
+                        {
+                            'location.name': {
+                                $regex: `.*${data.name}.*`,
+                                $options: 'i',
+                            },
+                        },
+                    ],
+                });
             }
 
             const result = await this.tasksService.getTaskList(
