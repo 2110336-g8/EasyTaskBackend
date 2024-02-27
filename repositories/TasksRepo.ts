@@ -1,7 +1,7 @@
 import { ITask, ITaskDocument, TaskModel } from '../models/TaskModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
-import { FilterQuery, Types } from 'mongoose';
+import { FilterQuery } from 'mongoose';
 
 export interface ITasksRepository extends IRepository<ITask> {
     findTasksByPage: (
