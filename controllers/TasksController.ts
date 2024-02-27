@@ -4,6 +4,8 @@ import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
 import { ImageService } from '../services/ImageService';
 import sharp from 'sharp';
+import { CannotApplyTaskError } from '../errors/TaskError';
+
 @Service()
 class TasksController {
     private tasksService: ITasksService;
@@ -19,6 +21,8 @@ class TasksController {
 
     createTask = async (req: Request, res: Response): Promise<void> => {
         try {
+            var data = req.body;
+            data.customerId = req.user._id;
             var data = req.body;
             data.customerId = req.user._id;
             const task = await this.tasksService.createTask(data);
@@ -127,11 +131,29 @@ class TasksController {
     getTaskbyId = async (req: Request, res: Response) => {
         try {
             const id = req.params.id;
+            const userId = req.user._id;
             const task = await this.tasksService.getTaskById(id);
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
                 return;
             }
+            if (userId.toString() !== task.customerId.toString()) {
+                const taskWithGeneralInfo =
+                    await this.tasksService.getTaskWithGeneralInfoById(id);
+                if (!taskWithGeneralInfo) {
+                    res.status(404).json({ error: 'Task not found' });
+                    return;
+                }
+                res.status(200).json({ task: taskWithGeneralInfo.toJSON() });
+                return;
+            }
+            // if (userId.toString() !== task.customerId.toString()) {
+            //     const filteredTask = { ...task.toObject() };
+            //     delete filteredTask.applications;
+            //     delete filteredTask.hiredWorkers;
+            //     res.status(200).json({ task: filteredTask });
+            //     return;
+            // }
             res.status(200).json({ task: task.toJSON() });
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
@@ -408,6 +430,31 @@ class TasksController {
             res.status(500).json({
                 error: 'Internal server error',
             });
+        }
+    };
+
+    applyTask = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
+            const task = await this.tasksService.getTaskById(id);
+            if (!task) {
+                res.status(404).json({ error: 'Task not found' });
+                return;
+            }
+            const result = await this.tasksService.applyTask(
+                id,
+                req.user._id.toString(),
+            );
+            res.status(200).json({ success: true, result });
+        } catch (error) {
+            if (error instanceof CannotApplyTaskError) {
+                res.status(500).json({
+                    error: error.name,
+                    details: error.message,
+                });
+            } else {
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
         }
     };
 }
