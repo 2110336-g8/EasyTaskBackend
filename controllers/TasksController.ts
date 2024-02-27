@@ -4,7 +4,6 @@ import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
 import { ImageService } from '../services/ImageService';
 import sharp from 'sharp';
-
 @Service()
 class TasksController {
     private tasksService: ITasksService;
@@ -44,7 +43,9 @@ class TasksController {
             const taskPage = Number(data.page) || 1;
             const taskPerPage = Number(data.limit) || 8;
 
+            //search tasks'title and tasks' location
             let filter: any = {};
+            //filter
             if (data.filter != null) {
                 let workers_q: { $eq?: number; $gt?: number } = { $gt: 1 };
                 if (data.filter.individual != null) {
@@ -74,6 +75,18 @@ class TasksController {
 
                     filter.$or = wage_filter;
                 }
+            }
+            // search name on tasks'title and tasks'location name
+            if (data.name) {
+                filter.$or = [
+                    { title: { $regex: `.*${data.name}.*`, $options: 'i' } },
+                    {
+                        'location.name': {
+                            $regex: `.*${data.name}.*`,
+                            $options: 'i',
+                        },
+                    },
+                ];
             }
 
             const result = await this.tasksService.getTaskList(
