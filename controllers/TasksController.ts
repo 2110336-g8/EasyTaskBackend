@@ -204,7 +204,7 @@ class TasksController {
     // upload 1 image
     uploadTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const taskID = req.params.id;
+            const taskId = req.params.id;
             const { seq } = req.body;
             const file = req.file;
 
@@ -219,9 +219,9 @@ class TasksController {
             try {
                 const metadata = await sharp(file.buffer).metadata();
                 const fileExtension = metadata.format!.toLowerCase();
-                const key = `${taskID}_${randomNum}.${fileExtension}`;
+                const key = `${taskId}_${randomNum}.${fileExtension}`;
 
-                const task = await this.tasksService.getTaskById(taskID);
+                const task = await this.tasksService.getTaskById(taskId);
 
                 if (!task) {
                     res.status(404).json({ error: 'Task not found' });
@@ -245,7 +245,7 @@ class TasksController {
 
                 task.imageKeys = currentImageKeys;
 
-                await this.tasksService.updateTask(taskID, task);
+                await this.tasksService.updateTask(taskId, task);
 
                 // Upload the file to AWS S3 or your preferred storage
                 await this.imageService.createImage(
@@ -272,7 +272,7 @@ class TasksController {
     // Change the sequence number in imageKeys (image that have seq = oldSeq to be newSeq)
     changeImageSeq = async (req: Request, res: Response): Promise<void> => {
         try {
-            const taskID = req.params.id;
+            const taskId = req.params.id;
             const { oldSeq, newSeq } = req.body;
 
             if (typeof oldSeq !== 'number' || typeof newSeq !== 'number') {
@@ -280,7 +280,7 @@ class TasksController {
                 return;
             }
 
-            const task = await this.tasksService.getTaskById(taskID);
+            const task = await this.tasksService.getTaskById(taskId);
 
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
@@ -297,7 +297,7 @@ class TasksController {
                     }
                     return imageKey;
                 });
-                await this.tasksService.updateTask(taskID, task);
+                await this.tasksService.updateTask(taskId, task);
 
                 res.status(200).json({ success: true });
             } else {
@@ -318,7 +318,7 @@ class TasksController {
         res: Response,
     ): Promise<void> => {
         try {
-            const taskID = req.params.id;
+            const taskId = req.params.id;
             const { seqs } = req.body;
             if (
                 !seqs ||
@@ -331,7 +331,7 @@ class TasksController {
                 return;
             }
 
-            const task = await this.tasksService.getTaskById(taskID);
+            const task = await this.tasksService.getTaskById(taskId);
 
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
@@ -356,7 +356,7 @@ class TasksController {
 
                 // Update the task with the remaining imageKeys
                 task.imageKeys = remainingImageKeys;
-                await this.tasksService.updateTask(taskID, task);
+                await this.tasksService.updateTask(taskId, task);
 
                 res.status(200).json(remainingImageKeys);
             } else {
