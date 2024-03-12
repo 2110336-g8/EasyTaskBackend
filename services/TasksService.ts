@@ -1,6 +1,7 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
+import { CannotApplyTaskError } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
 import categoryData from '../assets/categories/categorieslist.json';
@@ -13,12 +14,17 @@ export interface ITasksService {
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
     getTaskById: (id: string) => Promise<ITaskDocument | null>;
+    getTaskWithGeneralInfoById: (id: string) => Promise<ITaskDocument | null>;
     updateTask: (
         id: string,
         updateData: ITask,
     ) => Promise<ITaskDocument | null>;
     countTasks: () => Promise<number | null>;
     getCategories: () => Promise<String[]>;
+    applyTask: (
+        taskId: string,
+        userId: string,
+    ) => Promise<ITaskDocument | null>;
 }
 
 @Service()
@@ -86,6 +92,17 @@ export class TasksService implements ITasksService {
         }
     };
 
+    getTaskWithGeneralInfoById = async (
+        id: string,
+    ): Promise<ITaskDocument | null> => {
+        try {
+            const task = await this.taskRepository.findOneWithGeneralInfo(id);
+            return task;
+        } catch (error) {
+            return null;
+        }
+    };
+
     updateTask = async (
         id: string,
         updateData: ITask,
@@ -112,6 +129,47 @@ export class TasksService implements ITasksService {
             return categories;
         } catch (error) {
             return [];
+        }
+    };
+
+    applyTask = async (
+        taskId: string,
+        userId: string,
+    ): Promise<ITaskDocument | null> => {
+        const timestamps = new Date();
+        const session = await this.taskRepository.startSession();
+        session.startTransaction();
+        try {
+            const updatedUser = await this.userRepository.updateApplications(
+                taskId,
+                userId,
+                timestamps,
+            );
+            if (!updatedUser) {
+                throw new CannotApplyTaskError('Failed to apply task');
+            }
+
+            const updatedTask = await this.taskRepository.updateApplicants(
+                taskId,
+                userId,
+                timestamps,
+            );
+            if (!updatedTask) {
+                throw new CannotApplyTaskError('Failed to apply task');
+            }
+            const generalInfoTask = {
+                ...updatedTask.toObject(),
+                applicants: undefined,
+                hiredWorkers: undefined,
+            };
+
+            await session.commitTransaction();
+            session.endSession();
+            return generalInfoTask as ITaskDocument;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
         }
     };
 }
