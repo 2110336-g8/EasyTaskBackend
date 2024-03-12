@@ -15,7 +15,8 @@ router.route('/categories').get(tasksController.getCategories);
 
 router.route('/:id').get(tasksController.getTaskbyId);
 
-router.route('/:id/application').post(tasksController.applyTask);
+router.route('/:id/apply').post(tasksController.applyTask);
+router.route('/:id/cancel').post(tasksController.cancelTask);
 
 router
     .route('/:id/task-image')

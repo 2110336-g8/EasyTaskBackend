@@ -2,6 +2,7 @@ import { compare } from 'bcrypt';
 import { IUser, IUserDocument, UserModel } from '../models/UserModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
+import { StringSchemaDefinition } from 'mongoose';
 
 export interface IUsersRepositorty extends IRepository<IUser> {
     findOneByEmail: (email: string) => Promise<IUserDocument | null>;
@@ -9,11 +10,16 @@ export interface IUsersRepositorty extends IRepository<IUser> {
         email: string,
         password: string,
     ) => Promise<IUserDocument | null>;
-    updateApplications: (
+    addOwnedTasks: (
+        taskId: string,
+        userId: string,
+    ) => Promise<IUserDocument | null>;
+    addApplications: (
         taskId: string,
         userId: string,
         timestamps: Date,
     ) => Promise<IUserDocument | null>;
+    rejectAllApplicationsForOneTask: (taskId: string) => Promise<null>;
 }
 
 @Service()
@@ -41,7 +47,34 @@ export class UsersRepository
         return isValid ? user : null;
     };
 
-    updateApplications = async (
+    addOwnedTasks = async (
+        taskId: string,
+        userId: string,
+    ): Promise<IUserDocument | null> => {
+        try {
+            const updatedUser = await this._model.findOneAndUpdate(
+                { _id: userId },
+                {
+                    $push: {
+                        ownedTasks: taskId,
+                    },
+                },
+                { new: true },
+            );
+            if (!updatedUser) {
+                console.error(
+                    'Update failed: Document not found or constraint violated',
+                );
+                return null;
+            }
+            return updatedUser;
+        } catch (error) {
+            console.error('Error updating ownedTasks:', error);
+            throw error;
+        }
+    };
+
+    addApplications = async (
         taskId: string,
         userId: string,
         timestamps: Date,
@@ -71,7 +104,7 @@ export class UsersRepository
                 { _id: userId },
                 {
                     $push: {
-                        applicantions: {
+                        applications: {
                             taskId: taskId,
                             createdAt: timestamps,
                         },
@@ -86,6 +119,20 @@ export class UsersRepository
                 return null;
             }
             return updatedUser;
+        } catch (error) {
+            console.error('Error updating applications:', error);
+            throw error;
+        }
+    };
+
+    rejectAllApplicationsForOneTask = async (taskId: string): Promise<null> => {
+        try {
+            // Update all users with applications having the specific taskId to set their status to 'Rejected'
+            await this._model.updateMany(
+                { 'applications.taskId': taskId },
+                { $set: { 'applications.$.status': 'Rejected' } },
+            );
+            return null;
         } catch (error) {
             console.error('Error updating applications:', error);
             throw error;
