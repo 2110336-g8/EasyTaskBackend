@@ -95,7 +95,7 @@ const TaskSchema = new Schema<ITaskDocument>(
         },
         status: {
             type: String,
-            enum: ['Open', 'In Progress', 'Completed', 'Cancel'],
+            enum: ['Open', 'In Progress', 'Completed', 'Closed'],
             required: [true, 'Task status is required'],
             maxlength: [
                 255,

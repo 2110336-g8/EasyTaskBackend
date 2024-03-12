@@ -1,7 +1,10 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
-import { CannotApplyTaskError } from '../errors/TaskError';
+import {
+    CannotApplyTaskError,
+    CannotCancelTaskError,
+} from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
 import categoryData from '../assets/categories/categorieslist.json';
@@ -25,6 +28,7 @@ export interface ITasksService {
         taskId: string,
         userId: string,
     ) => Promise<ITaskDocument | null>;
+    cancelTask: (taskId: string) => Promise<ITaskDocument | null>;
 }
 
 @Service()
@@ -43,14 +47,27 @@ export class TasksService implements ITasksService {
     }
 
     createTask = async (taskData: ITask): Promise<ITaskDocument> => {
+        const session = await this.taskRepository.startSession();
+        session.startTransaction();
         try {
             const task: ITaskDocument =
                 await this.taskRepository.create(taskData);
+            const updatedUser = await this.userRepository.addOwnedTasks(
+                task._id.toString(),
+                task.customerId.toString(),
+            );
+            if (!updatedUser) {
+                throw new Error('Failed to update user with owned tasks.');
+            }
+            await session.commitTransaction();
+            session.endSession();
             return task;
         } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
             if (error instanceof ValidationError) throw error;
             else {
-                throw new Error('Unknown Error');
+                throw error;
             }
         }
     };
@@ -140,22 +157,26 @@ export class TasksService implements ITasksService {
         const session = await this.taskRepository.startSession();
         session.startTransaction();
         try {
-            const updatedUser = await this.userRepository.updateApplications(
+            const updatedUser = await this.userRepository.addApplications(
                 taskId,
                 userId,
                 timestamps,
             );
             if (!updatedUser) {
-                throw new CannotApplyTaskError('Failed to apply task');
+                throw new CannotApplyTaskError(
+                    'You have already applied to this task or your application has been accepted.',
+                );
             }
 
-            const updatedTask = await this.taskRepository.updateApplicants(
+            const updatedTask = await this.taskRepository.addApplicants(
                 taskId,
                 userId,
                 timestamps,
             );
             if (!updatedTask) {
-                throw new CannotApplyTaskError('Failed to apply task');
+                throw new CannotApplyTaskError(
+                    'You have already applied to this task or your application has been accepted.',
+                );
             }
             const generalInfoTask = {
                 ...updatedTask.toObject(),
@@ -166,6 +187,26 @@ export class TasksService implements ITasksService {
             await session.commitTransaction();
             session.endSession();
             return generalInfoTask as ITaskDocument;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+    };
+
+    cancelTask = async (taskId: string): Promise<ITaskDocument | null> => {
+        const session = await this.taskRepository.startSession();
+        session.startTransaction();
+        try {
+            await this.userRepository.rejectAllApplicationsForOneTask(taskId);
+
+            const updatedTask = await this.taskRepository.closeTask(taskId);
+            if (!updatedTask) {
+                throw new CannotCancelTaskError('Failed to cancel task');
+            }
+            await session.commitTransaction();
+            session.endSession();
+            return updatedTask;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
