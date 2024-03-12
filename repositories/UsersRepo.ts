@@ -9,11 +9,12 @@ export interface IUsersRepositorty extends IRepository<IUser> {
         email: string,
         password: string,
     ) => Promise<IUserDocument | null>;
-    updateApplications: (
+    addApplications: (
         taskId: string,
         userId: string,
         timestamps: Date,
     ) => Promise<IUserDocument | null>;
+    rejectAllApplicationsForOneTask: (taskId: string) => Promise<null>;
 }
 
 @Service()
@@ -41,7 +42,7 @@ export class UsersRepository
         return isValid ? user : null;
     };
 
-    updateApplications = async (
+    addApplications = async (
         taskId: string,
         userId: string,
         timestamps: Date,
@@ -71,7 +72,7 @@ export class UsersRepository
                 { _id: userId },
                 {
                     $push: {
-                        applicantions: {
+                        applications: {
                             taskId: taskId,
                             createdAt: timestamps,
                         },
@@ -86,6 +87,20 @@ export class UsersRepository
                 return null;
             }
             return updatedUser;
+        } catch (error) {
+            console.error('Error updating applications:', error);
+            throw error;
+        }
+    };
+
+    rejectAllApplicationsForOneTask = async (taskId: string): Promise<null> => {
+        try {
+            // Update all users with applications having the specific taskId to set their status to 'Rejected'
+            await this._model.updateMany(
+                { 'applications.taskId': taskId },
+                { $set: { 'applications.$.status': 'Rejected' } },
+            );
+            return null;
         } catch (error) {
             console.error('Error updating applications:', error);
             throw error;

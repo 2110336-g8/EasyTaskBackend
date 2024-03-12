@@ -4,7 +4,10 @@ import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
 import { ImageService } from '../services/ImageService';
 import sharp from 'sharp';
-import { CannotApplyTaskError } from '../errors/TaskError';
+import {
+    CannotApplyTaskError,
+    CannotCancelTaskError,
+} from '../errors/TaskError';
 
 @Service()
 class TasksController {
@@ -30,11 +33,14 @@ class TasksController {
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
-                    error: error.name,
-                    details: error.message,
+                    success: false,
+                    error: error.message,
                 });
             } else {
-                res.status(500).json({ error: 'Internal Server Error' });
+                res.status(500).json({
+                    success: false,
+                    error: 'Internal Server Error',
+                });
             }
         }
     };
@@ -438,8 +444,17 @@ class TasksController {
             const id = req.params.id;
             const task = await this.tasksService.getTaskById(id);
             if (!task) {
-                res.status(404).json({ error: 'Task not found' });
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
                 return;
+            }
+            if (task.customerId.toString() == id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'Cannot Apply To This Task',
+                });
             }
             const result = await this.tasksService.applyTask(
                 id,
@@ -449,11 +464,48 @@ class TasksController {
         } catch (error) {
             if (error instanceof CannotApplyTaskError) {
                 res.status(500).json({
-                    error: error.name,
-                    details: error.message,
+                    success: false,
+                    error: error.message,
                 });
             } else {
-                res.status(500).json({ error: 'Internal Server Error' });
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
+        }
+    };
+
+    cancelTask = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
+            const task = await this.tasksService.getTaskById(id);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'Cannot Cancel This Task',
+                });
+            }
+            const result = await this.tasksService.cancelTask(id);
+            res.status(200).json({ success: true, result });
+        } catch (error) {
+            if (error instanceof CannotCancelTaskError) {
+                res.status(500).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
             }
         }
     };
