@@ -160,6 +160,22 @@ class TasksController {
         }
     };
 
+    getAdvertisements = async (req: Request, res: Response) => {
+        const userId = req.params.userId;
+
+        try {
+            // Find tasks where the specified userId is equal to the customerId field
+            const advertisements = await Task.find({
+                customerId: userId,
+            });
+
+            res.status(200).json(advertisements);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
     // image ---------------------------------------------------------------------------------
     getTaskImages = async (req: Request, res: Response): Promise<void> => {
         try {
