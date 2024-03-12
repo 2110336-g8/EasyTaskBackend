@@ -10,6 +10,10 @@ export interface ITasksRepository extends IRepository<ITask> {
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
     countAllTasks: () => Promise<number | null>;
+    findTaskByWorkerIdAndStatus: (
+        userId: string,
+        status: string | undefined,
+    ) => Promise<ITaskDocument[]>;
     findOneWithGeneralInfo: (id: string) => Promise<ITaskDocument | null>;
     addApplicants: (
         taskId: string,
@@ -51,6 +55,46 @@ export class TasksRepository
         const count = await this._model.countDocuments();
         return count;
     }
+
+    findTaskByWorkerIdAndStatus = async (
+        userId: string,
+        status: string | undefined,
+    ): Promise<ITaskDocument[]> => {
+        let query: any = {
+            hiredWorkers: {
+                $elemMatch: {
+                    userId: userId,
+                },
+            },
+        };
+
+        // If status is provided, include it in the query
+        if (status !== undefined && status !== '') {
+            query.hiredWorkers.$elemMatch.status = status;
+        }
+
+        const tasks = await this._model.find(query).select({
+            applicants: 0,
+            hiredWorkers: 0,
+        });
+        // console.log(tasks);
+        return tasks;
+        // const tasks = await this._model
+        //     .find({
+        //         hiredWorkers: {
+        //             $elemMatch: {
+        //                 userId: userId,
+        //                 status: status,
+        //             },
+        //         },
+        //     })
+        //     .select({
+        //         applicants: 0,
+        //         hiredWorkers: 0,
+        //     });
+        // console.log(tasks);
+        // return tasks;
+    };
 
     findOneWithGeneralInfo = async (
         id: string,

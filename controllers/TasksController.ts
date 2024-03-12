@@ -165,6 +165,26 @@ class TasksController {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
+    getTaskExperience = async (req: Request, res: Response) => {
+        try {
+            const userId = req.params.id;
+            if (userId != req.user._id) {
+                res.status(403).json({
+                    error: 'You are not authorized to view information',
+                });
+            }
+            // const status = 'Completed';
+            const status = req.query.status as string;
+            // console.log(status);
+            const task = await this.tasksService.getTaskExperience(
+                userId,
+                status,
+            );
+            res.status(200).json({ task: task });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
 
     // image ---------------------------------------------------------------------------------
     getTaskImages = async (req: Request, res: Response): Promise<void> => {
