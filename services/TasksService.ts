@@ -1,10 +1,14 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
+import {
+    CannotApplyTaskError,
+    CannotCancelTaskError,
+} from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
 import categoryData from '../assets/categories/categorieslist.json';
-import { FilterQuery } from 'mongoose';
+import mongoose, { FilterQuery, Document, Types, Schema } from 'mongoose';
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
     getTaskList: (
@@ -13,12 +17,22 @@ export interface ITasksService {
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
     getTaskById: (id: string) => Promise<ITaskDocument | null>;
+    getTaskWithGeneralInfoById: (id: string) => Promise<ITaskDocument | null>;
     updateTask: (
         id: string,
         updateData: ITask,
     ) => Promise<ITaskDocument | null>;
     countTasks: () => Promise<number | null>;
     getCategories: () => Promise<String[]>;
+    applyTask: (
+        taskId: string,
+        userId: string,
+    ) => Promise<ITaskDocument | null>;
+    cancelTask: (taskId: string) => Promise<ITaskDocument | null>;
+    getAdvertisement: (
+        customerId: string,
+        status: string,
+    ) => Promise<ITaskDocument[] | null>;
 }
 
 @Service()
@@ -37,14 +51,27 @@ export class TasksService implements ITasksService {
     }
 
     createTask = async (taskData: ITask): Promise<ITaskDocument> => {
+        const session = await this.taskRepository.startSession();
+        session.startTransaction();
         try {
             const task: ITaskDocument =
                 await this.taskRepository.create(taskData);
+            const updatedUser = await this.userRepository.addOwnedTasks(
+                task._id.toString(),
+                task.customerId.toString(),
+            );
+            if (!updatedUser) {
+                throw new Error('Failed to update user with owned tasks.');
+            }
+            await session.commitTransaction();
+            session.endSession();
             return task;
         } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
             if (error instanceof ValidationError) throw error;
             else {
-                throw new Error('Unknown Error');
+                throw error;
             }
         }
     };
@@ -86,6 +113,17 @@ export class TasksService implements ITasksService {
         }
     };
 
+    getTaskWithGeneralInfoById = async (
+        id: string,
+    ): Promise<ITaskDocument | null> => {
+        try {
+            const task = await this.taskRepository.findOneWithGeneralInfo(id);
+            return task;
+        } catch (error) {
+            return null;
+        }
+    };
+
     updateTask = async (
         id: string,
         updateData: ITask,
@@ -111,6 +149,89 @@ export class TasksService implements ITasksService {
             const categories: String[] = categoryData.categories;
             return categories;
         } catch (error) {
+            return [];
+        }
+    };
+
+    applyTask = async (
+        taskId: string,
+        userId: string,
+    ): Promise<ITaskDocument | null> => {
+        const timestamps = new Date();
+        const session = await this.taskRepository.startSession();
+        session.startTransaction();
+        try {
+            const updatedUser = await this.userRepository.addApplications(
+                taskId,
+                userId,
+                timestamps,
+            );
+            if (!updatedUser) {
+                throw new CannotApplyTaskError(
+                    'You have already applied to this task or your application has been accepted.',
+                );
+            }
+
+            const updatedTask = await this.taskRepository.addApplicants(
+                taskId,
+                userId,
+                timestamps,
+            );
+            if (!updatedTask) {
+                throw new CannotApplyTaskError(
+                    'You have already applied to this task or your application has been accepted.',
+                );
+            }
+            const generalInfoTask = {
+                ...updatedTask.toObject(),
+                applicants: undefined,
+                hiredWorkers: undefined,
+            };
+
+            await session.commitTransaction();
+            session.endSession();
+            return generalInfoTask as ITaskDocument;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+    };
+
+    cancelTask = async (taskId: string): Promise<ITaskDocument | null> => {
+        const session = await this.taskRepository.startSession();
+        session.startTransaction();
+        try {
+            await this.userRepository.rejectAllApplicationsForOneTask(taskId);
+
+            const updatedTask = await this.taskRepository.closeTask(taskId);
+            if (!updatedTask) {
+                throw new CannotCancelTaskError('Failed to cancel task');
+            }
+            await session.commitTransaction();
+            session.endSession();
+            return updatedTask;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+    };
+
+    getAdvertisement = async (
+        customerId: string,
+        status: string,
+    ): Promise<ITaskDocument[]> => {
+        const filter: Record<string, unknown> = {
+            customerId: customerId,
+            status: status as 'Open' | 'In Progress' | 'Completed' | 'Closed',
+        };
+
+        try {
+            const tasks = await this.taskRepository.findTasks(filter);
+            return tasks;
+        } catch (error) {
+            console.error(error);
             return [];
         }
     };

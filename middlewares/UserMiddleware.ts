@@ -41,7 +41,7 @@ export class UserMiddleware {
 
         if (!id) {
             res.status(400).json({
-                error: 'ID is required to update user',
+                error: 'Id is required to update user',
             });
             return;
         }

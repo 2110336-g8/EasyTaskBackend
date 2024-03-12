@@ -1,4 +1,4 @@
-import mongoose, { Document, ObjectId, Types } from 'mongoose';
+import mongoose, { Document, ObjectId, Types, Schema } from 'mongoose';
 import { genSalt, hash } from 'bcrypt';
 
 export interface IUser {
@@ -11,6 +11,17 @@ export interface IUser {
     bankId?: ObjectId;
     bankAccName?: string;
     bankAccNo?: string;
+    applications: Array<{
+        taskId: Types.ObjectId;
+        status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancel';
+        createAt: Date;
+    }>;
+    tasks: Array<{
+        taskId: Types.ObjectId;
+        status: 'In Progress' | 'Completed' | 'Cancel';
+        createdAt: Date;
+    }>;
+    ownedTasks: Types.ObjectId[];
 }
 
 export interface IUpdatePassword {
@@ -87,6 +98,60 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                 message:
                     'Bank account number must be string with length 10 and all are number',
             },
+        },
+        applications: {
+            type: [
+                {
+                    taskId: {
+                        type: Schema.Types.ObjectId,
+                        required: [true, 'TaskId for application is required'],
+                        ref: 'Task',
+                    },
+                    status: {
+                        type: String,
+                        enum: ['Pending', 'Accepted', 'Rejected', 'Cancel'],
+                        required: [true, 'Application status is required'],
+                        default: 'Pending',
+                    },
+                    createdAt: {
+                        type: Date,
+                        required: [
+                            true,
+                            'Timestamp for application is required',
+                        ],
+                    },
+                },
+            ],
+            default: [],
+        },
+        tasks: {
+            type: [
+                {
+                    taskId: {
+                        type: Schema.Types.ObjectId,
+                        required: [true, 'TaskId for work is required'],
+                        ref: 'Task',
+                    },
+                    status: {
+                        type: String,
+                        enum: ['In Progress', 'Completed', 'Cancel'],
+                        required: [true, 'Task status is required'],
+                        default: 'In Progress',
+                    },
+                    createdAt: {
+                        type: Date,
+                        required: [
+                            true,
+                            'Timestamp for application is required',
+                        ],
+                    },
+                },
+            ],
+            default: [],
+        },
+        ownedTasks: {
+            type: [{ type: Schema.Types.ObjectId, ref: 'Task' }],
+            default: [],
         },
     },
     {
