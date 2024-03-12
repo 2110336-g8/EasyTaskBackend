@@ -9,6 +9,10 @@ export interface IUsersRepositorty extends IRepository<IUser> {
         email: string,
         password: string,
     ) => Promise<IUserDocument | null>;
+    isValidPasswordById: (
+        id: string,
+        password: string
+    ) => Promise<IUserDocument | null>;
 }
 
 @Service()
@@ -35,4 +39,17 @@ export class UsersRepository
         const isValid = await compare(password, user.password);
         return isValid ? user : null;
     };
+
+    isValidPasswordById = async (
+        id: string,
+        password: string
+    ): Promise<IUserDocument | null> => {
+        const user = await this._model.findById(id).select('+password');
+        if (!user) {
+            return null;
+        }
+        const isValid = await compare(password, user.password);
+        return isValid ? user : null;
+    }
+
 }

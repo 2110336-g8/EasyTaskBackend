@@ -13,6 +13,11 @@ export interface IUser {
     bankAccNo?: string;
 }
 
+export interface IUpdatePassword {
+    currentPassword: string;
+    newPassword: string;
+}
+
 export interface IUserDocument extends IUser, Document {}
 
 const UserSchema = new mongoose.Schema<IUserDocument>(
