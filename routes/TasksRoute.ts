@@ -12,11 +12,9 @@ router.route('/').post(tasksController.createTask);
 
 router.route('/page').post(tasksController.getTasksPage);
 router.route('/categories').get(tasksController.getCategories);
-
 router.route('/:id').get(tasksController.getTaskbyId);
 
-router.route('/:id/apply').post(tasksController.applyTask);
-router.route('/:id/cancel').post(tasksController.cancelTask);
+router.route('/adsOf/:userId').get(tasksController.getAdvertisement);
 
 router
     .route('/:id/task-image')
