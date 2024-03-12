@@ -1,4 +1,9 @@
-import { Model, Document, Error as MongooseError } from 'mongoose';
+import {
+    Model,
+    Document,
+    Error as MongooseError,
+    ClientSession,
+} from 'mongoose';
 import { ValidationError } from '../errors/RepoError';
 import { MongoError } from 'mongodb';
 
@@ -8,6 +13,7 @@ export interface IRepository<T> {
     create(item: T): Promise<T & Document>;
     update(id: string, item: T): Promise<(T & Document) | null>;
     deleteOne(id: string): Promise<boolean>;
+    startSession(): Promise<ClientSession>;
 }
 
 export abstract class BaseMongooseRepository<T> implements IRepository<T> {
@@ -70,5 +76,9 @@ export abstract class BaseMongooseRepository<T> implements IRepository<T> {
     findAll = async (): Promise<(T & Document)[]> => {
         const items = await this._model.find();
         return items;
+    };
+
+    startSession = async (): Promise<ClientSession> => {
+        return this._model.db.startSession();
     };
 }
