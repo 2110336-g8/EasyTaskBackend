@@ -47,14 +47,27 @@ export class TasksService implements ITasksService {
     }
 
     createTask = async (taskData: ITask): Promise<ITaskDocument> => {
+        const session = await this.taskRepository.startSession();
+        session.startTransaction();
         try {
             const task: ITaskDocument =
                 await this.taskRepository.create(taskData);
+            const updatedUser = await this.userRepository.addOwnedTasks(
+                task._id.toString(),
+                task.customerId.toString(),
+            );
+            if (!updatedUser) {
+                throw new Error('Failed to update user with owned tasks.');
+            }
+            await session.commitTransaction();
+            session.endSession();
             return task;
         } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
             if (error instanceof ValidationError) throw error;
             else {
-                throw new Error('Unknown Error');
+                throw error;
             }
         }
     };
@@ -150,7 +163,9 @@ export class TasksService implements ITasksService {
                 timestamps,
             );
             if (!updatedUser) {
-                throw new CannotApplyTaskError('Failed to apply task');
+                throw new CannotApplyTaskError(
+                    'You have already applied to this task or your application has been accepted.',
+                );
             }
 
             const updatedTask = await this.taskRepository.addApplicants(
@@ -159,7 +174,9 @@ export class TasksService implements ITasksService {
                 timestamps,
             );
             if (!updatedTask) {
-                throw new CannotApplyTaskError('Failed to apply task');
+                throw new CannotApplyTaskError(
+                    'You have already applied to this task or your application has been accepted.',
+                );
             }
             const generalInfoTask = {
                 ...updatedTask.toObject(),

@@ -2,12 +2,17 @@ import { compare } from 'bcrypt';
 import { IUser, IUserDocument, UserModel } from '../models/UserModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
+import { StringSchemaDefinition } from 'mongoose';
 
 export interface IUsersRepositorty extends IRepository<IUser> {
     findOneByEmail: (email: string) => Promise<IUserDocument | null>;
     isValidPassword: (
         email: string,
         password: string,
+    ) => Promise<IUserDocument | null>;
+    addOwnedTasks: (
+        taskId: string,
+        userId: string,
     ) => Promise<IUserDocument | null>;
     addApplications: (
         taskId: string,
@@ -40,6 +45,33 @@ export class UsersRepository
         }
         const isValid = await compare(password, user.password);
         return isValid ? user : null;
+    };
+
+    addOwnedTasks = async (
+        taskId: string,
+        userId: string,
+    ): Promise<IUserDocument | null> => {
+        try {
+            const updatedUser = await this._model.findOneAndUpdate(
+                { _id: userId },
+                {
+                    $push: {
+                        ownedTasks: taskId,
+                    },
+                },
+                { new: true },
+            );
+            if (!updatedUser) {
+                console.error(
+                    'Update failed: Document not found or constraint violated',
+                );
+                return null;
+            }
+            return updatedUser;
+        } catch (error) {
+            console.error('Error updating ownedTasks:', error);
+            throw error;
+        }
     };
 
     addApplications = async (

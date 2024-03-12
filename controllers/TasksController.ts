@@ -450,11 +450,19 @@ class TasksController {
                 });
                 return;
             }
-            if (task.customerId.toString() == id) {
+            if (task.customerId.toString() == req.user._id) {
                 res.status(403).json({
                     success: false,
-                    error: 'Cannot Apply To This Task',
+                    error: 'You are not allowed to apply to this task',
                 });
+                return;
+            }
+            if (task.status != 'Open') {
+                res.status(403).json({
+                    success: false,
+                    error: 'Task is not open',
+                });
+                return;
             }
             const result = await this.tasksService.applyTask(
                 id,
@@ -463,7 +471,7 @@ class TasksController {
             res.status(200).json({ success: true, result });
         } catch (error) {
             if (error instanceof CannotApplyTaskError) {
-                res.status(500).json({
+                res.status(400).json({
                     success: false,
                     error: error.message,
                 });
@@ -487,11 +495,12 @@ class TasksController {
                 });
                 return;
             }
-            if (task.customerId.toString() != id) {
+            if (task.customerId.toString() != req.user._id) {
                 res.status(403).json({
                     success: false,
                     error: 'Cannot Cancel This Task',
                 });
+                return;
             }
             const result = await this.tasksService.cancelTask(id);
             res.status(200).json({ success: true, result });
