@@ -6,13 +6,20 @@ import {
 } from '../models/AuthModel';
 import { AuthService, IAuthService } from '../services/AuthService';
 import { Inject, Service } from 'typedi';
+import { IUser, IUserDocument } from '../models/UserModel';
+import { IUsersService, UsersService } from '../services/UsersService';
 
 @Service()
 class AuthMiddleware {
     private authService: IAuthService;
+    private usersService: IUsersService;
 
-    constructor(@Inject(() => AuthService) authService: IAuthService) {
+    constructor(
+        @Inject(() => AuthService) authService: IAuthService,
+        @Inject(() => UsersService) usersService: IUsersService,
+    ) {
         this.authService = authService;
+        this.usersService = usersService;
     }
 
     validateSendOtpRequest = (
@@ -59,7 +66,11 @@ class AuthMiddleware {
         }
     };
 
-    validateToken = (req: Request, res: Response, next: NextFunction): void => {
+    validateToken = async (
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): Promise<void> => {
         const respondUnAuth = function (res: Response): void {
             res.status(401).json({
                 error: 'Unauthorized',
@@ -74,7 +85,6 @@ class AuthMiddleware {
         }
 
         const token = auth.split(' ')[1];
-        console.log(token);
 
         try {
             const decodedToken = this.authService.decodeToken(token);
@@ -83,8 +93,15 @@ class AuthMiddleware {
                 // If expired
                 respondUnAuth(res);
             } else {
-                // Token is valid, pass the token
-                res.locals.decodedToken = decodedToken;
+                // Add user to req
+                const user = await this.usersService.getUserById(
+                    (decodedToken as { id: string }).id,
+                );
+                if (!user) {
+                    respondUnAuth(res);
+                    return;
+                }
+                req.user = user;
                 next();
             }
         } catch (error) {
