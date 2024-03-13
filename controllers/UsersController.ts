@@ -50,24 +50,23 @@ class UsersController {
                 return;
             }
 
-            let imageUrl: string | null | undefined;
+            let imageUrl: string | undefined;
 
             // Check if user has an imageKey before fetching imageUrl
             if (user.imageKey) {
-                imageUrl = await this.imageService.getImageByKey(user.imageKey);
+                const fetchedImageUrl = await this.imageService.getImageByKey(user.imageKey);
+                imageUrl = fetchedImageUrl ?? undefined; // Convert null to undefined
             }
 
-            // Construct the response object including imageUrl if it exists
-            const responseObject = {
-                user: user.toJSON(),
-                imageUrl: imageUrl, // imageUrl can be undefined
-            };
+            // Add imageUrl to the user object
+            user.imageUrl = imageUrl;
 
-            res.status(200).json(responseObject);
+            res.status(200).json({ user });
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
+
 
     updateUser = async (req: Request, res: Response): Promise<void> => {
         try {
