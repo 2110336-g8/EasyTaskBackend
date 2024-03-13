@@ -176,18 +176,10 @@ UserSchema.pre('save', async function (next) {
 
 UserSchema.pre('findOneAndUpdate', async function (next) {
     const user = await this.model.findOne(this.getQuery());
-    if (!user) {
-        return next();
-    }
-    try {
-        const salt = await genSalt(10);
-        const hashedPassword = await hash(user.password, salt);
-        user.password = hashedPassword;
-        next();
-    }
-    catch(error) {
-        return;
-    } 
+    const salt = await genSalt(10);
+    const hashedPassword = await hash(user.password, salt);
+    user.password = hashedPassword;
+    next();
 });
 
 
