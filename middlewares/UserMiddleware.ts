@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { Inject, Service } from 'typedi';
-import { IUser, IUserDocument, IUpdatePassword } from '../models/UserModel';
+import { IUser, IUserDocument } from '../models/UserModel';
 import { IUsersService, UsersService } from '../services/UsersService';
 
 @Service()
@@ -130,7 +130,7 @@ export class UserMiddleware {
             return;
         }
 
-        const data: IUpdatePassword = req.body;
+        const data = req.body;
         if (!data.currentPassword &&
             !data.newPassword
         ) {

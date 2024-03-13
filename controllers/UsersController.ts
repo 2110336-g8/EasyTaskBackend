@@ -4,12 +4,13 @@ import {
     UsersService as UsersService,
 } from '../services/UsersService';
 import { ImageService } from '../services/ImageService';
-import { AuthService } from '../services/AuthService';
-import { IUserDocument, IUpdatePassword } from '../models/UserModel';
+import { IUser, IUserDocument } from '../models/UserModel';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import sharp from 'sharp';
+import { genSalt, hash } from 'bcrypt';
+
 @Service()
 class UsersController {
     private usersService: IUsersService;
@@ -72,6 +73,12 @@ class UsersController {
         try {
             const id = req.params.id;
             const data = req.body;
+
+            if (data.password) {
+                res.status(403).json({ error : 'Cannot update password' });
+                return;
+            };
+            
             const user = await this.usersService.updateUser(id, data);
             if (!user) {
                 res.status(404).json({
@@ -94,12 +101,18 @@ class UsersController {
 
     updatePassword = async (req: Request, res: Response): Promise<void> => {
         try {
-            const id = req.params.id;
-            const data: IUpdatePassword = req.body;
-            const user = await this.usersService.updatePassword(id, data);
+            const id: string = req.params.id;
+            const email: string = req.user.email as string;
+            const currentPassword: string = req.body.currentPassword as string;
+            
+            const salt = await genSalt(10);
+            const hashedPassword: string = await hash(req.body.newPassword as string, salt);
+            const data: IUser = { password : hashedPassword } as IUser;
+
+            const user = await this.usersService.updatePassword(id, email, data, currentPassword);
             if (!user) {
-                res.status(404).json({
-                    error: 'User not found',
+                res.status(401).json({
+                    error: 'Unauthorized',
                 });
                 return;
             }
@@ -116,6 +129,25 @@ class UsersController {
         }
     };
 
+    deleteUser = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const id = req.params.id;
+            const email: string = req.user.email as string;
+            const password = req.body.password;
+            
+            const user = await this.usersService.deleteUser(id, password, email);
+            if (!user) {
+                res.status(404).json({
+                    error: 'User not found',
+                });
+                return;
+            }
+            res.status(200).json({ user: user.toJSON() });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    };
+    
     // image ---------------------------------------------------------------------------------
     getProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {

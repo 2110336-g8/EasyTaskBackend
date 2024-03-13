@@ -8,11 +8,13 @@ import {
     CannotApplyTaskError,
     CannotCancelTaskError,
 } from '../errors/TaskError';
+import { IUserDocument } from '../models/UserModel';
 
 @Service()
 class TasksController {
     private tasksService: ITasksService;
     private imageService: ImageService;
+    usersService: any;
 
     constructor(
         @Inject(() => TasksService) tasksService: ITasksService,
@@ -144,13 +146,17 @@ class TasksController {
                 return;
             }
             if (userId.toString() !== task.customerId.toString()) {
-                const taskWithGeneralInfo =
-                    await this.tasksService.getTaskWithGeneralInfoById(id);
+                const taskWithGeneralInfo = await this.tasksService.getTaskWithGeneralInfoById(id);
                 if (!taskWithGeneralInfo) {
-                    res.status(404).json({ error: 'Task not found' });
+                    res.status(404).json({ 
+                        error: 'Task not found'
+                    });
                     return;
                 }
-                res.status(200).json({ task: taskWithGeneralInfo.toJSON() });
+
+                res.status(200).json({ 
+                    task: taskWithGeneralInfo.toJSON()
+                });
                 return;
             }
             // if (userId.toString() !== task.customerId.toString()) {
@@ -160,11 +166,33 @@ class TasksController {
             //     res.status(200).json({ task: filteredTask });
             //     return;
             // }
-            res.status(200).json({ task: task.toJSON() });
+
+            // const customer = await this.usersService.getUserById(task.customerId);
+            //     if (!customer) {
+            //         res.status(404).json({ 
+            //             error: 'Owner not found' 
+            //         });
+            //         return;
+            //     }
+                
+            // const customerImage = customer.imageKey ? await this.imageService.getImageByKey(customer.imageKey) : null;
+
+
+            // for (let i = 0; i < taskWithGeneralInfo.applicants.length; i++) {
+            //     const worker = await this.usersService.getUserById(taskWithGeneralInfo.applicants[i].userId);
+            //     taskWithGeneralInfo.applicants[i].userId = worker;
+            // }
+
+            res.status(200).json({ 
+                task: task.toJSON(),
+            //     customer: customer.toJSON(),
+            //     customerImage: customerImage?.toString()
+            });
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
+
     getTaskExperience = async (req: Request, res: Response) => {
         try {
             const userId = req.params.id;
