@@ -157,12 +157,11 @@ export class UsersRepository
                 { _id: userId },
                 {
                     $push : {
-                        applications : { password: newPassword }
+                        password: newPassword
                     }
                 },
                 {
                     new: true,
-                    runValidators: true,
                 },
             );
             if (!updatedUserPassword) {
