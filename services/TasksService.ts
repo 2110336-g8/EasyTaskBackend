@@ -16,23 +16,29 @@ export interface ITasksService {
         taskPerPage: number,
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
+    countTasks: () => Promise<number | null>;
+    getTaskExperience: (
+        userId: string,
+        status: string | undefined,
+    ) => Promise<ITaskDocument[]>;
     getTaskById: (id: string) => Promise<ITaskDocument | null>;
     getTaskWithGeneralInfoById: (id: string) => Promise<ITaskDocument | null>;
     updateTask: (
         id: string,
         updateData: ITask,
     ) => Promise<ITaskDocument | null>;
-    countTasks: () => Promise<number | null>;
     getCategories: () => Promise<String[]>;
     applyTask: (
         taskId: string,
         userId: string,
     ) => Promise<ITaskDocument | null>;
     cancelTask: (taskId: string) => Promise<ITaskDocument | null>;
+  
     getAdvertisement: (
         customerId: string,
         status: string,
     ) => Promise<ITaskDocument[] | null>;
+
 }
 
 @Service()
@@ -61,7 +67,9 @@ export class TasksService implements ITasksService {
                 task.customerId.toString(),
             );
             if (!updatedUser) {
-                throw new Error('Failed to update user with owned tasks.');
+                throw new ValidationError(
+                    'Failed to update user with owned tasks.',
+                );
             }
             await session.commitTransaction();
             session.endSession();
@@ -103,6 +111,21 @@ export class TasksService implements ITasksService {
             return null;
         }
     }
+
+    getTaskExperience = async (
+        userId: string,
+        status: string | undefined,
+    ): Promise<ITaskDocument[]> => {
+        try {
+            const tasks = await this.taskRepository.findTaskByWorkerIdAndStatus(
+                userId,
+                status,
+            );
+            return tasks;
+        } catch (error) {
+            throw error;
+        }
+    };
 
     getTaskById = async (id: string): Promise<ITaskDocument | null> => {
         try {
@@ -235,4 +258,5 @@ export class TasksService implements ITasksService {
             return [];
         }
     };
+
 }
