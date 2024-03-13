@@ -167,7 +167,7 @@ export class TasksRepository
 
     closeTask = async (taskId: string): Promise<ITaskDocument | null> => {
         try {
-            // // Update the task status to 'Closed' and update all applicants to 'Rejected'
+            // Update the task status to 'Closed' and update all applicants to 'Rejected'
             // const updatedTask = await this._model.findOneAndUpdate(
             //     { _id: taskId },
             //     [
