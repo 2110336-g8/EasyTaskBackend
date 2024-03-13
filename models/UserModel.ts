@@ -8,6 +8,7 @@ export interface IUser {
     password: string;
     phoneNumber?: string;
     imageKey?: string;
+    imageUrl?: string;
     bankId?: ObjectId;
     bankAccName?: string;
     bankAccNo?: string;
@@ -70,6 +71,9 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
             },
         },
         imageKey: {
+            type: String,
+        },
+        imageUrl: {
             type: String,
         },
         bankId: {
