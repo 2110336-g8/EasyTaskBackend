@@ -9,6 +9,7 @@ import {
     CannotCancelTaskError,
 } from '../errors/TaskError';
 import { IUserDocument } from '../models/UserModel';
+import { ITask } from '../models/TaskModel';
 
 @Service()
 class TasksController {
@@ -146,51 +147,52 @@ class TasksController {
                 return;
             }
             if (userId.toString() !== task.customerId.toString()) {
-                const taskWithGeneralInfo = await this.tasksService.getTaskWithGeneralInfoById(id);
+                const taskWithGeneralInfo =
+                    await this.tasksService.getTaskWithGeneralInfoById(id);
                 if (!taskWithGeneralInfo) {
-                    res.status(404).json({ 
-                        error: 'Task not found'
+                    res.status(404).json({
+                        error: 'Task not found',
                     });
                     return;
                 }
+                // Update or create imageUrls field in taskWithGeneralInfo
+                const taskWithImageUrls =
+                    await this.updateTaskImageUrls(taskWithGeneralInfo);
 
-                res.status(200).json({ 
-                    task: taskWithGeneralInfo.toJSON()
+                res.status(200).json({
+                    task: taskWithImageUrls,
                 });
                 return;
             }
-            // if (userId.toString() !== task.customerId.toString()) {
-            //     const filteredTask = { ...task.toObject() };
-            //     delete filteredTask.applications;
-            //     delete filteredTask.hiredWorkers;
-            //     res.status(200).json({ task: filteredTask });
-            //     return;
-            // }
+            // Update or create imageUrls field in task
+            const taskWithImageUrls = await this.updateTaskImageUrls(task);
 
-            // const customer = await this.usersService.getUserById(task.customerId);
-            //     if (!customer) {
-            //         res.status(404).json({ 
-            //             error: 'Owner not found' 
-            //         });
-            //         return;
-            //     }
-                
-            // const customerImage = customer.imageKey ? await this.imageService.getImageByKey(customer.imageKey) : null;
-
-
-            // for (let i = 0; i < taskWithGeneralInfo.applicants.length; i++) {
-            //     const worker = await this.usersService.getUserById(taskWithGeneralInfo.applicants[i].userId);
-            //     taskWithGeneralInfo.applicants[i].userId = worker;
-            // }
-
-            res.status(200).json({ 
-                task: task.toJSON(),
-            //     customer: customer.toJSON(),
-            //     customerImage: customerImage?.toString()
+            res.status(200).json({
+                task: taskWithImageUrls,
             });
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
+    };
+
+    updateTaskImageUrls = async (task: ITask): Promise<ITask> => {
+        // Check if task has imageKeys field
+        if (task.imageKeys && task.imageKeys.length > 0) {
+            const imageUrls: Array<{ seq: number; imageUrl: string }> = [];
+
+            // Fetch image URLs for each imageKey
+            for (const imageKeyObj of task.imageKeys) {
+                const imageUrl = await this.imageService.getImageByKey(
+                    imageKeyObj.imageKey,
+                );
+                if (imageUrl) {
+                    imageUrls.push({ seq: imageKeyObj.seq, imageUrl });
+                }
+            }
+            task.imageUrls = imageUrls;
+        }
+
+        return task;
     };
 
     getTaskExperience = async (req: Request, res: Response) => {
