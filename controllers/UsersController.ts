@@ -57,6 +57,12 @@ class UsersController {
         try {
             const id = req.params.id;
             const data = req.body;
+
+            if (data.password) {
+                res.status(403).json({ error : 'Cannot update password' });
+                return;
+            };
+            
             const user = await this.usersService.updateUser(id, data);
             if (!user) {
                 res.status(404).json({
@@ -79,11 +85,12 @@ class UsersController {
 
     updatePassword = async (req: Request, res: Response): Promise<void> => {
         try {
+            const id: string = req.params.id;
             const email: string = req.user.email as string;
             const data: IUser = { password : req.body.newPassword as string } as IUser;
             const currentPassword: string = req.body.currentPassword as string;
             
-            const user = await this.usersService.updatePassword(email, data, currentPassword);
+            const user = await this.usersService.updatePassword(id, email, data, currentPassword);
             if (!user) {
                 res.status(404).json({
                     error: 'User not found',

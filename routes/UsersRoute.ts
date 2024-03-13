@@ -14,7 +14,10 @@ router
     .route('/:id')
     .get(usersController.getUserbyId)
     .patch(userMiddleware.validateUpdateUserData, usersController.updateUser)
-    .put(userMiddleware.validateUpdatePassword, usersController.updatePassword);
+
+router
+    .route('/:id/change-password')
+    .patch(userMiddleware.validateUpdatePassword, usersController.updatePassword);
 
 router
     .route('/:id/profile-image')
