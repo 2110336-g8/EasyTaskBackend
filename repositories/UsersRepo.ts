@@ -2,7 +2,9 @@ import { compare } from 'bcrypt';
 import { IUser, IUserDocument, UserModel } from '../models/UserModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
-import { StringSchemaDefinition } from 'mongoose';
+import { Error as MongooseError, StringSchemaDefinition } from 'mongoose';
+import { ValidationError } from '../errors/RepoError';
+import { MongoError } from 'mongodb';
 
 export interface IUsersRepositorty extends IRepository<IUser> {
     findOneByEmail: (email: string) => Promise<IUserDocument | null>;
@@ -23,6 +25,10 @@ export interface IUsersRepositorty extends IRepository<IUser> {
         userId: string,
         timestamps: Date,
     ) => Promise<IUserDocument | null>;
+    updatePassword: (
+        id: string,
+        password: string
+    ) => Promise<IUserDocument | null>;
     rejectAllApplicationsForOneTask: (taskId: string) => Promise<null>;
 }
 
@@ -34,6 +40,7 @@ export class UsersRepository
     constructor() {
         super(UserModel);
     }
+
     findOneByEmail = async (email: string): Promise<IUserDocument | null> => {
         const result = await this._model.findOne({ email });
         return result;
@@ -140,6 +147,32 @@ export class UsersRepository
             throw error;
         }
     };
+
+    updatePassword = async (
+        id: string,
+        password: string
+    ): Promise<IUserDocument | null> => {
+        try { 
+            const updatedUser = await this._model.findByIdAndUpdate(
+                id,
+                { password: password },
+                {
+                    new: true,
+                    runValidators: true,
+                },
+            );
+            return updatedUser;
+        }
+        catch (error) {
+            if (error instanceof MongooseError.ValidationError) {
+                throw new ValidationError(error.message);
+            } else if ((error as MongoError).code == 11000) {
+                throw new ValidationError((error as MongoError).message);
+            } else {
+                throw new Error('Unknown Error');
+            }
+        }
+    }; 
 
     rejectAllApplicationsForOneTask = async (taskId: string): Promise<null> => {
         try {

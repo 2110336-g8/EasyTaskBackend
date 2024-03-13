@@ -108,8 +108,14 @@ export class UsersService implements IUsersService {
             if (!user) {
                 return null;
             }
-            user.password = data.newPassword;
-            return await user.save();
+            try {
+                const password: string = data.newPassword;
+                const user = await this.userRepository.updatePassword(id, data.newPassword);
+                return user;
+            }
+            catch (error) {
+                throw error;
+            }
         } catch (error) {
             return null;
         }
