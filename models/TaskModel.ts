@@ -6,6 +6,7 @@ export interface ITask {
     category: string;
     description?: string;
     imageKeys?: Array<{ seq: number; imageKey: string }>;
+    imageUrls?: Array<{ seq: number; imageUrl: string }>;
     location?: {
         name: string;
         latitude: number;
@@ -64,6 +65,18 @@ const TaskSchema = new Schema<ITaskDocument>(
                     imageKey: {
                         type: String,
                         required: [true, 'Image key is required'],
+                    },
+                },
+            ],
+        },
+        imageUrls: {
+            type: [
+                {
+                    seq: {
+                        type: Number,
+                    },
+                    imageUrl: {
+                        type: String,
                     },
                 },
             ],
