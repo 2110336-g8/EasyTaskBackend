@@ -154,23 +154,24 @@ export class UsersRepository
     ): Promise<IUserDocument | null> => {
         try { 
             const updatedUser = await this._model.findByIdAndUpdate(
-                id,
-                { password: password },
+                { id: id },
+                { $set: { password: password } },
                 {
                     new: true,
                     runValidators: true,
                 },
             );
+            if (!updatedUser) {
+                console.error(
+                    'Update failed: Document not found or constraint violated',
+                );
+                return null;
+            }
             return updatedUser;
         }
         catch (error) {
-            if (error instanceof MongooseError.ValidationError) {
-                throw new ValidationError(error.message);
-            } else if ((error as MongoError).code == 11000) {
-                throw new ValidationError((error as MongoError).message);
-            } else {
-                throw new Error('Unknown Error');
-            }
+            console.error('Error updating applications:', error);
+            throw error;
         }
     }; 
 

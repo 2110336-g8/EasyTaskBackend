@@ -106,18 +106,20 @@ export class UsersService implements IUsersService {
                 data.currentPassword,
             );
             if (!user) {
-                return null;
+                throw new ValidationError('Current password is not correct');
             }
             try {
-                const password: string = data.newPassword;
                 const user = await this.userRepository.updatePassword(id, data.newPassword);
-                return user;
+                if (!user) {
+                    throw new ValidationError('Failed to update password');
+                }
             }
             catch (error) {
-                throw error;
+                return null;
             }
+            return user;
         } catch (error) {
-            return null;
+            throw error;
         }
     }
 }
