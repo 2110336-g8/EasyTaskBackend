@@ -165,6 +165,26 @@ class TasksController {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
+    getTaskExperience = async (req: Request, res: Response) => {
+        try {
+            const userId = req.params.id;
+            if (userId != req.user._id) {
+                res.status(403).json({
+                    error: 'You are not authorized to view information',
+                });
+            }
+            // const status = 'Completed';
+            const status = req.query.status as string;
+            // console.log(status);
+            const task = await this.tasksService.getTaskExperience(
+                userId,
+                status,
+            );
+            res.status(200).json({ task: task });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
 
     getAdvertisements = async (req: Request, res: Response): Promise<void> => {
         try {
@@ -471,7 +491,24 @@ class TasksController {
             const id = req.params.id;
             const task = await this.tasksService.getTaskById(id);
             if (!task) {
-                res.status(404).json({ error: 'Task not found' });
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() == req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'You are not allowed to apply to this task',
+                });
+                return;
+            }
+            if (task.status != 'Open') {
+                res.status(403).json({
+                    success: false,
+                    error: 'Task is not open',
+                });
                 return;
             }
             const result = await this.tasksService.applyTask(
@@ -481,12 +518,50 @@ class TasksController {
             res.status(200).json({ success: true, result });
         } catch (error) {
             if (error instanceof CannotApplyTaskError) {
-                res.status(500).json({
-                    error: error.name,
-                    details: error.message,
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
                 });
             } else {
-                res.status(500).json({ error: 'Internal Server Error' });
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
+        }
+    };
+
+    cancelTask = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
+            const task = await this.tasksService.getTaskById(id);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'Cannot Cancel This Task',
+                });
+                return;
+            }
+            const result = await this.tasksService.cancelTask(id);
+            res.status(200).json({ success: true, result });
+        } catch (error) {
+            if (error instanceof CannotCancelTaskError) {
+                res.status(500).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
             }
         }
     };
