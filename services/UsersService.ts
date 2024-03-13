@@ -110,19 +110,17 @@ export class UsersService implements IUsersService {
             if (!user) {
                 return null;
             }
-            try {
-                const user = await this.userRepository.update( 
-                    id,
-                    data
-                );
-                if (!user) {
-                    throw new ValidationError('Failed to update password');
-                }
-            }
-            catch (error) {
-                return null;
-            }
             return user;
+            // try {
+            //     const user = await this.userRepository.update( 
+            //         id,
+            //         data
+            //     );
+            //     return user;
+            // }
+            // catch (error) {
+            //     return null;
+            // }
         } catch (error) {
             return null;
         }
