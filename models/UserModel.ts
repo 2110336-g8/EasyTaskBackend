@@ -24,11 +24,6 @@ export interface IUser {
     ownedTasks: Types.ObjectId[];
 }
 
-export interface IUpdatePassword {
-    currentPassword: string;
-    newPassword: string;
-}
-
 export interface IUserDocument extends IUser, Document {}
 
 const UserSchema = new mongoose.Schema<IUserDocument>(
@@ -58,7 +53,7 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
             type: String,
             required: [true, 'Password is required'],
             minlength: [8, 'Password cannot be shorter than 8 characters'],
-            select: false,
+            // select: false,
         },
         phoneNumber: {
             type: String,

@@ -1,5 +1,5 @@
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
-import { IUpdatePassword, IUser, IUserDocument } from '../models/UserModel';
+import { IUser, IUserDocument } from '../models/UserModel';
 import { Service, Inject, Token } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
@@ -17,7 +17,8 @@ export interface IUsersService {
     ) => Promise<IUserDocument | null>;
     updatePassword: (
         id: string, 
-        data: IUpdatePassword
+        data: IUserDocument,
+        currentPassword: string
     ) => Promise<IUserDocument | null>;
 }
 
@@ -98,22 +99,22 @@ export class UsersService implements IUsersService {
 
     updatePassword = async (
         id: string,
-        data: IUpdatePassword
+        data: IUserDocument,
+        currentPassword: string
     ): Promise<IUserDocument | null> => {
         try {
             const user = await this.userRepository.isValidPasswordById(
                 id,
-                data.currentPassword,
+                currentPassword,
             );
             if (!user) {
                 return null;
             }
             try {
-                const user = await this.userRepository.setNewPassword( 
-                    id, 
-                    data.newPassword
+                const user = await this.userRepository.update( 
+                    id,
+                    data
                 );
-                // const user = await this.userRepository.setNewPassword(id, data.newPassword);
                 if (!user) {
                     throw new ValidationError('Failed to update password');
                 }

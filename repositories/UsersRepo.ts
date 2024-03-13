@@ -25,10 +25,6 @@ export interface IUsersRepositorty extends IRepository<IUser> {
         userId: string,
         timestamps: Date,
     ) => Promise<IUserDocument | null>;
-    setNewPassword: (  
-        id: string,
-        password: string
-    ) => Promise<string | null>;
     rejectAllApplicationsForOneTask: (taskId: string) => Promise<null>;
 }
 
@@ -144,27 +140,6 @@ export class UsersRepository
             return updatedUser;
         } catch (error) {
             console.error('Error updating applications:', error);
-            throw error;
-        }
-    };
-
-    setNewPassword = async (
-        userId: string, 
-        newPassword: string
-    ): Promise<string | null> => {
-        try {
-            const updatedUserPassword = await this._model.updateOne(
-                { _id: userId },
-                { $set : { password: newPassword } }
-            );
-            if (!updatedUserPassword) {
-                console.error('Update failed: Document not found or constraint violated');
-                return null;
-            }
-            return newPassword;
-        }
-        catch (error) {
-            console.error('Error updating password:', error);
             throw error;
         }
     };

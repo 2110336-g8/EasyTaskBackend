@@ -4,8 +4,7 @@ import {
     UsersService as UsersService,
 } from '../services/UsersService';
 import { ImageService } from '../services/ImageService';
-import { AuthService } from '../services/AuthService';
-import { IUserDocument, IUpdatePassword } from '../models/UserModel';
+import { IUser, IUserDocument } from '../models/UserModel';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
@@ -80,9 +79,10 @@ class UsersController {
 
     updatePassword = async (req: Request, res: Response): Promise<void> => {
         try {
-            const id = req.params.id;
-            const data: IUpdatePassword = req.body;
-            const user = await this.usersService.updatePassword(id, data);
+            const id: string = req.params.id;
+            const data: IUserDocument = { password : req.body.newPassword as string } as IUserDocument;
+            const currentPassword: string = req.body.newPassword;
+            const user = await this.usersService.updatePassword(id, data, currentPassword);
             if (!user) {
                 res.status(404).json({
                     error: 'User not found',
