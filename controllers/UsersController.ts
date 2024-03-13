@@ -17,7 +17,7 @@ class UsersController {
 
     constructor(
         @Inject(() => UsersService) userService: IUsersService,
-        @Inject(() => ImageService) imageService: ImageService
+        @Inject(() => ImageService) imageService: ImageService,
     ) {
         this.usersService = userService;
         this.imageService = imageService;
@@ -48,7 +48,21 @@ class UsersController {
                 res.status(404).json({ error: 'User not found' });
                 return;
             }
-            res.status(200).json({ user: user.toJSON() });
+
+            let imageUrl: string | null | undefined;
+
+            // Check if user has an imageKey before fetching imageUrl
+            if (user.imageKey) {
+                imageUrl = await this.imageService.getImageByKey(user.imageKey);
+            }
+
+            // Construct the response object including imageUrl if it exists
+            const responseObject = {
+                user: user.toJSON(),
+                imageUrl: imageUrl, // imageUrl can be undefined
+            };
+
+            res.status(200).json(responseObject);
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
@@ -101,7 +115,7 @@ class UsersController {
             }
         }
     };
-    
+
     // image ---------------------------------------------------------------------------------
     getProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {
