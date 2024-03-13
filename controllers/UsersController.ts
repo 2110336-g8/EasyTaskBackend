@@ -137,8 +137,8 @@ class UsersController {
             
             const user = await this.usersService.deleteUser(id, password, email);
             if (!user) {
-                res.status(404).json({
-                    error: 'User not found',
+                res.status(401).json({
+                    error: 'Unauthorized',
                 });
                 return;
             }
