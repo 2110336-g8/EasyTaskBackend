@@ -1,5 +1,5 @@
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
-import { IUpdatePassword, IUser, IUserDocument } from '../models/UserModel';
+import { IUser, IUserDocument } from '../models/UserModel';
 import { Service, Inject, Token } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
@@ -16,8 +16,15 @@ export interface IUsersService {
         data: IUserDocument,
     ) => Promise<IUserDocument | null>;
     updatePassword: (
+        id: string,
+        email: string, 
+        data: IUser,
+        currentPassword: string
+    ) => Promise<IUserDocument | null>;
+    deleteUser: (
         id: string, 
-        data: IUpdatePassword
+        password: string,
+        email: string 
     ) => Promise<IUserDocument | null>;
 }
 
@@ -98,18 +105,55 @@ export class UsersService implements IUsersService {
 
     updatePassword = async (
         id: string,
-        data: IUpdatePassword
+        email: string,
+        data: IUser,
+        currentPassword: string
     ): Promise<IUserDocument | null> => {
         try {
-            const user = await this.userRepository.isValidPasswordById(
-                id,
-                data.currentPassword,
+            const user = await this.userRepository.isValidPassword(
+                email,
+                currentPassword,
             );
             if (!user) {
                 return null;
             }
-            user.password = data.newPassword;
-            return await user.save();
+            try {
+                const user = await this.userRepository.update( 
+                    id,
+                    data
+                );
+                return user;
+            }
+            catch (error) {
+                return null;
+            }
+        } catch (error) {
+            return null;
+        }
+    };
+
+    deleteUser = async (
+        id: string,
+        password: string,
+        email: string
+    ): Promise<IUserDocument | null> => {
+        try {
+            const user = await this.userRepository.isValidPassword(
+                email,
+                password
+            );
+            if (!user) {
+                return null;
+            }
+            try {
+                if(!this.userRepository.deleteOne(id)) {
+                    return null;
+                }
+                return user;
+            }
+            catch (error) {
+                return null;
+            }
         } catch (error) {
             return null;
         }

@@ -8,11 +8,14 @@ import {
     CannotApplyTaskError,
     CannotCancelTaskError,
 } from '../errors/TaskError';
+import { IUserDocument } from '../models/UserModel';
+import { ITask } from '../models/TaskModel';
 
 @Service()
 class TasksController {
     private tasksService: ITasksService;
     private imageService: ImageService;
+    usersService: any;
 
     constructor(
         @Inject(() => TasksService) tasksService: ITasksService,
@@ -147,24 +150,51 @@ class TasksController {
                 const taskWithGeneralInfo =
                     await this.tasksService.getTaskWithGeneralInfoById(id);
                 if (!taskWithGeneralInfo) {
-                    res.status(404).json({ error: 'Task not found' });
+                    res.status(404).json({
+                        error: 'Task not found',
+                    });
                     return;
                 }
-                res.status(200).json({ task: taskWithGeneralInfo.toJSON() });
+                // Update or create imageUrls field in taskWithGeneralInfo
+                const taskWithImageUrls =
+                    await this.updateTaskImageUrls(taskWithGeneralInfo);
+
+                res.status(200).json({
+                    task: taskWithImageUrls,
+                });
                 return;
             }
-            // if (userId.toString() !== task.customerId.toString()) {
-            //     const filteredTask = { ...task.toObject() };
-            //     delete filteredTask.applications;
-            //     delete filteredTask.hiredWorkers;
-            //     res.status(200).json({ task: filteredTask });
-            //     return;
-            // }
-            res.status(200).json({ task: task.toJSON() });
+            // Update or create imageUrls field in task
+            const taskWithImageUrls = await this.updateTaskImageUrls(task);
+
+            res.status(200).json({
+                task: taskWithImageUrls,
+            });
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
+
+    updateTaskImageUrls = async (task: ITask): Promise<ITask> => {
+        // Check if task has imageKeys field
+        if (task.imageKeys && task.imageKeys.length > 0) {
+            const imageUrls: Array<{ seq: number; imageUrl: string }> = [];
+
+            // Fetch image URLs for each imageKey
+            for (const imageKeyObj of task.imageKeys) {
+                const imageUrl = await this.imageService.getImageByKey(
+                    imageKeyObj.imageKey,
+                );
+                if (imageUrl) {
+                    imageUrls.push({ seq: imageKeyObj.seq, imageUrl });
+                }
+            }
+            task.imageUrls = imageUrls;
+        }
+
+        return task;
+    };
+
     getTaskExperience = async (req: Request, res: Response) => {
         try {
             const userId = req.params.id;
@@ -531,40 +561,6 @@ class TasksController {
         }
     };
 
-    cancelTask = async (req: Request, res: Response) => {
-        try {
-            const id = req.params.id;
-            const task = await this.tasksService.getTaskById(id);
-            if (!task) {
-                res.status(404).json({
-                    success: false,
-                    error: 'Task Not Found',
-                });
-                return;
-            }
-            if (task.customerId.toString() != req.user._id) {
-                res.status(403).json({
-                    success: false,
-                    error: 'Cannot Cancel This Task',
-                });
-                return;
-            }
-            const result = await this.tasksService.cancelTask(id);
-            res.status(200).json({ success: true, result });
-        } catch (error) {
-            if (error instanceof CannotCancelTaskError) {
-                res.status(500).json({
-                    success: false,
-                    error: error.message,
-                });
-            } else {
-                res.status(500).json({
-                    sucess: false,
-                    error: 'Internal Server Error',
-                });
-            }
-        }
-    };
     cancelTask = async (req: Request, res: Response) => {
         try {
             const id = req.params.id;

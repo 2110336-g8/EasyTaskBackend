@@ -2,17 +2,15 @@ import { compare } from 'bcrypt';
 import { IUser, IUserDocument, UserModel } from '../models/UserModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
-import { StringSchemaDefinition } from 'mongoose';
+import { Error as MongooseError, StringSchemaDefinition } from 'mongoose';
+import { ValidationError } from '../errors/RepoError';
+import { MongoError } from 'mongodb';
 
 export interface IUsersRepositorty extends IRepository<IUser> {
     findOneByEmail: (email: string) => Promise<IUserDocument | null>;
     isValidPassword: (
         email: string,
         password: string,
-    ) => Promise<IUserDocument | null>;
-    isValidPasswordById: (
-        id: string,
-        password: string
     ) => Promise<IUserDocument | null>;
     addOwnedTasks: (
         taskId: string,
@@ -34,6 +32,7 @@ export class UsersRepository
     constructor() {
         super(UserModel);
     }
+
     findOneByEmail = async (email: string): Promise<IUserDocument | null> => {
         const result = await this._model.findOne({ email });
         return result;
@@ -50,18 +49,6 @@ export class UsersRepository
         const isValid = await compare(password, user.password);
         return isValid ? user : null;
     };
-
-    isValidPasswordById = async (
-        id: string,
-        password: string
-    ): Promise<IUserDocument | null> => {
-        const user = await this._model.findById(id).select('+password');
-        if (!user) {
-            return null;
-        }
-        const isValid = await compare(password, user.password);
-        return isValid ? user : null;
-    }
 
     addOwnedTasks = async (
         taskId: string,

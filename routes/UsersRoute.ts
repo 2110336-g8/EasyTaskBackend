@@ -14,6 +14,10 @@ router
     .route('/:id')
     .get(usersController.getUserbyId)
     .patch(userMiddleware.validateUpdateUserData, usersController.updateUser)
+    .delete(usersController.deleteUser);
+
+router
+    .route('/:id/change-password')
     .patch(userMiddleware.validateUpdatePassword, usersController.updatePassword);
 
 router
