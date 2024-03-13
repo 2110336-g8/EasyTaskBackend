@@ -9,6 +9,8 @@ import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import sharp from 'sharp';
+import { genSalt, hash } from 'bcrypt';
+
 @Service()
 class UsersController {
     private usersService: IUsersService;
@@ -87,9 +89,12 @@ class UsersController {
         try {
             const id: string = req.params.id;
             const email: string = req.user.email as string;
-            const data: IUser = { password : req.body.newPassword as string } as IUser;
             const currentPassword: string = req.body.currentPassword as string;
             
+            const salt = await genSalt(10);
+            const hashedPassword: string = await hash(req.body.newPassword as string, salt);
+            const data: IUser = { password : hashedPassword } as IUser;
+
             const user = await this.usersService.updatePassword(id, email, data, currentPassword);
             if (!user) {
                 res.status(404).json({
