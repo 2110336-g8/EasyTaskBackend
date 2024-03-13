@@ -114,6 +114,25 @@ class UsersController {
             }
         }
     };
+
+    deleteUser = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const id = req.params.id;
+            const email: string = req.user.email as string;
+            const password = req.body.password;
+            
+            const user = await this.usersService.deleteUser(id, password, email);
+            if (!user) {
+                res.status(404).json({
+                    error: 'User not found',
+                });
+                return;
+            }
+            res.status(200).json({ user: user.toJSON() });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    };
     
     // image ---------------------------------------------------------------------------------
     getProfileImage = async (req: Request, res: Response): Promise<void> => {

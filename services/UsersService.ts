@@ -21,6 +21,11 @@ export interface IUsersService {
         data: IUser,
         currentPassword: string
     ) => Promise<IUserDocument | null>;
+    deleteUser: (
+        id: string, 
+        password: string,
+        email: string 
+    ) => Promise<IUserDocument | null>;
 }
 
 @Service()
@@ -117,6 +122,33 @@ export class UsersService implements IUsersService {
                     id,
                     data
                 );
+                return user;
+            }
+            catch (error) {
+                return null;
+            }
+        } catch (error) {
+            return null;
+        }
+    };
+
+    deleteUser = async (
+        id: string,
+        password: string,
+        email: string
+    ): Promise<IUserDocument | null> => {
+        try {
+            const user = await this.userRepository.isValidPassword(
+                email,
+                password
+            );
+            if (!user) {
+                return null;
+            }
+            try {
+                if(!this.userRepository.deleteOne(id)) {
+                    return null;
+                }
                 return user;
             }
             catch (error) {

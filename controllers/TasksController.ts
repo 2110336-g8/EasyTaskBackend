@@ -166,6 +166,7 @@ class TasksController {
             //     res.status(200).json({ task: filteredTask });
             //     return;
             // }
+
             // const customer = await this.usersService.getUserById(task.customerId);
             //     if (!customer) {
             //         res.status(404).json({ 
@@ -177,15 +178,15 @@ class TasksController {
             // const customerImage = customer.imageKey ? await this.imageService.getImageByKey(customer.imageKey) : null;
 
 
-                // for (let i = 0; i < taskWithGeneralInfo.applicants.length; i++) {
-                //     const worker = await this.usersService.getUserById(taskWithGeneralInfo.applicants[i].userId);
-                //     taskWithGeneralInfo.applicants[i].userId = worker;
-                // }
+            // for (let i = 0; i < taskWithGeneralInfo.applicants.length; i++) {
+            //     const worker = await this.usersService.getUserById(taskWithGeneralInfo.applicants[i].userId);
+            //     taskWithGeneralInfo.applicants[i].userId = worker;
+            // }
 
             res.status(200).json({ 
                 task: task.toJSON(),
-                // customer: customer.toJSON(),
-                // customerImage: customerImage?.toString()
+            //     customer: customer.toJSON(),
+            //     customerImage: customerImage?.toString()
             });
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
