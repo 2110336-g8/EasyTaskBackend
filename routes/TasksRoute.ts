@@ -16,6 +16,9 @@ router.route('/:id').get(tasksController.getTaskbyId);
 
 router.route('/adsOf/:userId').get(tasksController.getAdvertisements);
 
+router.route('/:id/apply').post(tasksController.applyTask);
+router.route('/:id/cancel').post(tasksController.cancelTask);
+
 router
     .route('/:id/task-image')
     .get(tasksController.getTaskImages)

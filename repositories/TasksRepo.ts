@@ -17,7 +17,9 @@ export interface ITasksRepository extends IRepository<ITask> {
         timestamps: Date,
     ) => Promise<ITaskDocument | null>;
     closeTask: (taskId: string) => Promise<ITaskDocument | null>;
-    findTasks: (filter: Record<string, unknown>) => Promise<ITaskDocument[]>;
+    findTasks: (
+        filter?: FilterQuery<ITaskDocument>,
+    ) => Promise<ITaskDocument[]>;
 }
 
 @Service()
@@ -164,9 +166,11 @@ export class TasksRepository
         }
     };
 
-    async findTasks(filter: Record<string, unknown>): Promise<ITaskDocument[]> {
+    async findTasks(
+        filter: FilterQuery<ITaskDocument> = {},
+    ): Promise<ITaskDocument[]> {
         try {
-            const tasks = await this._model.find(filter).exec();
+            const tasks = await this._model.find(filter);
             return tasks;
         } catch (error) {
             console.error('Error finding tasks:', error);
