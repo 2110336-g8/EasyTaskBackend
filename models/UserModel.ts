@@ -162,10 +162,33 @@ UserSchema.methods.toJSON = function () {
 
 UserSchema.pre('save', async function (next) {
     const salt = await genSalt(10);
-    console.log(salt);
     const hashedPassword = await hash(this.password, salt);
     this.password = hashedPassword;
     next();
 });
+
+UserSchema.pre('save', async function (next) {
+    const salt = await genSalt(10);
+    const hashedPassword = await hash(this.password, salt);
+    this.password = hashedPassword;
+    next();
+});
+
+UserSchema.pre('findOneAndUpdate', async function (next) {
+    const user = await this.model.findOne(this.getQuery());
+    if (!user) {
+        return next();
+    }
+    try {
+        const salt = await genSalt(10);
+        const hashedPassword = await hash(user.password, salt);
+        user.password = hashedPassword;
+        next();
+    }
+    catch(error) {
+        return;
+    } 
+});
+
 
 export const UserModel = mongoose.model<IUserDocument>('User', UserSchema);
