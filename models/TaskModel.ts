@@ -19,12 +19,12 @@ export interface ITask {
     customerId: Types.ObjectId;
     applicants: Array<{
         userId: Types.ObjectId;
-        status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancel';
+        status: 'Pending' | 'Accepted' | 'Rejected' | 'Canceled';
         createdAt: Date;
     }>;
     hiredWorkers: Array<{
         userId: Types.ObjectId;
-        status: 'In Progress' | 'Completed' | 'Cancel';
+        status: 'In Progress' | 'Completed' | 'Canceled';
         createdAt: Date;
     }>;
     createdAt: Date;
