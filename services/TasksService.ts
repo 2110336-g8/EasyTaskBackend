@@ -33,12 +33,11 @@ export interface ITasksService {
         userId: string,
     ) => Promise<ITaskDocument | null>;
     cancelTask: (taskId: string) => Promise<ITaskDocument | null>;
-  
+
     getAdvertisement: (
         customerId: string,
         status: string,
     ) => Promise<ITaskDocument[] | null>;
-
 }
 
 @Service()
@@ -245,11 +244,24 @@ export class TasksService implements ITasksService {
         customerId: string,
         status: string,
     ): Promise<ITaskDocument[]> => {
-        const filter: FilterQuery<ITaskDocument> = {
+        let filter: FilterQuery<ITaskDocument> = {
             customerId: customerId,
-            status: status as 'Open' | 'In Progress' | 'Completed' | 'Closed',
         };
+
+        // Check if status is provided and not an empty string
+        if (status && status.trim() !== '') {
+            filter = {
+                ...filter,
+                status: status as
+                    | 'Open'
+                    | 'In Progress'
+                    | 'Completed'
+                    | 'Closed',
+            };
+        }
+
         console.log(filter);
+
         try {
             const tasks = await this.taskRepository.findTasks(filter);
             return tasks;
@@ -258,5 +270,4 @@ export class TasksService implements ITasksService {
             return [];
         }
     };
-
 }

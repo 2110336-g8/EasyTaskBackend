@@ -12,10 +12,6 @@ export interface IUsersRepositorty extends IRepository<IUser> {
         email: string,
         password: string,
     ) => Promise<IUserDocument | null>;
-    isValidPasswordById: (
-        id: string,
-        password: string
-    ) => Promise<IUserDocument | null>;
     addOwnedTasks: (
         taskId: string,
         userId: string,
@@ -25,10 +21,6 @@ export interface IUsersRepositorty extends IRepository<IUser> {
         userId: string,
         timestamps: Date,
     ) => Promise<IUserDocument | null>;
-    setNewPassword: (  
-        id: string,
-        password: string
-    ) => Promise<string | null>;
     rejectAllApplicationsForOneTask: (taskId: string) => Promise<null>;
 }
 
@@ -57,18 +49,6 @@ export class UsersRepository
         const isValid = await compare(password, user.password);
         return isValid ? user : null;
     };
-
-    isValidPasswordById = async (
-        id: string,
-        password: string
-    ): Promise<IUserDocument | null> => {
-        const user = await this._model.findById(id).select('+password');
-        if (!user) {
-            return null;
-        }
-        const isValid = await compare(password, user.password);
-        return isValid ? user : null;
-    }
 
     addOwnedTasks = async (
         taskId: string,
@@ -144,27 +124,6 @@ export class UsersRepository
             return updatedUser;
         } catch (error) {
             console.error('Error updating applications:', error);
-            throw error;
-        }
-    };
-
-    setNewPassword = async (
-        userId: string, 
-        newPassword: string
-    ): Promise<string | null> => {
-        try {
-            const updatedUserPassword = await this._model.updateOne(
-                { _id: userId },
-                { $set : { password: newPassword } }
-            );
-            if (!updatedUserPassword) {
-                console.error('Update failed: Document not found or constraint violated');
-                return null;
-            }
-            return newPassword;
-        }
-        catch (error) {
-            console.error('Error updating password:', error);
             throw error;
         }
     };
