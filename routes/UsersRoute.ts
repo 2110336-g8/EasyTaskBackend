@@ -13,7 +13,8 @@ const userMiddleware = Container.get(UserMiddleware);
 router
     .route('/:id')
     .get(usersController.getUserbyId)
-    .patch(userMiddleware.validateUpdateUserData, usersController.updateUser);
+    .patch(userMiddleware.validateUpdateUserData, usersController.updateUser)
+    .patch(userMiddleware.validateUpdatePassword, usersController.updatePassword);
 
 router
     .route('/:id/profile-image')

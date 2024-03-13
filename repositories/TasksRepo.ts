@@ -11,11 +11,15 @@ export interface ITasksRepository extends IRepository<ITask> {
     ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
     countAllTasks: () => Promise<number | null>;
     findOneWithGeneralInfo: (id: string) => Promise<ITaskDocument | null>;
-    updateApplicants: (
+    addApplicants: (
         taskId: string,
         userId: string,
         timestamps: Date,
     ) => Promise<ITaskDocument | null>;
+    closeTask: (taskId: string) => Promise<ITaskDocument | null>;
+    findTasks: (
+        filter?: FilterQuery<ITaskDocument>,
+    ) => Promise<ITaskDocument[]>;
 }
 
 @Service()
@@ -34,6 +38,10 @@ export class TasksRepository
     ): Promise<{ tasks: ITaskDocument[]; count: number }> => {
         const tasks = await this._model
             .find(filter)
+            .select({
+                applicants: 0,
+                hiredWorkers: 0,
+            })
             .skip((page - 1) * taskPerPage)
             .limit(taskPerPage);
 
@@ -61,7 +69,7 @@ export class TasksRepository
         }
     };
 
-    updateApplicants = async (
+    addApplicants = async (
         taskId: string,
         userId: string,
         timestamps: Date,
@@ -81,7 +89,7 @@ export class TasksRepository
                 )
             ) {
                 console.error(
-                    'Update failed: An applicant with the same userId already exists with status "Pending" or "Accepted"',
+                    'Adding failed: An applicant with the same userId already exists with status "Pending" or "Accepted"',
                 );
                 return null;
             }
@@ -101,15 +109,72 @@ export class TasksRepository
             );
             if (!updatedTask) {
                 console.error(
-                    'Update failed: Document not found or constraint violated',
+                    'Adding failed: Document not found or constraint violated',
                 );
                 return null;
             }
 
             return updatedTask;
         } catch (error) {
-            console.error('Error updating applicants:', error);
+            console.error('Error adding applicants:', error);
             throw error;
         }
     };
+
+    closeTask = async (taskId: string): Promise<ITaskDocument | null> => {
+        try {
+            // // Update the task status to 'Closed' and update all applicants to 'Rejected'
+            // const updatedTask = await this._model.findOneAndUpdate(
+            //     { _id: taskId },
+            //     [
+            //         { $set: { status: 'Closed' } }, // Update the task status to 'Closed'
+            //         { $set: { 'applicants.$[].status': 'Rejected' } }, // Update all applicants to 'Rejected'
+            //     ],
+            //     { new: true }, // to return the updated document
+            // );
+
+            // if (!updatedTask) {
+            //     console.error(
+            //         'Close failed: Document not found or constraint violated',
+            //     );
+            //     return null;
+            // }
+
+            // Find the task within the session
+            const task = await this._model.findById(taskId);
+
+            if (!task) {
+                console.error('Close failed: Task not found');
+                return null;
+            }
+
+            // Update the task status to 'Closed'
+            task.status = 'Closed';
+
+            // Update the status of all applicants to 'Rejected'
+            for (const applicant of task.applicants) {
+                applicant.status = 'Rejected';
+            }
+
+            // Save the changes to the task document
+            await task.save();
+
+            return task;
+        } catch (error) {
+            console.error('Error closing task:', error);
+            throw error;
+        }
+    };
+
+    async findTasks(
+        filter: FilterQuery<ITaskDocument> = {},
+    ): Promise<ITaskDocument[]> {
+        try {
+            const tasks = await this._model.find(filter);
+            return tasks;
+        } catch (error) {
+            console.error('Error finding tasks:', error);
+            throw error;
+        }
+    }
 }
