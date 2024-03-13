@@ -162,6 +162,7 @@ UserSchema.methods.toJSON = function () {
 
 UserSchema.pre('save', async function (next) {
     const salt = await genSalt(10);
+    console.log(salt);
     const hashedPassword = await hash(this.password, salt);
     this.password = hashedPassword;
     next();
