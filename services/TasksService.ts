@@ -8,7 +8,7 @@ import {
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
 import categoryData from '../assets/categories/categorieslist.json';
-import { FilterQuery } from 'mongoose';
+import mongoose, { FilterQuery, Types } from 'mongoose';
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
     getTaskList: (
@@ -33,6 +33,12 @@ export interface ITasksService {
         userId: string,
     ) => Promise<ITaskDocument | null>;
     cancelTask: (taskId: string) => Promise<ITaskDocument | null>;
+  
+    getAdvertisement: (
+        customerId: string,
+        status: string,
+    ) => Promise<ITaskDocument[] | null>;
+
 }
 
 @Service()
@@ -234,4 +240,23 @@ export class TasksService implements ITasksService {
             throw error;
         }
     };
+
+    getAdvertisement = async (
+        customerId: string,
+        status: string,
+    ): Promise<ITaskDocument[]> => {
+        const filter: FilterQuery<ITaskDocument> = {
+            customerId: customerId,
+            status: status as 'Open' | 'In Progress' | 'Completed' | 'Closed',
+        };
+        console.log(filter);
+        try {
+            const tasks = await this.taskRepository.findTasks(filter);
+            return tasks;
+        } catch (error) {
+            console.error(error);
+            return [];
+        }
+    };
+
 }

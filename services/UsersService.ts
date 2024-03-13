@@ -1,10 +1,11 @@
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
-import { IUser, IUserDocument } from '../models/UserModel';
+import { IUpdatePassword, IUser, IUserDocument } from '../models/UserModel';
 import { Service, Inject, Token } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
 import { IOtpRepository, OtpRepository } from '../repositories/OtpRepo';
 import Constants from '../config/constants';
+import e from 'express';
 
 export interface IUsersService {
     createUser: (userData: IUserDocument) => Promise<IUserDocument>;
@@ -13,6 +14,10 @@ export interface IUsersService {
     updateUser: (
         id: string,
         data: IUserDocument,
+    ) => Promise<IUserDocument | null>;
+    updatePassword: (
+        id: string, 
+        data: IUpdatePassword
     ) => Promise<IUserDocument | null>;
 }
 
@@ -90,4 +95,23 @@ export class UsersService implements IUsersService {
             throw error;
         }
     };
+
+    updatePassword = async (
+        id: string,
+        data: IUpdatePassword
+    ): Promise<IUserDocument | null> => {
+        try {
+            const user = await this.userRepository.isValidPasswordById(
+                id,
+                data.currentPassword,
+            );
+            if (!user) {
+                return null;
+            }
+            user.password = data.newPassword;
+            return await user.save();
+        } catch (error) {
+            return null;
+        }
+    }
 }

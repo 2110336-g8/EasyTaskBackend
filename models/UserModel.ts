@@ -24,6 +24,11 @@ export interface IUser {
     ownedTasks: Types.ObjectId[];
 }
 
+export interface IUpdatePassword {
+    currentPassword: string;
+    newPassword: string;
+}
+
 export interface IUserDocument extends IUser, Document {}
 
 const UserSchema = new mongoose.Schema<IUserDocument>(

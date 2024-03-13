@@ -3,11 +3,12 @@ import {
     IUsersService,
     UsersService as UsersService,
 } from '../services/UsersService';
-import { IUserDocument } from '../models/UserModel';
+import { ImageService } from '../services/ImageService';
+import { AuthService } from '../services/AuthService';
+import { IUserDocument, IUpdatePassword } from '../models/UserModel';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
-import { ImageService } from '../services/ImageService';
 import sharp from 'sharp';
 @Service()
 class UsersController {
@@ -16,7 +17,7 @@ class UsersController {
 
     constructor(
         @Inject(() => UsersService) userService: IUsersService,
-        @Inject(() => ImageService) imageService: ImageService,
+        @Inject(() => ImageService) imageService: ImageService
     ) {
         this.usersService = userService;
         this.imageService = imageService;
@@ -76,6 +77,31 @@ class UsersController {
             }
         }
     };
+
+    updatePassword = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const id = req.params.id;
+            const data: IUpdatePassword = req.body;
+            const user = await this.usersService.updatePassword(id, data);
+            if (!user) {
+                res.status(404).json({
+                    error: 'User not found',
+                });
+                return;
+            }
+            res.status(200).json({ user: user.toJSON() });
+        } catch (error) {
+            if (error instanceof ValidationError) {
+                res.status(400).json({
+                    error: error.name,
+                    details: error.message,
+                });
+            } else {
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        }
+    };
+    
     // image ---------------------------------------------------------------------------------
     getProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {
