@@ -174,13 +174,13 @@ UserSchema.pre('save', async function (next) {
     next();
 });
 
-// UserSchema.pre('findOneAndUpdate', async function (next) {
-//     const user = await this.model.findOne(this.getQuery());
-//     const salt = await genSalt(10);
-//     const hashedPassword = await hash(user.password, salt);
-//     user.password = hashedPassword;
-//     next();
-// });
+UserSchema.pre('findOneAndUpdate', async function (next) {
+    const user = await this.model.findOne(this.getQuery());
+    const salt = await genSalt(10);
+    const hashedPassword = await hash(user.password, salt);
+    user.password = hashedPassword;
+    next();
+});
 
 
 export const UserModel = mongoose.model<IUserDocument>('User', UserSchema);
