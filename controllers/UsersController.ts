@@ -80,8 +80,8 @@ class UsersController {
     updatePassword = async (req: Request, res: Response): Promise<void> => {
         try {
             const id: string = req.params.id;
-            const data: IUserDocument = { password : req.body.newPassword as string } as IUserDocument;
-            const currentPassword: string = req.body.newPassword;
+            const data: IUser = { password : req.body.newPassword as string } as IUser;
+            const currentPassword: string = req.body.currentPassword;
             const user = await this.usersService.updatePassword(id, data, currentPassword);
             if (!user) {
                 res.status(404).json({

@@ -17,7 +17,7 @@ export interface IUsersService {
     ) => Promise<IUserDocument | null>;
     updatePassword: (
         id: string, 
-        data: IUserDocument,
+        data: IUser,
         currentPassword: string
     ) => Promise<IUserDocument | null>;
 }
@@ -99,7 +99,7 @@ export class UsersService implements IUsersService {
 
     updatePassword = async (
         id: string,
-        data: IUserDocument,
+        data: IUser,
         currentPassword: string
     ): Promise<IUserDocument | null> => {
         try {
