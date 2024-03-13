@@ -565,40 +565,6 @@ class TasksController {
             }
         }
     };
-    cancelTask = async (req: Request, res: Response) => {
-        try {
-            const id = req.params.id;
-            const task = await this.tasksService.getTaskById(id);
-            if (!task) {
-                res.status(404).json({
-                    success: false,
-                    error: 'Task Not Found',
-                });
-                return;
-            }
-            if (task.customerId.toString() != req.user._id) {
-                res.status(403).json({
-                    success: false,
-                    error: 'Cannot Cancel This Task',
-                });
-                return;
-            }
-            const result = await this.tasksService.cancelTask(id);
-            res.status(200).json({ success: true, result });
-        } catch (error) {
-            if (error instanceof CannotCancelTaskError) {
-                res.status(500).json({
-                    success: false,
-                    error: error.message,
-                });
-            } else {
-                res.status(500).json({
-                    sucess: false,
-                    error: 'Internal Server Error',
-                });
-            }
-        }
-    };
 }
 
 export default TasksController;

@@ -24,7 +24,6 @@ export interface ITasksRepository extends IRepository<ITask> {
     findTasks: (
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<ITaskDocument[]>;
-
 }
 
 @Service()
@@ -162,51 +161,6 @@ export class TasksRepository
             return updatedTask;
         } catch (error) {
             console.error('Error adding applicants:', error);
-            throw error;
-        }
-    };
-
-    closeTask = async (taskId: string): Promise<ITaskDocument | null> => {
-        try {
-            // // Update the task status to 'Closed' and update all applicants to 'Rejected'
-            // const updatedTask = await this._model.findOneAndUpdate(
-            //     { _id: taskId },
-            //     [
-            //         { $set: { status: 'Closed' } }, // Update the task status to 'Closed'
-            //         { $set: { 'applicants.$[].status': 'Rejected' } }, // Update all applicants to 'Rejected'
-            //     ],
-            //     { new: true }, // to return the updated document
-            // );
-
-            // if (!updatedTask) {
-            //     console.error(
-            //         'Close failed: Document not found or constraint violated',
-            //     );
-            //     return null;
-            // }
-
-            // Find the task within the session
-            const task = await this._model.findById(taskId);
-
-            if (!task) {
-                console.error('Close failed: Task not found');
-                return null;
-            }
-
-            // Update the task status to 'Closed'
-            task.status = 'Closed';
-
-            // Update the status of all applicants to 'Rejected'
-            for (const applicant of task.applicants) {
-                applicant.status = 'Rejected';
-            }
-
-            // Save the changes to the task document
-            await task.save();
-
-            return task;
-        } catch (error) {
-            console.error('Error closing task:', error);
             throw error;
         }
     };
