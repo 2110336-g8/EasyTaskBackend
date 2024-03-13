@@ -97,8 +97,8 @@ class UsersController {
 
             const user = await this.usersService.updatePassword(id, email, data, currentPassword);
             if (!user) {
-                res.status(404).json({
-                    error: 'User not found',
+                res.status(401).json({
+                    error: 'Unauthorized',
                 });
                 return;
             }

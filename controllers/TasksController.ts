@@ -148,11 +148,25 @@ class TasksController {
             if (userId.toString() !== task.customerId.toString()) {
                 const taskWithGeneralInfo = await this.tasksService.getTaskWithGeneralInfoById(id);
                 if (!taskWithGeneralInfo) {
-                    res.status(404).json({ error: 'Task not found' });
+                    res.status(404).json({ 
+                        error: 'Task not found'
+                    });
                     return;
                 }
 
-                const customer: IUserDocument = await this.usersService.getUserById(task.customerId);
+                res.status(200).json({ 
+                    task: taskWithGeneralInfo.toJSON()
+                });
+                return;
+            }
+            // if (userId.toString() !== task.customerId.toString()) {
+            //     const filteredTask = { ...task.toObject() };
+            //     delete filteredTask.applications;
+            //     delete filteredTask.hiredWorkers;
+            //     res.status(200).json({ task: filteredTask });
+            //     return;
+            // }
+            const customer: IUserDocument = await this.usersService.getUserById(task.customerId);
                 if (!customer) {
                     res.status(404).json({ error: 'Owner not found' });
                     return;
@@ -166,21 +180,11 @@ class TasksController {
                 //     taskWithGeneralInfo.applicants[i].userId = worker;
                 // }
 
-                res.status(200).json({ 
-                    task: taskWithGeneralInfo.toJSON(),
-                    customer: customer.toJSON(),
-                    customerImage: customerImage?.toString()
-                });
-                return;
-            }
-            // if (userId.toString() !== task.customerId.toString()) {
-            //     const filteredTask = { ...task.toObject() };
-            //     delete filteredTask.applications;
-            //     delete filteredTask.hiredWorkers;
-            //     res.status(200).json({ task: filteredTask });
-            //     return;
-            // }
-            res.status(200).json({ task: task.toJSON() });
+            res.status(200).json({ 
+                task: task.toJSON(),
+                customer: customer.toJSON(),
+                customerImage: customerImage?.toString()
+            });
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
