@@ -110,7 +110,7 @@ export class UsersService implements IUsersService {
             if (!user) {
                 return null;
             }
-            return user;
+            return null;
             // try {
             //     const user = await this.userRepository.update( 
             //         id,
