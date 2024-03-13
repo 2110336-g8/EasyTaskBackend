@@ -16,7 +16,7 @@ export interface IUsersService {
         data: IUserDocument,
     ) => Promise<IUserDocument | null>;
     updatePassword: (
-        id: string, 
+        email: string, 
         data: IUser,
         currentPassword: string
     ) => Promise<IUserDocument | null>;
@@ -98,13 +98,13 @@ export class UsersService implements IUsersService {
     };
 
     updatePassword = async (
-        id: string,
+        email: string,
         data: IUser,
         currentPassword: string
     ): Promise<IUserDocument | null> => {
         try {
-            const user = await this.userRepository.isValidPasswordById(
-                id,
+            const user = await this.userRepository.isValidPassword(
+                email,
                 currentPassword,
             );
             if (!user) {
