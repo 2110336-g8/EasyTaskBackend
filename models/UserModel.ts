@@ -11,6 +11,7 @@ export interface IUser {
     description?: string;
     imageKey?: string;
     imageUrl?: string;
+    imageUrlLastUpdateTime?: Date;
     bankId?: ObjectId;
     bankAccName?: string;
     bankAccNo?: string;
@@ -82,6 +83,9 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
         },
         imageUrl: {
             type: String,
+        },
+        imageUrlLastUpdateTime: {
+            type: Date,
         },
         bankId: {
             type: String,

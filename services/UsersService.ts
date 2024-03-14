@@ -17,14 +17,14 @@ export interface IUsersService {
     ) => Promise<IUserDocument | null>;
     updatePassword: (
         id: string,
-        email: string, 
+        email: string,
         data: IUser,
-        currentPassword: string
+        currentPassword: string,
     ) => Promise<IUserDocument | null>;
     deleteUser: (
-        id: string, 
+        id: string,
         password: string,
-        email: string 
+        email: string,
     ) => Promise<IUserDocument | null>;
 }
 
@@ -107,7 +107,7 @@ export class UsersService implements IUsersService {
         id: string,
         email: string,
         data: IUser,
-        currentPassword: string
+        currentPassword: string,
     ): Promise<IUserDocument | null> => {
         try {
             const user = await this.userRepository.isValidPassword(
@@ -118,13 +118,9 @@ export class UsersService implements IUsersService {
                 return null;
             }
             try {
-                const user = await this.userRepository.update( 
-                    id,
-                    data
-                );
+                const user = await this.userRepository.update(id, data);
                 return user;
-            }
-            catch (error) {
+            } catch (error) {
                 return null;
             }
         } catch (error) {
@@ -135,27 +131,26 @@ export class UsersService implements IUsersService {
     deleteUser = async (
         id: string,
         password: string,
-        email: string
+        email: string,
     ): Promise<IUserDocument | null> => {
         try {
             const user = await this.userRepository.isValidPassword(
                 email,
-                password
+                password,
             );
             if (!user) {
                 return null;
             }
             try {
-                if(!this.userRepository.deleteOne(id)) {
+                if (!this.userRepository.deleteOne(id)) {
                     return null;
                 }
                 return user;
-            }
-            catch (error) {
+            } catch (error) {
                 return null;
             }
         } catch (error) {
             return null;
         }
-    }
+    };
 }
