@@ -7,6 +7,7 @@ import { ValidationError } from '../errors/RepoError';
 import { MongoError } from 'mongodb';
 
 export interface IUsersRepositorty extends IRepository<IUser> {
+    findById: (id: string) => Promise<IUserDocument | null>;
     findOneByEmail: (email: string) => Promise<IUserDocument | null>;
     isValidPassword: (
         email: string,
@@ -32,6 +33,15 @@ export class UsersRepository
     constructor() {
         super(UserModel);
     }
+
+    findById = async (id: string): Promise<IUserDocument | null> => {
+        try {
+            const user = await this._model.findById(id);
+            return user;
+        } catch (error) {
+            throw error;
+        }
+    };
 
     findOneByEmail = async (email: string): Promise<IUserDocument | null> => {
         const result = await this._model.findOne({ email });
