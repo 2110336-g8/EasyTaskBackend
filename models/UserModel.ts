@@ -1,5 +1,6 @@
 import mongoose, { Document, ObjectId, Types, Schema } from 'mongoose';
 import { genSalt, hash } from 'bcrypt';
+import sanitize = require('sanitize-html');
 
 export interface IUser {
     firstName: string;
@@ -7,8 +8,10 @@ export interface IUser {
     email: string;
     password: string;
     phoneNumber?: string;
+    description?: string;
     imageKey?: string;
     imageUrl?: string;
+    imageUrlLastUpdateTime?: Date;
     bankId?: ObjectId;
     bankAccName?: string;
     bankAccNo?: string;
@@ -65,11 +68,24 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                 message: 'Invalid phone number format',
             },
         },
+        description: {
+            type: String,
+            validate: {
+                validator: function (value: string) {
+                    return value.length <= 1000;
+                },
+                message: 'Description must not exceed 1000 characters',
+            },
+            set: (value: string) => sanitize(value), // Sanitize the description before saving (prevent malicious code injection)
+        },
         imageKey: {
             type: String,
         },
         imageUrl: {
             type: String,
+        },
+        imageUrlLastUpdateTime: {
+            type: Date,
         },
         bankId: {
             type: String,
@@ -170,6 +186,5 @@ UserSchema.pre('save', async function (next) {
     this.password = hashedPassword;
     next();
 });
-
 
 export const UserModel = mongoose.model<IUserDocument>('User', UserSchema);

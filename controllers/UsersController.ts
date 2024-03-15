@@ -10,6 +10,10 @@ import { Service, Inject } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import sharp from 'sharp';
 import { genSalt, hash } from 'bcrypt';
+import dotenv from 'dotenv';
+dotenv.config({ path: './config/config.env' });
+
+const IMAGE_EXPIRE_TIME_SECONDS = Number(process.env.IMAGE_EXPIRE_TIME); // Assuming IMAGE_EXPIRE_TIME is defined in your environment variables
 
 @Service()
 class UsersController {
@@ -44,29 +48,46 @@ class UsersController {
     getUserbyId = async (req: Request, res: Response): Promise<void> => {
         try {
             const id = req.params.id;
-            const user = await this.usersService.getUserById(id);
+            const user: IUser | null = await this.usersService.getUserById(id);
+
             if (!user) {
                 res.status(404).json({ error: 'User not found' });
                 return;
             }
 
-            let imageUrl: string | undefined;
+            let imageUrl: string | undefined = user.imageUrl;
+            const imageUrlLastUpdateTime = user.imageUrlLastUpdateTime;
 
-            // Check if user has an imageKey before fetching imageUrl
-            if (user.imageKey) {
-                const fetchedImageUrl = await this.imageService.getImageByKey(user.imageKey);
-                imageUrl = fetchedImageUrl ?? undefined; // Convert null to undefined
+            if (
+                !imageUrlLastUpdateTime ||
+                Date.now() >
+                    imageUrlLastUpdateTime.getTime() +
+                        IMAGE_EXPIRE_TIME_SECONDS * 1000
+            ) {
+                // Fetch new image URL from image service
+                const imageKey = user.imageKey;
+                if (imageKey) {
+                    const fetchedImageUrl =
+                        await this.imageService.getImageByKey(imageKey);
+                    if (fetchedImageUrl) {
+                        imageUrl = fetchedImageUrl;
+                        // Update imageUrl and imageUrlLastUpdateTime
+                        await this.usersService.updateUser(id, {
+                            imageUrl: fetchedImageUrl,
+                            imageUrlLastUpdateTime: new Date(),
+                        } as IUserDocument);
+                        console.log('update imageUrl successfully');
+                    }
+                }
             }
-
-            // Add imageUrl to the user object
             user.imageUrl = imageUrl;
 
             res.status(200).json({ user });
         } catch (error) {
+            console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
-
 
     updateUser = async (req: Request, res: Response): Promise<void> => {
         try {
@@ -74,10 +95,10 @@ class UsersController {
             const data = req.body;
 
             if (data.password) {
-                res.status(403).json({ error : 'Cannot update password' });
+                res.status(403).json({ error: 'Cannot update password' });
                 return;
-            };
-            
+            }
+
             const user = await this.usersService.updateUser(id, data);
             if (!user) {
                 res.status(404).json({
@@ -103,12 +124,20 @@ class UsersController {
             const id: string = req.params.id;
             const email: string = req.user.email as string;
             const currentPassword: string = req.body.currentPassword as string;
-            
-            const salt = await genSalt(10);
-            const hashedPassword: string = await hash(req.body.newPassword as string, salt);
-            const data: IUser = { password : hashedPassword } as IUser;
 
-            const user = await this.usersService.updatePassword(id, email, data, currentPassword);
+            const salt = await genSalt(10);
+            const hashedPassword: string = await hash(
+                req.body.newPassword as string,
+                salt,
+            );
+            const data: IUser = { password: hashedPassword } as IUser;
+
+            const user = await this.usersService.updatePassword(
+                id,
+                email,
+                data,
+                currentPassword,
+            );
             if (!user) {
                 res.status(401).json({
                     error: 'Unauthorized',
@@ -133,8 +162,12 @@ class UsersController {
             const id = req.params.id;
             const email: string = req.user.email as string;
             const password = req.body.password;
-            
-            const user = await this.usersService.deleteUser(id, password, email);
+
+            const user = await this.usersService.deleteUser(
+                id,
+                password,
+                email,
+            );
             if (!user) {
                 res.status(401).json({
                     error: 'Unauthorized',
@@ -146,7 +179,7 @@ class UsersController {
             res.status(500).json({ error: 'Internal server error' });
         }
     };
-    
+
     // image ---------------------------------------------------------------------------------
     getProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {
