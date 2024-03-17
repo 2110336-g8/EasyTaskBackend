@@ -24,13 +24,8 @@ router.route('/:id/cancel').post(tasksController.cancelTask);
 
 router
     .route('/:id/task-image')
-    .get(tasksController.getTaskImages)
-    .post(upload.single('file'), tasksController.uploadTaskImage)
-    .put(tasksController.changeImageSeq);
-
-router
-    .route('/:id/task-image/delete')
-    .post(tasksController.deleteTaskImagesBySeqs)
-    .delete(tasksController.deleteTaskAllImages);
+    .get(tasksController.getTaskImage)
+    .post(tasksController.uploadTaskImage)
+    .delete(tasksController.deleteTaskImage);
 
 export default router;
