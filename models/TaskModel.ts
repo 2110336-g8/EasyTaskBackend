@@ -5,8 +5,9 @@ export interface ITask {
     title: string;
     category: string;
     description?: string;
-    imageKeys?: Array<{ seq: number; imageKey: string }>;
-    imageUrls?: Array<{ seq: number; imageUrl: string }>;
+    imageKey?: string;
+    imageUrl?: string;
+    imageUrlLastUpdateTime?: Date | null;
     location?: {
         name: string;
         latitude: number;
@@ -55,31 +56,14 @@ const TaskSchema = new Schema<ITaskDocument>(
         description: {
             type: String,
         },
-        imageKeys: {
-            type: [
-                {
-                    seq: {
-                        type: Number,
-                        required: [true, 'Sequence number is required'],
-                    },
-                    imageKey: {
-                        type: String,
-                        required: [true, 'Image key is required'],
-                    },
-                },
-            ],
+        imageKey: {
+            type: String,
         },
-        imageUrls: {
-            type: [
-                {
-                    seq: {
-                        type: Number,
-                    },
-                    imageUrl: {
-                        type: String,
-                    },
-                },
-            ],
+        imageUrl: {
+            type: String,
+        },
+        imageUrlLastUpdateTime: {
+            type: Date,
         },
         location: {
             type: {

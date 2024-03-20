@@ -9,7 +9,9 @@ import {
     CannotCancelTaskError,
 } from '../errors/TaskError';
 import { IUserDocument } from '../models/UserModel';
-import { ITask } from '../models/TaskModel';
+import { ITask, ITaskDocument } from '../models/TaskModel';
+import dotenv from 'dotenv';
+dotenv.config({ path: './config/config.env' });
 
 @Service()
 class TasksController {
@@ -155,44 +157,18 @@ class TasksController {
                     });
                     return;
                 }
-                // Update or create imageUrls field in taskWithGeneralInfo
-                const taskWithImageUrls =
-                    await this.updateTaskImageUrls(taskWithGeneralInfo);
-
                 res.status(200).json({
-                    task: taskWithImageUrls,
+                    task: taskWithGeneralInfo,
                 });
                 return;
             }
-            // Update or create imageUrls field in task
-            const taskWithImageUrls = await this.updateTaskImageUrls(task);
 
             res.status(200).json({
-                task: taskWithImageUrls,
+                task,
             });
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
-    };
-
-    updateTaskImageUrls = async (task: ITask): Promise<ITask> => {
-        // Check if task has imageKeys field
-        if (task.imageKeys && task.imageKeys.length > 0) {
-            const imageUrls: Array<{ seq: number; imageUrl: string }> = [];
-
-            // Fetch image URLs for each imageKey
-            for (const imageKeyObj of task.imageKeys) {
-                const imageUrl = await this.imageService.getImageByKey(
-                    imageKeyObj.imageKey,
-                );
-                if (imageUrl) {
-                    imageUrls.push({ seq: imageKeyObj.seq, imageUrl });
-                }
-            }
-            task.imageUrls = imageUrls;
-        }
-
-        return task;
     };
 
     getTaskExperience = async (req: Request, res: Response) => {
@@ -244,39 +220,29 @@ class TasksController {
     };
 
     // image ---------------------------------------------------------------------------------
-    getTaskImages = async (req: Request, res: Response): Promise<void> => {
+    getTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
             const id = req.params.id;
             const task = await this.tasksService.getTaskById(id);
             if (!task) {
-                res.status(404).json({ error: 'Task not found' });
+                res.status(404).json({ error: 'User not found' });
                 return;
             }
-            const imageKeys = task.imageKeys;
+            const imageKey = task.imageKey;
 
-            if (imageKeys) {
-                const response = [];
+            if (imageKey) {
+                const imageUrl = await this.imageService.getImageByKey(
+                    String(imageKey),
+                );
 
-                for (const imageKey of imageKeys) {
-                    const seq = imageKey.seq;
-                    const key = imageKey.imageKey;
-
-                    // Get the image URL from the ImageService
-                    const imageUrl = await this.imageService.getImageByKey(
-                        String(key),
-                    );
-
-                    if (imageUrl) {
-                        response.push({ seq, imageUrl });
-                    }
+                // If the image URL exists, redirect to the image
+                if (imageUrl) {
+                    res.status(200).json(imageUrl);
+                } else {
+                    res.status(404).json({ error: 'Task image not found' });
                 }
-
-                res.status(200).json(response);
             } else {
-                // Handle the case where imageKeys is undefined
-                res.status(404).json({
-                    error: 'ImageKeys not found for the task',
-                });
+                res.status(404).json({ error: 'Task image not found' });
             }
         } catch (error) {
             console.error(error);
@@ -284,65 +250,45 @@ class TasksController {
         }
     };
 
-    // upload 1 image
     uploadTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
             const taskId = req.params.id;
-            const { seq } = req.body;
-            const file = req.file;
-
-            if (!file || isNaN(Number(seq))) {
-                res.status(400).json({ error: 'Invalid input' });
+            const file = req.body;
+            // console.log(req.body);
+            if (!file) {
+                console.log('no file');
+                res.status(400).json({ error: 'No file uploaded' });
                 return;
             }
-
-            // Generate a random number between 1 and 100000 (adjust the range as needed)
-            const randomNum = Math.floor(Math.random() * 100000) + 1;
-
+            // Use sharp to check if the file is an image
             try {
-                const metadata = await sharp(file.buffer).metadata();
+                const metadata = await sharp(file).metadata();
+
+                // Extract the file extension from the originalname (e.g., '.jpg')
                 const fileExtension = metadata.format!.toLowerCase();
-                const key = `${taskId}_${randomNum}.${fileExtension}`;
+                // console.log(fileExtension);
 
-                const task = await this.tasksService.getTaskById(taskId);
-
-                if (!task) {
-                    res.status(404).json({ error: 'Task not found' });
-                    return;
-                }
-
-                // Get the current imageKeys array
-                const currentImageKeys = task.imageKeys || [];
-
-                const seqExists = currentImageKeys.find(
-                    image => Number(image.seq) === Number(seq),
-                );
-
-                if (seqExists) {
-                    res.status(400).json({ error: 'Image seq already exists' });
-                    return;
-                }
-
-                // Update the array with the new image information
-                currentImageKeys.push({ seq, imageKey: key });
-
-                task.imageKeys = currentImageKeys;
-
-                await this.tasksService.updateTask(taskId, task);
+                // Generate the imageKey using the userId and fileExtension
+                const key = `${taskId}.${fileExtension}`;
+                // console.log(key);
+                // Update the user's imageKey in your database
+                await this.tasksService.updateTask(taskId, {
+                    imageKey: key,
+                } as ITaskDocument);
 
                 // Upload the file to AWS S3 or your preferred storage
-                await this.imageService.createImage(
+                const uploadedFile = await this.imageService.createImage(
                     file.buffer,
-                    file.mimetype,
+                    file.mimeType,
                     key,
                 );
 
                 res.status(201).json({
-                    message: 'Task image uploaded successfully',
+                    message: 'Profile image uploaded successfully',
                 });
             } catch (error) {
                 res.status(400).json({
-                    error,
+                    error: 'Uploaded file is not a valid image',
                 });
                 return;
             }
@@ -352,148 +298,30 @@ class TasksController {
         }
     };
 
-    // Change the sequence number in imageKeys (image that have seq = oldSeq to be newSeq)
-    changeImageSeq = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const taskId = req.params.id;
-            const { oldSeq, newSeq } = req.body;
-
-            if (typeof oldSeq !== 'number' || typeof newSeq !== 'number') {
-                res.status(400).json({ error: 'Invalid input' });
-                return;
-            }
-
-            const task = await this.tasksService.getTaskById(taskId);
-
-            if (!task) {
-                res.status(404).json({ error: 'Task not found' });
-                return;
-            }
-
-            const imageKeys = task.imageKeys;
-
-            if (imageKeys) {
-                // Update the sequence number in imageKeys array
-                task.imageKeys = imageKeys.map(imageKey => {
-                    if (imageKey.seq === oldSeq) {
-                        return { ...imageKey, seq: newSeq };
-                    }
-                    return imageKey;
-                });
-                await this.tasksService.updateTask(taskId, task);
-
-                res.status(200).json({ success: true });
-            } else {
-                // Handle the case where imageKeys is undefined
-                res.status(404).json({
-                    error: 'ImageKeys not found for the task',
-                });
-            }
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
-    };
-
-    //delete every image that have seq number in the seqs list input
-    deleteTaskImagesBySeqs = async (
-        req: Request,
-        res: Response,
-    ): Promise<void> => {
-        try {
-            const taskId = req.params.id;
-            const { seqs } = req.body;
-            if (
-                !seqs ||
-                !Array.isArray(seqs) ||
-                seqs.some(seq => isNaN(Number(seq)))
-            ) {
-                res.status(400).json({
-                    error: 'Invalid input or non-numeric seq in the array',
-                });
-                return;
-            }
-
-            const task = await this.tasksService.getTaskById(taskId);
-
-            if (!task) {
-                res.status(404).json({ error: 'Task not found' });
-                return;
-            }
-
-            const imageKeys = task.imageKeys;
-
-            if (imageKeys) {
-                // Filter out the imageKeys with seqs to be deleted
-                const remainingImageKeys = imageKeys.filter(
-                    imageKey => !seqs.includes(imageKey.seq),
-                );
-
-                // Delete images from AWS S3 bucket
-                for (const imageKey of imageKeys) {
-                    if (seqs.includes(imageKey.seq)) {
-                        const key = imageKey.imageKey;
-                        await this.imageService.deleteImage(String(key));
-                    }
-                }
-
-                // Update the task with the remaining imageKeys
-                task.imageKeys = remainingImageKeys;
-                await this.tasksService.updateTask(taskId, task);
-
-                res.status(200).json(remainingImageKeys);
-            } else {
-                // Handle the case where imageKeys is undefined
-                res.status(404).json({
-                    error: 'ImageKeys not found for the task',
-                });
-            }
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
-    };
-
-    deleteTaskAllImages = async (
-        req: Request,
-        res: Response,
-    ): Promise<void> => {
+    deleteTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
             const id = req.params.id;
             const task = await this.tasksService.getTaskById(id);
             if (!task) {
-                res.status(404).json({ error: 'Task not found' });
+                res.status(404).json({ error: 'task not found' });
                 return;
             }
-            const imageKeys = task.imageKeys;
+            const imageKey = task.imageKey;
+            // console.log('Image Key:', imageKey);
 
-            if (imageKeys && imageKeys.length > 0) {
-                for (const imageKey of imageKeys) {
-                    const key = imageKey.imageKey;
-
-                    try {
-                        // Delete image from AWS S3 bucket
-                        await this.imageService.deleteImage(String(key));
-                    } catch (deleteError) {
-                        console.error(
-                            `Error deleting image with key ${key}:`,
-                            deleteError,
-                        );
-                        // Continue with the deletion process even if one image deletion fails
-                    }
-                }
-
-                // Clear the imageKeys array in the task
-                task.imageKeys = [];
-
-                // Update the task to remove all imageKeys
-                await this.tasksService.updateTask(id, task);
-
-                res.status(200).json(true);
+            if (imageKey === null || imageKey === '') {
+                res.status(200).json({
+                    message: 'There is no image for this task',
+                });
             } else {
-                // Handle the case where imageKeys is undefined
-                res.status(404).json({
-                    error: 'ImageKeys not found for the task',
+                await this.imageService.deleteImage(String(imageKey));
+                await this.tasksService.updateTask(id, {
+                    imageKey: '',
+                    imageUrl: '',
+                    imageUrlLastUpdateTime: null,
+                } as ITaskDocument);
+                res.status(200).json({
+                    message: 'image deleted successfully',
                 });
             }
         } catch (error) {
@@ -501,6 +329,8 @@ class TasksController {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
+
+    //-----------------------------------------------------------------------------------------
 
     getCategories = async (req: Request, res: Response) => {
         try {

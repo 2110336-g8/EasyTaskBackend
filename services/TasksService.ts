@@ -7,8 +7,16 @@ import {
 } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
+import { ImageService } from '../services/ImageService';
+
 import categoryData from '../assets/categories/categorieslist.json';
 import mongoose, { FilterQuery, Types } from 'mongoose';
+
+import dotenv from 'dotenv';
+dotenv.config({ path: './config/config.env' });
+
+const IMAGE_EXPIRE_TIME_SECONDS = Number(process.env.IMAGE_EXPIRE_TIME); // Assuming IMAGE_EXPIRE_TIME is defined in your environment variables
+
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
     getTaskList: (
@@ -46,15 +54,19 @@ export interface ITasksService {
 export class TasksService implements ITasksService {
     private taskRepository: ITasksRepository;
     private userRepository: IUsersRepositorty;
+    private imageService: ImageService;
 
     constructor(
         @Inject(() => TasksRepository)
         taskRepository: ITasksRepository,
         @Inject(() => UsersRepository)
         userRepository: IUsersRepositorty,
+        @Inject(() => ImageService)
+        imageService: ImageService,
     ) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
+        this.imageService = imageService;
     }
 
     createTask = async (taskData: ITask): Promise<ITaskDocument> => {
@@ -96,7 +108,15 @@ export class TasksService implements ITasksService {
                 taskPerPage,
                 filter,
             );
-            return result;
+
+            // Update image URLs for each task
+            const tasksWithUpdatedUrls = await Promise.all(
+                result.tasks.map(async task => {
+                    return await this.updateTaskImageUrls(task);
+                }),
+            );
+
+            return { tasks: tasksWithUpdatedUrls, count: result.count };
         } catch (error) {
             console.error(error);
             return { tasks: [], count: 0 };
@@ -113,6 +133,36 @@ export class TasksService implements ITasksService {
         }
     }
 
+    async getTaskById(id: string): Promise<ITaskDocument | null> {
+        try {
+            const task = await this.taskRepository.findOne(id);
+            if (task) {
+                // Update image URL for the task
+                return await this.updateTaskImageUrls(task);
+            }
+            return null;
+        } catch (error) {
+            console.error(error);
+            return null;
+        }
+    }
+
+    getTaskWithGeneralInfoById = async (
+        id: string,
+    ): Promise<ITaskDocument | null> => {
+        try {
+            const task = await this.taskRepository.findOneWithGeneralInfo(id);
+            if (task) {
+                // Update image URL for the task
+                return await this.updateTaskImageUrls(task);
+            }
+            return null;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    //taskOf
     getTaskExperience = async (
         userId: string,
         status: string | undefined,
@@ -122,29 +172,53 @@ export class TasksService implements ITasksService {
                 userId,
                 status,
             );
-            return tasks;
+            // Update image URLs for each task
+            const tasksWithUpdatedUrls = await Promise.all(
+                tasks.map(async task => {
+                    return await this.updateTaskImageUrls(task);
+                }),
+            );
+
+            return tasksWithUpdatedUrls;
         } catch (error) {
             throw error;
         }
     };
 
-    getTaskById = async (id: string): Promise<ITaskDocument | null> => {
-        try {
-            const task = await this.taskRepository.findOne(id);
-            return task;
-        } catch (error) {
-            return null;
-        }
-    };
+    //adsOf
+    getAdvertisement = async (
+        customerId: string,
+        status: string,
+    ): Promise<ITaskDocument[]> => {
+        let filter: FilterQuery<ITaskDocument> = {
+            customerId: customerId,
+        };
 
-    getTaskWithGeneralInfoById = async (
-        id: string,
-    ): Promise<ITaskDocument | null> => {
+        // Check if status is provided and not an empty string
+        if (status && status.trim() !== '') {
+            filter = {
+                ...filter,
+                status: status as
+                    | 'Open'
+                    | 'In Progress'
+                    | 'Completed'
+                    | 'Closed',
+            };
+        }
+
         try {
-            const task = await this.taskRepository.findOneWithGeneralInfo(id);
-            return task;
+            const tasks = await this.taskRepository.findTasks(filter);
+            // Update image URLs for each task
+            const tasksWithUpdatedUrls = await Promise.all(
+                tasks.map(async task => {
+                    return await this.updateTaskImageUrls(task);
+                }),
+            );
+
+            return tasksWithUpdatedUrls;
         } catch (error) {
-            return null;
+            console.error(error);
+            return [];
         }
     };
 
@@ -167,6 +241,39 @@ export class TasksService implements ITasksService {
             return null;
         }
     };
+
+    async updateTaskImageUrls(task: ITaskDocument): Promise<ITaskDocument> {
+        let imageUrl: string | undefined = task.imageUrl;
+        const imageUrlLastUpdateTime = task.imageUrlLastUpdateTime;
+
+        // Logic to update image URLs if needed
+        if (
+            !imageUrlLastUpdateTime ||
+            Date.now() >
+                imageUrlLastUpdateTime.getTime() +
+                    IMAGE_EXPIRE_TIME_SECONDS * 1000
+        ) {
+            const imageKey = task.imageKey;
+            if (imageKey) {
+                const fetchedImageUrl =
+                    await this.imageService.getImageByKey(imageKey);
+                if (fetchedImageUrl) {
+                    imageUrl = fetchedImageUrl;
+                    // Update imageUrl and imageUrlLastUpdateTime
+                    task.imageUrl = fetchedImageUrl;
+                    task.imageUrlLastUpdateTime = new Date();
+                    // Update the task in the database if necessary
+                    await this.taskRepository.update(task._id, {
+                        imageUrl: fetchedImageUrl,
+                        imageUrlLastUpdateTime: new Date(),
+                    } as ITaskDocument);
+                    console.log('Updated imageUrl successfully');
+                }
+            }
+        }
+
+        return task;
+    }
 
     getCategories = async (): Promise<String[]> => {
         try {
@@ -239,37 +346,6 @@ export class TasksService implements ITasksService {
             await session.abortTransaction();
             session.endSession();
             throw error;
-        }
-    };
-
-    getAdvertisement = async (
-        customerId: string,
-        status: string,
-    ): Promise<ITaskDocument[]> => {
-        let filter: FilterQuery<ITaskDocument> = {
-            customerId: customerId,
-        };
-
-        // Check if status is provided and not an empty string
-        if (status && status.trim() !== '') {
-            filter = {
-                ...filter,
-                status: status as
-                    | 'Open'
-                    | 'In Progress'
-                    | 'Completed'
-                    | 'Closed',
-            };
-        }
-
-        console.log(filter);
-
-        try {
-            const tasks = await this.taskRepository.findTasks(filter);
-            return tasks;
-        } catch (error) {
-            console.error(error);
-            return [];
         }
     };
 
