@@ -595,6 +595,22 @@ class TasksController {
             }
         }
     };
+
+    getCandidate = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
+            const candidates = await this.tasksService.getCandidate(id);
+            if (!candidates) {
+                res.status(404).json({ error: 'Task Not Found' });
+                return;
+            }
+            for (const user of candidates) {
+                console.log('555');
+            }
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
 }
 
 export default TasksController;

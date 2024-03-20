@@ -38,6 +38,8 @@ export interface ITasksService {
         customerId: string,
         status: string,
     ) => Promise<ITaskDocument[] | null>;
+
+    getCandidate: (id: string) => Promise<any[] | null>;
 }
 
 @Service()
@@ -268,6 +270,16 @@ export class TasksService implements ITasksService {
         } catch (error) {
             console.error(error);
             return [];
+        }
+    };
+
+    getCandidate = async (id: string): Promise<any[] | null> => {
+        try {
+            const task = await this.taskRepository.findOne(id);
+            return task ? task.applicants : null;
+        } catch (error) {
+            console.error('Error occurred while fetching candidates:', error);
+            throw error;
         }
     };
 }
