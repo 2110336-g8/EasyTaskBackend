@@ -8,8 +8,7 @@ import {
     CannotApplyTaskError,
     CannotCancelTaskError,
 } from '../errors/TaskError';
-import { IUserDocument } from '../models/UserModel';
-import { ITask, ITaskDocument } from '../models/TaskModel';
+import { ITaskDocument } from '../models/TaskModel';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
 
@@ -225,7 +224,7 @@ class TasksController {
             const id = req.params.id;
             const task = await this.tasksService.getTaskById(id);
             if (!task) {
-                res.status(404).json({ error: 'User not found' });
+                res.status(404).json({ error: 'Task not found' });
                 return;
             }
             const imageKey = task.imageKey;
@@ -284,7 +283,7 @@ class TasksController {
                 );
 
                 res.status(201).json({
-                    message: 'Profile image uploaded successfully',
+                    message: 'Task image uploaded successfully',
                 });
             } catch (error) {
                 res.status(400).json({
