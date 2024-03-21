@@ -8,8 +8,7 @@ import {
     CannotApplyTaskError,
     CannotCancelTaskError,
 } from '../errors/TaskError';
-import { IUserDocument } from '../models/UserModel';
-import { ITask, ITaskDocument } from '../models/TaskModel';
+import { ITaskDocument } from '../models/TaskModel';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
 
@@ -428,15 +427,40 @@ class TasksController {
 
     getCandidate = async (req: Request, res: Response) => {
         try {
-            const id = req.params.id;
-            const candidates = await this.tasksService.getCandidate(id);
-            if (!candidates) {
-                res.status(404).json({ error: 'Task Not Found' });
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(400).json({ error: 'Wrong task id' });
                 return;
             }
-            for (const user of candidates) {
-                console.log('555');
+            if (task.customerId.toString() == req.user._id) {
+                res.status(403).json({
+                    error: 'You are not allowed to access this task',
+                });
+                return;
             }
+            const result = await this.tasksService.getCandidate(taskId);
+            res.status(200).json({ result });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
+    selectCandidate = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(400).json({ error: 'Wrong task id' });
+                return;
+            }
+            if (task.customerId.toString() == req.user._id) {
+                res.status(403).json({
+                    error: 'You are not allowed to access this task',
+                });
+                return;
+            }
+            // const result = await this.tasksService.selectCandidate(req.body);
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }

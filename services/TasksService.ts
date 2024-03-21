@@ -1,6 +1,7 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
+import { ICandidate } from '../models/CandidateModel';
 import {
     CannotApplyTaskError,
     CannotCancelTaskError,
@@ -47,7 +48,8 @@ export interface ITasksService {
         status: string,
     ) => Promise<ITaskDocument[] | null>;
 
-    getCandidate: (id: string) => Promise<any[] | null>;
+    getCandidate: (id: string) => Promise<ICandidate>;
+    // selectCandidate: (id: string[]) => Promise<>
 }
 
 @Service()
@@ -349,13 +351,60 @@ export class TasksService implements ITasksService {
         }
     };
 
-    getCandidate = async (id: string): Promise<any[] | null> => {
+    getCandidate = async (id: string): Promise<ICandidate> => {
+        const result: ICandidate = {
+            taskId: id,
+            capacity: -1,
+            vacancy: -1,
+            candidates: { pending: [], offering: [], accepted: [] },
+        }; // Initialize result object
         try {
             const task = await this.taskRepository.findOne(id);
-            return task ? task.applicants : null;
+            if (task) {
+                result.capacity = task.workers;
+            }
+            const candidateList = await this.taskRepository.findCandidate(id); // Assuming findCandidate returns array of candidates
+            if (candidateList === null) {
+                return result; // Return empty result if no candidate is found
+            }
+            for (const candidate of candidateList.applicants) {
+                const user = await this.userRepository.findOne(
+                    candidate.userId,
+                ); // Find user details by userId
+
+                if (user) {
+                    const tmp = {
+                        userId: user.id.toString(),
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        phoneNumber: user.phoneNumber,
+                        description: user.description,
+                        imageUrl: user.imageUrl,
+                        appliedAt: candidate.createdAt, // Fix typo: createdAt instead of createAt
+                    };
+
+                    if (candidate.status === 'Pending') {
+                        result.candidates.pending.push(tmp); // Push to pending array if status is Pending
+                    } else if (candidate.status === 'Offering') {
+                        result.candidates.offering.push(tmp); // Push to pending array if status is Offering
+                    } else if (candidate.status === 'Accepted') {
+                        result.candidates.accepted.push(tmp); // Push to accepted array if status is Accepted
+                    }
+                }
+            }
+            result.vacancy = Math.max(
+                0,
+                result.capacity - result.candidates.accepted.length,
+            );
+
+            return result; // Return the result object
         } catch (error) {
             console.error('Error occurred while fetching candidates:', error);
             throw error;
         }
+        // selectCandidate = async( ids: string[]): Promise<> {
+
+        // }
     };
 }
