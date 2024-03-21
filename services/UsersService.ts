@@ -5,7 +5,12 @@ import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
 import { IOtpRepository, OtpRepository } from '../repositories/OtpRepo';
 import Constants from '../config/constants';
-import e from 'express';
+import { ImageService } from '../services/ImageService';
+
+import dotenv from 'dotenv';
+dotenv.config({ path: './config/config.env' });
+
+const IMAGE_EXPIRE_TIME_SECONDS = Number(process.env.IMAGE_EXPIRE_TIME); // Assuming IMAGE_EXPIRE_TIME is defined in your environment variables
 
 export interface IUsersService {
     createUser: (userData: IUserDocument) => Promise<IUserDocument>;
@@ -32,15 +37,19 @@ export interface IUsersService {
 export class UsersService implements IUsersService {
     private userRepository: IUsersRepositorty;
     private otpRepository: IOtpRepository;
+    private imageService: ImageService;
 
     constructor(
         @Inject(() => UsersRepository)
         userRepository: IUsersRepositorty,
         @Inject(() => OtpRepository)
         otpRepository: IOtpRepository,
+        @Inject(() => ImageService)
+        imageService: ImageService,
     ) {
         this.userRepository = userRepository;
         this.otpRepository = otpRepository;
+        this.imageService = imageService;
     }
 
     createUser = async (userData: IUser): Promise<IUserDocument> => {
@@ -76,8 +85,12 @@ export class UsersService implements IUsersService {
     getUserById = async (id: string): Promise<IUserDocument | null> => {
         try {
             const user = await this.userRepository.findOne(id);
-            return user;
+            if (user) {
+                return await this.updateImageUrl(user);
+            }
+            return null;
         } catch (error) {
+            console.error(error);
             return null;
         }
     };
@@ -127,6 +140,38 @@ export class UsersService implements IUsersService {
             return null;
         }
     };
+    async updateImageUrl(task: IUserDocument): Promise<IUserDocument> {
+        let imageUrl: string | undefined = task.imageUrl;
+        const imageUrlLastUpdateTime = task.imageUrlLastUpdateTime;
+
+        // Logic to update image URLs if needed
+        if (
+            !imageUrlLastUpdateTime ||
+            Date.now() >
+                imageUrlLastUpdateTime.getTime() +
+                    IMAGE_EXPIRE_TIME_SECONDS * 1000
+        ) {
+            const imageKey = task.imageKey;
+            if (imageKey) {
+                const fetchedImageUrl =
+                    await this.imageService.getImageByKey(imageKey);
+                if (fetchedImageUrl) {
+                    imageUrl = fetchedImageUrl;
+                    // Update imageUrl and imageUrlLastUpdateTime
+                    task.imageUrl = fetchedImageUrl;
+                    task.imageUrlLastUpdateTime = new Date();
+                    // Update the task in the database if necessary
+                    await this.userRepository.update(task._id, {
+                        imageUrl: fetchedImageUrl,
+                        imageUrlLastUpdateTime: new Date(),
+                    } as IUserDocument);
+                    console.log('Updated imageUrl successfully');
+                }
+            }
+        }
+
+        return task;
+    }
 
     deleteUser = async (
         id: string,

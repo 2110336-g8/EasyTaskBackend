@@ -110,7 +110,7 @@ export class TasksService implements ITasksService {
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 result.tasks.map(async task => {
-                    return await this.updateTaskImageUrls(task);
+                    return await this.updateTaskImageUrl(task);
                 }),
             );
 
@@ -136,7 +136,7 @@ export class TasksService implements ITasksService {
             const task = await this.taskRepository.findOne(id);
             if (task) {
                 // Update image URL for the task
-                return await this.updateTaskImageUrls(task);
+                return await this.updateTaskImageUrl(task);
             }
             return null;
         } catch (error) {
@@ -152,7 +152,7 @@ export class TasksService implements ITasksService {
             const task = await this.taskRepository.findOneWithGeneralInfo(id);
             if (task) {
                 // Update image URL for the task
-                return await this.updateTaskImageUrls(task);
+                return await this.updateTaskImageUrl(task);
             }
             return null;
         } catch (error) {
@@ -173,7 +173,7 @@ export class TasksService implements ITasksService {
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 tasks.map(async task => {
-                    return await this.updateTaskImageUrls(task);
+                    return await this.updateTaskImageUrl(task);
                 }),
             );
 
@@ -209,7 +209,7 @@ export class TasksService implements ITasksService {
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 tasks.map(async task => {
-                    return await this.updateTaskImageUrls(task);
+                    return await this.updateTaskImageUrl(task);
                 }),
             );
 
@@ -240,7 +240,7 @@ export class TasksService implements ITasksService {
         }
     };
 
-    async updateTaskImageUrls(task: ITaskDocument): Promise<ITaskDocument> {
+    async updateTaskImageUrl(task: ITaskDocument): Promise<ITaskDocument> {
         let imageUrl: string | undefined = task.imageUrl;
         const imageUrlLastUpdateTime = task.imageUrlLastUpdateTime;
 

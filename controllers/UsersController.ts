@@ -7,7 +7,6 @@ import { ImageService } from '../services/ImageService';
 import { IUser, IUserDocument } from '../models/UserModel';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
-import { CannotCreateUserError } from '../errors/UsersError';
 import sharp from 'sharp';
 import { genSalt, hash } from 'bcrypt';
 import dotenv from 'dotenv';
@@ -54,34 +53,6 @@ class UsersController {
                 res.status(404).json({ error: 'User not found' });
                 return;
             }
-
-            let imageUrl: string | undefined = user.imageUrl;
-            const imageUrlLastUpdateTime = user.imageUrlLastUpdateTime;
-
-            if (
-                !imageUrlLastUpdateTime ||
-                Date.now() >
-                    imageUrlLastUpdateTime.getTime() +
-                        IMAGE_EXPIRE_TIME_SECONDS * 1000
-            ) {
-                // Fetch new image URL from image service
-                const imageKey = user.imageKey;
-                if (imageKey) {
-                    const fetchedImageUrl =
-                        await this.imageService.getImageByKey(imageKey);
-                    if (fetchedImageUrl) {
-                        imageUrl = fetchedImageUrl;
-                        // Update imageUrl and imageUrlLastUpdateTime
-                        await this.usersService.updateUser(id, {
-                            imageUrl: fetchedImageUrl,
-                            imageUrlLastUpdateTime: new Date(),
-                        } as IUserDocument);
-                        console.log('update imageUrl successfully');
-                    }
-                }
-            }
-            user.imageUrl = imageUrl;
-
             res.status(200).json({ user });
         } catch (error) {
             console.error(error);
