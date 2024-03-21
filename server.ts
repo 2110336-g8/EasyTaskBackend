@@ -1,10 +1,13 @@
 import 'reflect-metadata';
 import express, { Request, Response } from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import userRouter from './routes/UsersRoute';
 import connectDB from './config/db';
 import authRouter from './routes/AuthRoute';
 import taskRouter from './routes/TasksRoute';
+import chatsRouter from './routes/MessagesRoute';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import bankRouter from './routes/BankRoute';
@@ -15,9 +18,7 @@ import AuthMiddleware from './middlewares/AuthMiddleware';
 dotenv.config({ path: `${__dirname}/config/config.env` });
 
 // Connect DB
-connectDB().then(function (r: any) {
-    console.log('DB Connected!');
-});
+connectDB();
 
 // Parameters
 const app = express();
@@ -87,6 +88,7 @@ app.use('/v1/auth', authRouter);
 app.use('/v1/banks', bankRouter);
 app.use('/v1/users', authMiddleware.validateToken, userRouter);
 app.use('/v1/tasks', authMiddleware.validateToken, taskRouter);
+app.use('/v1/chats', authMiddleware.validateToken, chatsRouter);
 
 // Other paths are invalid, res 404
 app.use('*', (req: Request, res: Response) => {
@@ -94,6 +96,17 @@ app.use('*', (req: Request, res: Response) => {
         error: 'Path Not Found',
     });
 });
+
+// const httpServer = createServer(app);
+// const io = new Server(httpServer, {
+//     /* options */
+// });
+
+// io.on('connection', socket => {
+//     // ...
+// });
+
+// httpServer.listen(3000);
 
 require('./config/schedule');
 

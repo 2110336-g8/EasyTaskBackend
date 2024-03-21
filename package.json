@@ -31,6 +31,7 @@
         "reflect-metadata": "^0.2.1",
         "sanitize-html": "^2.12.1",
         "sharp": "^0.33.2",
+        "socket.io": "^4.7.5",
         "typedi": "^0.10.0"
     },
     "devDependencies": {
@@ -54,5 +55,9 @@
         "ts-jest": "^29.1.2",
         "ts-node-dev": "^2.0.0",
         "typescript": "^5.3.3"
+    },
+    "optionalDependencies": {
+        "bufferutil": "^4.0.8",
+        "utf-8-validate": "^5.0.10"
     }
 }
