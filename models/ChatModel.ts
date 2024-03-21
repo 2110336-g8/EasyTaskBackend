@@ -1,14 +1,18 @@
 import { Document, ObjectId, Schema, model } from 'mongoose';
 
-export interface IChat {
-    sender: ObjectId;
+export interface IMessage {
+    senderType: 'sys' | 'user';
+    senderId?: ObjectId;
     sentAt: Date;
-    message: string;
+    message: {
+        title?: string;
+        content?: string;
+    };
 }
 
 export interface IChatRoom {
     taskId: ObjectId;
-    chats: Array<IChat>;
+    message: IMessage[];
 }
 
 export interface IChatRoomDocument extends IChatRoom, Document {}
@@ -17,12 +21,19 @@ const ChatRoomSchema = new Schema({
     taskId: {
         type: Schema.Types.ObjectId,
         required: true,
+        unique: true,
+        ref: 'Task',
     },
     chats: [
         {
+            senderType: {
+                type: String,
+                enum: ['sys', 'user'],
+                required: true,
+            },
             sender: {
                 type: Schema.Types.ObjectId,
-                required: true,
+                ref: 'User',
             },
             sentAt: {
                 type: Date,
@@ -30,8 +41,12 @@ const ChatRoomSchema = new Schema({
                 required: true,
             },
             message: {
-                type: String,
-                required: true,
+                title: {
+                    type: String,
+                },
+                message: {
+                    type: String,
+                },
             },
         },
     ],
