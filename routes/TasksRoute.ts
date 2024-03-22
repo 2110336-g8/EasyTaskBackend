@@ -21,8 +21,6 @@ router.route('/adsOf/:customerId').get(tasksController.getAdvertisements);
 
 router.route('/:id/apply').post(tasksController.applyTask);
 router.route('/:id/cancel').post(tasksController.cancelTask);
-router.route('/:id/candidates').get(tasksController.getCandidate);
-router.route('/:id/candidates').post(tasksController.selectCandidate);
 
 router
     .route('/:id/task-image')

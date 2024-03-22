@@ -1,6 +1,6 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
-import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
+import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 import { ICandidate } from '../models/CandidateModel';
 import {
     CannotApplyTaskError,
@@ -12,11 +12,6 @@ import { ImageService } from '../services/ImageService';
 
 import categoryData from '../assets/categories/categorieslist.json';
 import mongoose, { FilterQuery, Types } from 'mongoose';
-
-import dotenv from 'dotenv';
-dotenv.config({ path: './config/config.env' });
-
-const IMAGE_EXPIRE_TIME_SECONDS = Number(process.env.IMAGE_EXPIRE_TIME); // Assuming IMAGE_EXPIRE_TIME is defined in your environment variables
 
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
@@ -47,22 +42,19 @@ export interface ITasksService {
         customerId: string,
         status: string,
     ) => Promise<ITaskDocument[] | null>;
-
-    getCandidate: (id: string) => Promise<ICandidate>;
-    // selectCandidate: (id: string[]) => Promise<>
 }
 
 @Service()
 export class TasksService implements ITasksService {
     private taskRepository: ITasksRepository;
-    private userRepository: IUsersRepositorty;
+    private userRepository: IUsersRepository;
     private imageService: ImageService;
 
     constructor(
         @Inject(() => TasksRepository)
         taskRepository: ITasksRepository,
         @Inject(() => UsersRepository)
-        userRepository: IUsersRepositorty,
+        userRepository: IUsersRepository,
         @Inject(() => ImageService)
         imageService: ImageService,
     ) {
@@ -114,7 +106,7 @@ export class TasksService implements ITasksService {
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 result.tasks.map(async task => {
-                    return await this.updateTaskImageUrl(task);
+                    return await this.imageService.updateTaskImageUrl(task);
                 }),
             );
 
@@ -140,7 +132,7 @@ export class TasksService implements ITasksService {
             const task = await this.taskRepository.findOne(id);
             if (task) {
                 // Update image URL for the task
-                return await this.updateTaskImageUrl(task);
+                return await this.imageService.updateTaskImageUrl(task);
             }
             return null;
         } catch (error) {
@@ -156,7 +148,7 @@ export class TasksService implements ITasksService {
             const task = await this.taskRepository.findOneWithGeneralInfo(id);
             if (task) {
                 // Update image URL for the task
-                return await this.updateTaskImageUrl(task);
+                return await this.imageService.updateTaskImageUrl(task);
             }
             return null;
         } catch (error) {
@@ -177,7 +169,7 @@ export class TasksService implements ITasksService {
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 tasks.map(async task => {
-                    return await this.updateTaskImageUrl(task);
+                    return await this.imageService.updateTaskImageUrl(task);
                 }),
             );
 
@@ -213,7 +205,7 @@ export class TasksService implements ITasksService {
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 tasks.map(async task => {
-                    return await this.updateTaskImageUrl(task);
+                    return await this.imageService.updateTaskImageUrl(task);
                 }),
             );
 
@@ -243,39 +235,6 @@ export class TasksService implements ITasksService {
             return null;
         }
     };
-
-    async updateTaskImageUrl(task: ITaskDocument): Promise<ITaskDocument> {
-        let imageUrl: string | undefined = task.imageUrl;
-        const imageUrlLastUpdateTime = task.imageUrlLastUpdateTime;
-
-        // Logic to update image URLs if needed
-        if (
-            !imageUrlLastUpdateTime ||
-            Date.now() >
-                imageUrlLastUpdateTime.getTime() +
-                    IMAGE_EXPIRE_TIME_SECONDS * 1000
-        ) {
-            const imageKey = task.imageKey;
-            if (imageKey) {
-                const fetchedImageUrl =
-                    await this.imageService.getImageByKey(imageKey);
-                if (fetchedImageUrl) {
-                    imageUrl = fetchedImageUrl;
-                    // Update imageUrl and imageUrlLastUpdateTime
-                    task.imageUrl = fetchedImageUrl;
-                    task.imageUrlLastUpdateTime = new Date();
-                    // Update the task in the database if necessary
-                    await this.taskRepository.update(task._id, {
-                        imageUrl: fetchedImageUrl,
-                        imageUrlLastUpdateTime: new Date(),
-                    } as ITaskDocument);
-                    console.log('Updated imageUrl successfully');
-                }
-            }
-        }
-
-        return task;
-    }
 
     getCategories = async (): Promise<String[]> => {
         try {
@@ -349,62 +308,5 @@ export class TasksService implements ITasksService {
             session.endSession();
             throw error;
         }
-    };
-
-    getCandidate = async (id: string): Promise<ICandidate> => {
-        const result: ICandidate = {
-            taskId: id,
-            capacity: -1,
-            vacancy: -1,
-            candidates: { pending: [], offering: [], accepted: [] },
-        }; // Initialize result object
-        try {
-            const task = await this.taskRepository.findOne(id);
-            if (task) {
-                result.capacity = task.workers;
-            }
-            const candidateList = await this.taskRepository.findCandidate(id); // Assuming findCandidate returns array of candidates
-            if (candidateList === null) {
-                return result; // Return empty result if no candidate is found
-            }
-            for (const candidate of candidateList.applicants) {
-                const user = await this.userRepository.findOne(
-                    candidate.userId,
-                ); // Find user details by userId
-
-                if (user) {
-                    const tmp = {
-                        userId: user.id.toString(),
-                        firstName: user.firstName,
-                        lastName: user.lastName,
-                        email: user.email,
-                        phoneNumber: user.phoneNumber,
-                        description: user.description,
-                        imageUrl: user.imageUrl,
-                        appliedAt: candidate.createdAt, // Fix typo: createdAt instead of createAt
-                    };
-
-                    if (candidate.status === 'Pending') {
-                        result.candidates.pending.push(tmp); // Push to pending array if status is Pending
-                    } else if (candidate.status === 'Offering') {
-                        result.candidates.offering.push(tmp); // Push to pending array if status is Offering
-                    } else if (candidate.status === 'Accepted') {
-                        result.candidates.accepted.push(tmp); // Push to accepted array if status is Accepted
-                    }
-                }
-            }
-            result.vacancy = Math.max(
-                0,
-                result.capacity - result.candidates.accepted.length,
-            );
-
-            return result; // Return the result object
-        } catch (error) {
-            console.error('Error occurred while fetching candidates:', error);
-            throw error;
-        }
-        // selectCandidate = async( ids: string[]): Promise<> {
-
-        // }
     };
 }

@@ -9,10 +9,6 @@ import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import sharp from 'sharp';
 import { genSalt, hash } from 'bcrypt';
-import dotenv from 'dotenv';
-dotenv.config({ path: './config/config.env' });
-
-const IMAGE_EXPIRE_TIME_SECONDS = Number(process.env.IMAGE_EXPIRE_TIME); // Assuming IMAGE_EXPIRE_TIME is defined in your environment variables
 
 @Service()
 class UsersController {

@@ -1,7 +1,7 @@
 import { ITask, ITaskDocument, TaskModel } from '../models/TaskModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
-import { FilterQuery, Types } from 'mongoose';
+import { FilterQuery } from 'mongoose';
 
 export interface ITasksRepository extends IRepository<ITask> {
     findTasksByPage: (
@@ -95,7 +95,23 @@ export class TasksRepository
             applicants: 0,
             hiredWorkers: 0,
         });
+        // console.log(tasks);
         return tasks;
+        // const tasks = await this._model
+        //     .find({
+        //         hiredWorkers: {
+        //             $elemMatch: {
+        //                 userId: userId,
+        //                 status: status,
+        //             },
+        //         },
+        //     })
+        //     .select({
+        //         applicants: 0,
+        //         hiredWorkers: 0,
+        //     });
+        // console.log(tasks);
+        // return tasks;
     };
 
     findOneWithGeneralInfo = async (
@@ -166,6 +182,23 @@ export class TasksRepository
 
     closeTask = async (taskId: string): Promise<ITaskDocument | null> => {
         try {
+            // Update the task status to 'Closed' and update all applicants to 'Rejected'
+            // const updatedTask = await this._model.findOneAndUpdate(
+            //     { _id: taskId },
+            //     [
+            //         { $set: { status: 'Closed' } }, // Update the task status to 'Closed'
+            //         { $set: { 'applicants.$[].status': 'Rejected' } }, // Update all applicants to 'Rejected'
+            //     ],
+            //     { new: true }, // to return the updated document
+            // );
+
+            // if (!updatedTask) {
+            //     console.error(
+            //         'Close failed: Document not found or constraint violated',
+            //     );
+            //     return null;
+            // }
+
             // Find the task within the session
             const task = await this._model.findById(taskId);
 
