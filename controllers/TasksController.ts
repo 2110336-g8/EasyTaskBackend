@@ -2,6 +2,7 @@ import e, { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
+import { UsersService, IUsersService } from '../services/UsersService';
 import { ImageService } from '../services/ImageService';
 import sharp from 'sharp';
 import {
@@ -10,6 +11,7 @@ import {
 } from '../errors/TaskError';
 import { ITaskDocument } from '../models/TaskModel';
 import dotenv from 'dotenv';
+import { IUserDocument } from '../models/UserModel';
 dotenv.config({ path: './config/config.env' });
 
 @Service()
@@ -143,28 +145,65 @@ class TasksController {
             const id = req.params.id;
             const userId = req.user._id;
             const task = await this.tasksService.getTaskById(id);
+
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
                 return;
             }
+
             if (userId.toString() !== task.customerId.toString()) {
-                const taskWithGeneralInfo =
-                    await this.tasksService.getTaskWithGeneralInfoById(id);
-                if (!taskWithGeneralInfo) {
-                    res.status(404).json({
-                        error: 'Task not found',
-                    });
+                const user = await this.usersService.getUserById(
+                    task.customerId,
+                );
+                if (!user) {
+                    res.status(404).json({ error: 'User not found' });
                     return;
                 }
-                res.status(200).json({
-                    task: taskWithGeneralInfo,
-                });
-                return;
-            }
 
-            res.status(200).json({
-                task,
-            });
+                const customerInfo = {
+                    customerId: user.id,
+                    customerName: user.name,
+                    customerImageUrl: user.imageUrl,
+                    customerPhone: user.phoneNumber,
+                };
+
+                const taskWithGeneralInfo =
+                    await this.tasksService.getTaskWithGeneralInfoById(id);
+                if (taskWithGeneralInfo) {
+                    res.status(200).json({
+                        task: taskWithGeneralInfo,
+                        customerInfo: customerInfo,
+                    });
+                } else {
+                    res.status(404).json({ error: 'Task not found' });
+                }
+            } else {
+                if (task.applicants && task.applicants.length > 0) {
+                    const applicantsInfo = [];
+                    for (const applicant of task.applicants) {
+                        const applicantId = applicant.userId;
+                        const applicantUser =
+                            await this.usersService.getUserById(applicantId);
+                        if (applicantUser) {
+                            applicantsInfo.push({
+                                applicantId: applicantUser.id,
+                                applicantName: applicantUser.name,
+                                applicantImage: applicantUser.imageUrl,
+                                applicantPhone: applicantUser.phoneNumber,
+                            });
+                        }
+                    }
+                    res.status(200).json({
+                        task: task,
+                        applicantsInfo: applicantsInfo,
+                    });
+                } else {
+                    res.status(200).json({
+                        task: task,
+                        applicantsInfo: [],
+                    });
+                }
+            }
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }
@@ -422,47 +461,6 @@ class TasksController {
                     error: 'Internal Server Error',
                 });
             }
-        }
-    };
-
-    getCandidate = async (req: Request, res: Response) => {
-        try {
-            const taskId = req.params.id;
-            const task = await this.tasksService.getTaskById(taskId);
-            if (!task) {
-                res.status(400).json({ error: 'Wrong task id' });
-                return;
-            }
-            if (task.customerId.toString() == req.user._id) {
-                res.status(403).json({
-                    error: 'You are not allowed to access this task',
-                });
-                return;
-            }
-            const result = await this.tasksService.getCandidate(taskId);
-            res.status(200).json({ result });
-        } catch (error) {
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
-    };
-
-    selectCandidate = async (req: Request, res: Response) => {
-        try {
-            const taskId = req.params.id;
-            const task = await this.tasksService.getTaskById(taskId);
-            if (!task) {
-                res.status(400).json({ error: 'Wrong task id' });
-                return;
-            }
-            if (task.customerId.toString() == req.user._id) {
-                res.status(403).json({
-                    error: 'You are not allowed to access this task',
-                });
-                return;
-            }
-            // const result = await this.tasksService.selectCandidate(req.body);
-        } catch (error) {
-            res.status(500).json({ error: 'Internal Server Error' });
         }
     };
 }

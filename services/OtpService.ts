@@ -2,7 +2,7 @@ import Container, { Inject, Service, Token } from 'typedi';
 import { IOtpRepository, OtpRepository } from '../repositories/OtpRepo';
 import { IOtpDocument } from '../models/OtpModel';
 import { CannotCreateOtpError } from '../errors/OtpError';
-import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
+import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 import { IVerifyOtp } from '../models/AuthModel';
 import Constants from '../config/constants';
 
@@ -16,13 +16,13 @@ export interface IOtpService {
 @Service()
 export class OtpService implements IOtpService {
     private otpRepository: IOtpRepository;
-    private usersRepository: IUsersRepositorty;
+    private usersRepository: IUsersRepository;
 
     constructor(
         @Inject(() => OtpRepository)
         otpRepository: IOtpRepository,
         @Inject(() => UsersRepository)
-        usersRepository: IUsersRepositorty,
+        usersRepository: IUsersRepository,
     ) {
         this.otpRepository = otpRepository;
         this.usersRepository = usersRepository;
