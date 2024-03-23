@@ -24,7 +24,7 @@ const MessageSchema = new Schema(
             enum: ['sys', 'user'],
             required: true,
         },
-        sender: {
+        senderId: {
             type: Schema.Types.ObjectId,
             ref: 'User',
         },

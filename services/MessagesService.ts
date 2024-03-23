@@ -4,18 +4,21 @@ import {
     MessagesRepository,
 } from '../repositories/MessagesRepo';
 import { IMessage, IMessageDocument } from '../models/MessageModel';
-import { ITask } from '../models/TaskModel';
+import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
-import { CannotCreateMessageError } from '../errors/MessagesError';
-import { Types } from 'mongoose';
+import {
+    CannotCreateMessageError,
+    CannotJoinRoomError,
+} from '../errors/MessagesError';
+import { MongooseError, Types } from 'mongoose';
 
 export interface IMessagesService {
-    sendUserMessage: (
+    saveUserMessage: (
         taskId: string,
         senderId: string,
         text: string,
     ) => Promise<IMessage>;
-    sendSystemMessage: (
+    saveSystemMessage: (
         taskId: string,
         text: { title?: string; content?: string },
     ) => Promise<IMessage>;
@@ -24,6 +27,7 @@ export interface IMessagesService {
         page: number,
         limit: number,
     ) => Promise<IMessage[]>;
+    isJoinableIdRoom: (taskId: string, userId: string) => Promise<void>;
 }
 
 @Service()
@@ -41,7 +45,34 @@ export class MessagesService implements IMessagesService {
         this.tasksRepository = tasksRepository;
     }
 
-    sendSystemMessage = async (
+    isJoinableIdRoom = async (
+        taskId: string,
+        userId: string,
+    ): Promise<void> => {
+        // try {
+        //     const task: ITaskDocument | null =
+        //         await this.tasksRepository.findOne(taskId);
+        //     if (!task || !['In Progress' || 'Closed'].includes(task.status)) {
+        //         throw new CannotJoinRoomError('Invalid task id');
+        //     }
+        //     const isUserHired = task.hiredWorkers.some(
+        //         worker => worker.userId.toString() === userId,
+        //     );
+        //     if (!isUserHired) {
+        //         throw new CannotJoinRoomError('You are not hired for this job');
+        //     }
+        // } catch (error) {
+        //     if (error instanceof CannotJoinRoomError) {
+        //         throw error;
+        //     }
+        //     if (error instanceof MongooseError) {
+        //         throw new CannotJoinRoomError('Invalid task id');
+        //     }
+        //     throw new Error('Unknown error');
+        // }
+    };
+
+    saveSystemMessage = async (
         taskId: string,
         text: { title?: string; content?: string },
     ): Promise<IMessage> => {
@@ -70,14 +101,14 @@ export class MessagesService implements IMessagesService {
         }
     };
 
-    sendUserMessage = async (
+    saveUserMessage = async (
         taskId: string,
         senderId: string,
         text: string,
     ): Promise<IMessage> => {
         try {
-            const task: ITask | null =
-                await this.tasksRepository.findOne(taskId);
+            const task = await this.tasksRepository.findOne(taskId);
+
             if (!task) {
                 throw new CannotCreateMessageError('Invalid task id');
             }
@@ -87,15 +118,28 @@ export class MessagesService implements IMessagesService {
                     'Invalid task status, must be in progress',
                 );
             }
-            const newMessage: IMessageDocument =
-                await this.messagesRepository.create({
-                    taskId: new Types.ObjectId(taskId),
-                    senderType: 'user',
-                    senderId: new Types.ObjectId(senderId),
-                    text: {
-                        content: text,
-                    },
-                });
+
+            // const isUserHired = task.hiredWorkers.some(
+            //     worker =>
+            //         worker.userId.toString() === senderId &&
+            //         worker.status === 'In Progress',
+            // );
+
+            // if (!isUserHired) {
+            //     throw new CannotCreateMessageError(
+            //         'You are not hired for this job or your status is not in progress',
+            //     );
+            // }
+
+            const newMessage = await this.messagesRepository.create({
+                taskId: new Types.ObjectId(taskId),
+                senderType: 'user',
+                senderId: new Types.ObjectId(senderId),
+                text: {
+                    content: text,
+                },
+            });
+
             return newMessage;
         } catch (error) {
             throw error;
@@ -107,12 +151,11 @@ export class MessagesService implements IMessagesService {
         page: number = 0,
         limit: number = 16,
     ): Promise<IMessage[]> => {
-        const messages = await this.messagesRepository._model
-            .find({ taskId })
-            .sort({ createdAt: -1 }) // Sorting in descending order of createdAt
-            .skip(page * limit) // Skipping documents based on page number and limit
-            .limit(limit); // Limiting the number of documents returned per page
-
+        const messages = await this.messagesRepository.findMessages({
+            taskId,
+            page,
+            limit,
+        });
         return messages;
     };
 }

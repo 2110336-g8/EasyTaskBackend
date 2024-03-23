@@ -8,7 +8,6 @@ import { ValidationError } from '../errors/RepoError';
 import { MongoError } from 'mongodb';
 
 export interface IRepository<T> {
-    _model: Model<T & Document>;
     findOne(id: string): Promise<(T & Document) | null>;
     findAll(): Promise<(T & Document)[]>;
     create(item: T): Promise<T & Document>;
@@ -18,7 +17,7 @@ export interface IRepository<T> {
 }
 
 export abstract class BaseMongooseRepository<T> implements IRepository<T> {
-    readonly _model: Model<T & Document>;
+    protected readonly _model: Model<T & Document>;
 
     constructor(model: Model<T & Document>) {
         this._model = model;

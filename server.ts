@@ -1,16 +1,17 @@
 import 'reflect-metadata';
 import express, { Request, Response } from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import userRouter from './routes/UsersRoute';
 import connectDB from './config/db';
 import authRouter from './routes/AuthRoute';
 import taskRouter from './routes/TasksRoute';
-import chatsRouter from './routes/MessagesRoute';
+import bankRouter from './routes/BankRoute';
+import messagesRouter from './routes/MessagesRoute';
+import socketRouter from './routes/SocketRoute';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import bankRouter from './routes/BankRoute';
+import http from 'http'; // Import http module for creating HTTP server
+import { Server as SocketIOServer } from 'socket.io';
 import Container from 'typedi';
 import AuthMiddleware from './middlewares/AuthMiddleware';
 
@@ -88,7 +89,7 @@ app.use('/v1/auth', authRouter);
 app.use('/v1/banks', bankRouter);
 app.use('/v1/users', authMiddleware.validateToken, userRouter);
 app.use('/v1/tasks', authMiddleware.validateToken, taskRouter);
-app.use('/v1/chats', authMiddleware.validateToken, chatsRouter);
+app.use('/v1/messages', authMiddleware.validateToken, messagesRouter);
 
 // Other paths are invalid, res 404
 app.use('*', (req: Request, res: Response) => {
@@ -97,20 +98,18 @@ app.use('*', (req: Request, res: Response) => {
     });
 });
 
-// const httpServer = createServer(app);
-// const io = new Server(httpServer, {
-//     /* options */
-// });
+// Create an HTTP server instance
+const httpServer = http.createServer(app);
 
-// io.on('connection', socket => {
-//     // ...
-// });
-
-// httpServer.listen(3000);
-
+// Pass the HTTP server instance to Socket.IO
+const io = new SocketIOServer(httpServer, {
+    cors: corsOption,
+});
+socketRouter(io);
+// Schedule
 require('./config/schedule');
 
-const server = app.listen(backPort, function () {
+const server = httpServer.listen(backPort, function () {
     console.log(`Server is running on ${backHostname}:${backPort}`);
 });
 
