@@ -81,7 +81,9 @@ export class UsersService implements IUsersService {
         try {
             const user = await this.userRepository.findOne(id);
             if (user) {
-                return await this.imageService.updateUserImageUrl(user);
+                const updatedUser =
+                    await this.imageService.updateUserImageUrl(user);
+                return updatedUser;
             }
             return null;
         } catch (error) {

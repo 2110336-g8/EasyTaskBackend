@@ -17,14 +17,16 @@ dotenv.config({ path: './config/config.env' });
 @Service()
 class TasksController {
     private tasksService: ITasksService;
+    private usersService: IUsersService;
     private imageService: ImageService;
-    usersService: any;
 
     constructor(
         @Inject(() => TasksService) tasksService: ITasksService,
+        @Inject(() => UsersService) usersService: IUsersService,
         @Inject(() => ImageService) imageService: ImageService,
     ) {
         this.tasksService = tasksService;
+        this.usersService = usersService;
         this.imageService = imageService;
     }
 
@@ -151,18 +153,19 @@ class TasksController {
                 return;
             }
 
+            //not the task's owner
             if (userId.toString() !== task.customerId.toString()) {
                 const user = await this.usersService.getUserById(
-                    task.customerId,
+                    task.customerId.toString(),
                 );
                 if (!user) {
+                    console.log('user not found');
                     res.status(404).json({ error: 'User not found' });
                     return;
                 }
-
                 const customerInfo = {
                     customerId: user.id,
-                    customerName: user.name,
+                    customerName: user.firstName,
                     customerImageUrl: user.imageUrl,
                     customerPhone: user.phoneNumber,
                 };
@@ -183,11 +186,13 @@ class TasksController {
                     for (const applicant of task.applicants) {
                         const applicantId = applicant.userId;
                         const applicantUser =
-                            await this.usersService.getUserById(applicantId);
+                            await this.usersService.getUserById(
+                                applicantId.toString(),
+                            );
                         if (applicantUser) {
                             applicantsInfo.push({
                                 applicantId: applicantUser.id,
-                                applicantName: applicantUser.name,
+                                applicantName: applicantUser.firstName,
                                 applicantImage: applicantUser.imageUrl,
                                 applicantPhone: applicantUser.phoneNumber,
                             });
@@ -205,7 +210,8 @@ class TasksController {
                 }
             }
         } catch (error) {
-            res.status(500).json({ error: 'Internal Server Error' });
+            const err = error as Error;
+            res.status(500).json({ error: err.message });
         }
     };
 
