@@ -1,7 +1,7 @@
 import { ITask, ITaskDocument, TaskModel } from '../models/TaskModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
 
 export interface ITasksRepository extends IRepository<ITask> {
     findTasksByPage: (
@@ -24,6 +24,10 @@ export interface ITasksRepository extends IRepository<ITask> {
     findTasks: (
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<ITaskDocument[]>;
+    findTasksByUserIdAndStatus: (
+        userId: string,
+        status: string[],
+    ) => Promise<ITaskDocument[]>;
 }
 
 @Service()
@@ -34,6 +38,34 @@ export class TasksRepository
     constructor() {
         super(TaskModel);
     }
+    findTasksByUserIdAndStatus = async (
+        userId: string,
+        status: string[],
+    ): Promise<ITaskDocument[]> => {
+        return await this._model.aggregate([
+            {
+                $match: {
+                    $and: [
+                        { status: { $in: status } },
+                        {
+                            $or: [
+                                {
+                                    hiredWorkers: {
+                                        $elemMatch: {
+                                            $eq: new Types.ObjectId(userId),
+                                        },
+                                    },
+                                },
+                                {
+                                    customerId: new Types.ObjectId(userId),
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        ]);
+    };
 
     findTasksByPage = async (
         page: number,

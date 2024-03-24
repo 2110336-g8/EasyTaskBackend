@@ -4,6 +4,7 @@ export interface IMessage {
     taskId: Types.ObjectId;
     senderType: 'sys' | 'user';
     senderId?: Types.ObjectId;
+    sentAt: Date;
     text: {
         title?: string;
         content?: string;
@@ -12,34 +13,34 @@ export interface IMessage {
 
 export interface IMessageDocument extends IMessage, Document {}
 
-const MessageSchema = new Schema(
-    {
-        taskId: {
-            type: Schema.Types.ObjectId,
-            required: true,
-            ref: 'Task',
-        },
-        senderType: {
+const MessageSchema = new Schema({
+    taskId: {
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: 'Task',
+    },
+    senderType: {
+        type: String,
+        enum: ['sys', 'user'],
+        required: true,
+    },
+    senderId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+    },
+    sentAt: {
+        type: Date,
+        required: true,
+        default: Date.now,
+    },
+    text: {
+        title: {
             type: String,
-            enum: ['sys', 'user'],
-            required: true,
         },
-        senderId: {
-            type: Schema.Types.ObjectId,
-            ref: 'User',
-        },
-        text: {
-            title: {
-                type: String,
-            },
-            content: {
-                type: String,
-            },
+        content: {
+            type: String,
         },
     },
-    {
-        timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
-    },
-);
+});
 
 export const MessageModel = model<IMessageDocument>('Message', MessageSchema);

@@ -45,7 +45,7 @@ export interface ITasksService {
     getAdvertisement: (
         customerId: string,
         status: string,
-    ) => Promise<ITaskDocument[] | null>;
+    ) => Promise<ITaskDocument[]>;
 }
 
 @Service()

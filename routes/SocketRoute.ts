@@ -7,10 +7,10 @@ const messagesController = Container.get(MessagesController);
 const authMiddleware = Container.get(AuthMiddleware);
 
 export default function socketRouter(io: SocketIOServer) {
-    io.of('/chats')
+    io.of('/messages')
         .use(authMiddleware.validateTokenSocket)
         .on('connection', (socket: Socket) => {
-            console.log('A user connected');
+            console.log(`${socket.data.user._id} connected to socket`);
             messagesController.respond(io, socket);
         });
 }
