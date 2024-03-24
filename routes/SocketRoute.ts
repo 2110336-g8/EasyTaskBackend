@@ -12,5 +12,8 @@ export default function socketRouter(io: SocketIOServer) {
         .on('connection', (socket: Socket) => {
             console.log(`${socket.data.user._id} connected to socket`);
             messagesController.respond(io, socket);
+        })
+        .on('disconnect', (socket: Socket) => {
+            console.log(`${socket.data.user._id} disconnected from socket`);
         });
 }

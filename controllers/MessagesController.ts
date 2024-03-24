@@ -98,7 +98,7 @@ export class MessagesController {
                 console.log(
                     `user ${senderId} sent \"${text}\" to room ${taskId}`,
                 );
-                io.of('/chats').to(taskId).emit('chat_message', message);
+                io.of('/messages').to(taskId).emit('chat_message', message);
             } catch (error) {
                 console.log(error);
             }
