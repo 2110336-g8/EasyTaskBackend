@@ -5,9 +5,13 @@ import userRouter from './routes/UsersRoute';
 import connectDB from './config/db';
 import authRouter from './routes/AuthRoute';
 import taskRouter from './routes/TasksRoute';
+import bankRouter from './routes/BankRoute';
+import messagesRouter from './routes/MessagesRoute';
+import socketRouter from './routes/SocketRoute';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import bankRouter from './routes/BankRoute';
+import http from 'http'; // Import http module for creating HTTP server
+import { Server as SocketIOServer } from 'socket.io';
 import Container from 'typedi';
 import AuthMiddleware from './middlewares/AuthMiddleware';
 
@@ -15,9 +19,7 @@ import AuthMiddleware from './middlewares/AuthMiddleware';
 dotenv.config({ path: `${__dirname}/config/config.env` });
 
 // Connect DB
-connectDB().then(function (r: any) {
-    console.log('DB Connected!');
-});
+connectDB();
 
 // Parameters
 const app = express();
@@ -87,6 +89,7 @@ app.use('/v1/auth', authRouter);
 app.use('/v1/banks', bankRouter);
 app.use('/v1/users', authMiddleware.validateToken, userRouter);
 app.use('/v1/tasks', authMiddleware.validateToken, taskRouter);
+app.use('/v1/messages', authMiddleware.validateToken, messagesRouter);
 
 // Other paths are invalid, res 404
 app.use('*', (req: Request, res: Response) => {
@@ -95,9 +98,18 @@ app.use('*', (req: Request, res: Response) => {
     });
 });
 
+// Create an HTTP server instance
+const httpServer = http.createServer(app);
+
+// Pass the HTTP server instance to Socket.IO
+const io = new SocketIOServer(httpServer, {
+    cors: corsOption,
+});
+socketRouter(io);
+// Schedule
 require('./config/schedule');
 
-const server = app.listen(backPort, function () {
+const server = httpServer.listen(backPort, function () {
     console.log(`Server is running on ${backHostname}:${backPort}`);
 });
 

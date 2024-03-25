@@ -8,6 +8,8 @@ import { AuthService, IAuthService } from '../services/AuthService';
 import { Inject, Service } from 'typedi';
 import { IUser, IUserDocument } from '../models/UserModel';
 import { IUsersService, UsersService } from '../services/UsersService';
+import { Socket } from 'socket.io';
+import { ExtendedError } from 'socket.io/dist/namespace';
 
 @Service()
 class AuthMiddleware {
@@ -108,6 +110,38 @@ class AuthMiddleware {
             // Token is invalid (failed decode)
             console.log('Fail to Decode:', error);
             respondUnAuth(res);
+        }
+    };
+
+    validateTokenSocket = async (
+        socket: Socket,
+        next: (err?: ExtendedError | undefined) => void,
+    ) => {
+        const token = socket.handshake.auth.token;
+        if (!token) {
+            return next(new Error('No token provided'));
+        }
+
+        try {
+            const decodedToken = this.authService.decodeToken(token);
+            // @ts-ignore
+            if (Date.now() >= decodedToken.exp * 1000) {
+                // If expired
+                return next(new Error('Invalid token'));
+            } else {
+                // Add user to req
+                const user = await this.usersService.getUserById(
+                    (decodedToken as { id: string }).id,
+                );
+                if (!user) {
+                    return next(new Error('Invalid token'));
+                }
+                socket.data.user = user;
+                next();
+            }
+        } catch (error) {
+            console.log('Fail to Decode:', error);
+            return next(new Error('Invalid token'));
         }
     };
 }

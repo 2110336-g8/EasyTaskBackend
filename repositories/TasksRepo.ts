@@ -61,6 +61,34 @@ export class TasksRepository
     constructor() {
         super(TaskModel);
     }
+    findTasksByUserIdAndStatus = async (
+        userId: string,
+        status: string[],
+    ): Promise<ITaskDocument[]> => {
+        return await this._model.aggregate([
+            {
+                $match: {
+                    $and: [
+                        { status: { $in: status } },
+                        {
+                            $or: [
+                                {
+                                    hiredWorkers: {
+                                        $elemMatch: {
+                                            $eq: new Types.ObjectId(userId),
+                                        },
+                                    },
+                                },
+                                {
+                                    customerId: new Types.ObjectId(userId),
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        ]);
+    };
 
     findTasksByPage = async (
         page: number,

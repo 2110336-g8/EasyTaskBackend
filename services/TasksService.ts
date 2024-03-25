@@ -783,7 +783,7 @@ export class TasksService implements ITasksService {
             // To pay 30%
             // To update status of tasks in user model
             // To update status of hiredWorkers in task model
-            const updatedTask = this.tasksRepository.updateStatus(
+            const updatedTask = await this.tasksRepository.updateStatus(
                 taskId,
                 'Dismissed',
             );
