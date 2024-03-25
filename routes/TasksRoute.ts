@@ -13,7 +13,7 @@ router.route('/').post(tasksController.createTask);
 router.route('/page').post(tasksController.getTasksPage);
 router.route('/categories').get(tasksController.getCategories);
 
-router.route('/taskOf/:customerId').get(tasksController.getTaskExperience);
+router.route('/tasksOf/:userId').get(tasksController.getTasksOf);
 
 router.route('/:id').get(tasksController.getTaskbyId);
 
