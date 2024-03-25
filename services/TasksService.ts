@@ -228,7 +228,7 @@ export class TasksService implements ITasksService {
                 ...filter,
                 status: status as
                     | 'Open'
-                    | 'In Progress'
+                    | 'InProgress'
                     | 'Completed'
                     | 'Closed',
             };

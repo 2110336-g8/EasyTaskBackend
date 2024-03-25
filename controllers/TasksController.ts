@@ -241,7 +241,7 @@ class TasksController {
 
             const allowedStatusValues = [
                 'Open',
-                'In Progress',
+                'InProgress',
                 'Completed',
                 'Closed',
             ];

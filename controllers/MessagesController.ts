@@ -67,7 +67,7 @@ export class MessagesController {
             const userId = socket.data.user._id;
             await this.messagesService.isJoinableIdRoom(taskId, userId);
             socket.join(taskId);
-            // await this.messagesService.resetUnreadCount(taskId, [userId]);
+            await this.messagesService.resetUnreadCount(taskId, userId);
             socket.emit('join_success', 'Room joined successfully');
             console.log(`User ${userId} joined room ${taskId}`);
         } catch (error) {
