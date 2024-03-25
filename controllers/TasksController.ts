@@ -159,12 +159,41 @@ class TasksController {
                     return;
                 }
                 const customerInfo = {
-                    id: user.id,
+                    _id: user.id,
                     firstName: user.firstName,
                     lastName: user.lastName,
                     phoneNumber: user.phoneNumber,
-                    ImageUrl: user.imageUrl,
+                    imageUrl: user.imageUrl,
                 };
+                //add status in the response
+                let viewStatus = '';
+                if (task.status == 'Open') {
+                    //check if userId is one of applicant's userId then set viewStatus = applicant's status
+                    const applicant = task.applicants.find(
+                        applicant =>
+                            applicant.userId.toString() === userId.toString(),
+                    );
+                    if (applicant) {
+                        viewStatus = applicant.status;
+                    } else {
+                        viewStatus = 'Open';
+                    }
+                } else if (task.status == 'InProgress') {
+                    //check if userId is one of hiredWorker's userId then set viewStatus = hiredworker's status
+                    const hiredWorker = task.hiredWorkers.find(
+                        worker =>
+                            worker.userId.toString() === userId.toString(),
+                    );
+                    if (hiredWorker) {
+                        viewStatus = hiredWorker.status;
+                    } else {
+                        viewStatus = 'InProgress';
+                    }
+                } else if (task.status == 'Dismissed') {
+                    viewStatus = 'Dismissed';
+                } else if (task.status == 'Completed') {
+                    viewStatus = 'Completed';
+                }
 
                 const taskWithGeneralInfo =
                     await this.tasksService.getTaskWithGeneralInfoById(id);
@@ -172,37 +201,75 @@ class TasksController {
                     res.status(200).json({
                         task: taskWithGeneralInfo,
                         customerInfo: customerInfo,
+                        status: viewStatus,
                     });
                 } else {
                     res.status(404).json({ error: 'Task not found' });
                 }
             } else {
-                if (task.applicants && task.applicants.length > 0) {
-                    const applicantsInfo = [];
-                    for (const applicant of task.applicants) {
-                        const applicantId = applicant.userId;
-                        const applicantUser =
-                            await this.usersService.getUserById(
-                                applicantId.toString(),
-                            );
-                        if (applicantUser) {
-                            applicantsInfo.push({
-                                id: applicantUser.id,
-                                firstName: applicantUser.firstName,
-                                lastName: applicantUser.lastName,
-                                imageUrl: applicantUser.imageUrl,
-                                phoneNumber: applicantUser.phoneNumber,
-                            });
+                if (task.status == 'Open') {
+                    if (task.applicants && task.applicants.length > 0) {
+                        const applicantsInfo = [];
+                        for (const applicant of task.applicants) {
+                            const applicantId = applicant.userId;
+                            const applicantUser =
+                                await this.usersService.getUserById(
+                                    applicantId.toString(),
+                                );
+                            if (applicantUser) {
+                                applicantsInfo.push({
+                                    _id: applicantUser.id,
+                                    firstName: applicantUser.firstName,
+                                    lastName: applicantUser.lastName,
+                                    imageUrl: applicantUser.imageUrl,
+                                    phoneNumber: applicantUser.phoneNumber,
+                                });
+                            }
                         }
+                        res.status(200).json({
+                            task: task,
+                            applicantsInfo: applicantsInfo,
+                        });
+                    } else {
+                        res.status(200).json({
+                            task: task,
+                            applicantsInfo: [],
+                        });
                     }
-                    res.status(200).json({
-                        task: task,
-                        applicantsInfo: applicantsInfo,
-                    });
+                } else if (task.status == 'InProgress') {
+                    if (task.hiredWorkers && task.hiredWorkers.length > 0) {
+                        const hiredWorkersInfo = [];
+                        for (const worker of task.hiredWorkers) {
+                            const workerId = worker.userId;
+                            const workerStatus = worker.status;
+                            const workerUser =
+                                await this.usersService.getUserById(
+                                    workerId.toString(),
+                                );
+                            if (workerUser) {
+                                hiredWorkersInfo.push({
+                                    _id: workerUser.id,
+                                    firstName: workerUser.firstName,
+                                    lastName: workerUser.lastName,
+                                    imageUrl: workerUser.imageUrl,
+                                    phoneNumber: workerUser.phoneNumber,
+                                    status: workerStatus,
+                                });
+                            }
+                        }
+                        res.status(200).json({
+                            task: task,
+                            hiredWorkersInfo: hiredWorkersInfo,
+                        });
+                    } else {
+                        res.status(200).json({
+                            task: task,
+                            hiredWorkersInfo: [],
+                        });
+                    }
                 } else {
                     res.status(200).json({
                         task: task,
-                        applicantsInfo: [],
                     });
                 }
             }
@@ -239,7 +306,7 @@ class TasksController {
 
             const allowedStatusValues = [
                 'Open',
-                'In Progress',
+                'InProgress',
                 'Completed',
                 'Closed',
             ];

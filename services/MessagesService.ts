@@ -12,9 +12,10 @@ import {
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { MongooseError, Types } from 'mongoose';
 import dotenv from 'dotenv';
-
-dotenv.config({ path: './config/config.env' });
-const IMAGE_EXPIRE_TIME_SECONDS = Number(process.env.IMAGE_EXPIRE_TIME);
+import UnreadCountRepository, {
+    IUnreadCountRepository,
+} from '../repositories/UnreadCountRepo';
+import { ITasksService, TasksService } from './TasksService';
 
 export interface IMessagesService {
     saveUserMessage: (
@@ -26,8 +27,9 @@ export interface IMessagesService {
         taskId: string,
         text: { title?: string; content?: string },
     ) => Promise<IMessage>;
-    // increaseUnreadCount: (taskId: string, userIds: string[]) => Promise<void>;
-    // resetUnreadCount: (taskId: string, userIds: string[]) => Promise<void>;
+    increaseUnreadCount: (taskId: string, userIds: string[]) => Promise<void>;
+    resetUnreadCount: (taskId: string, userId: string) => Promise<void>;
+    getUnreadCount: (userId: string) => Promise<Map<string, number>>;
     getMessageHistory: (
         taskId: string,
         page: number,
@@ -40,6 +42,7 @@ export interface IMessagesService {
         { message: IMessageDocument; task: ITaskDocument | undefined }[]
     >;
     isJoinableIdRoom: (taskId: string, userId: string) => Promise<void>;
+    getUsersOfRoom: (taskId: string) => Promise<Set<string>>;
 }
 
 @Service()
@@ -47,16 +50,44 @@ export class MessagesService implements IMessagesService {
     constructor(
         @Inject(() => MessagesRepository)
         private messagesRepository: IMessagesRepository,
-        @Inject(() => TasksRepository)
-        private tasksRepository: ITasksRepository,
-        // @Inject(() => UnreadCounterRepository)
-        // private unreadCounterRepository: IUnreadCounterRepository,
+        @Inject(() => TasksService)
+        private tasksService: ITasksService,
+        @Inject(() => UnreadCountRepository)
+        private unreadCountRepository: IUnreadCountRepository,
     ) {}
+
+    async getUnreadCount(userId: string): Promise<Map<string, number>> {
+        const unreadDoc =
+            await this.unreadCountRepository.getUnreadCountByUserId(userId);
+        const mapper = new Map<string, number>();
+        unreadDoc.forEach(value =>
+            mapper.set(value.taskId.toString(), value.count),
+        );
+
+        return mapper;
+    }
+
+    async getUsersOfRoom(taskId: string): Promise<Set<string>> {
+        try {
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                throw new Error('Invalid task id');
+            }
+            const users = new Set<string>();
+            users.add(task.customerId.toString());
+            task.hiredWorkers.forEach(hiredWorker =>
+                users.add(hiredWorker.userId.toString()),
+            );
+            return users;
+        } catch (err) {
+            throw err;
+        }
+    }
 
     async isJoinableIdRoom(taskId: string, userId: string): Promise<void> {
         try {
-            const task = await this.tasksRepository.findOne(taskId);
-            if (!task || !['In Progress' || 'Closed'].includes(task.status)) {
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task || !['InProgress' || 'Closed'].includes(task.status)) {
                 throw new CannotJoinRoomError('Invalid task id');
             }
             const isUserHired = task.hiredWorkers.some(
@@ -86,7 +117,7 @@ export class MessagesService implements IMessagesService {
         text: { title?: string; content?: string },
     ): Promise<IMessage> {
         try {
-            const task = await this.tasksRepository.findOne(taskId);
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
                 throw new CannotCreateMessageError('Invalid task id');
             }
@@ -112,7 +143,7 @@ export class MessagesService implements IMessagesService {
         text: string,
     ): Promise<IMessage> {
         try {
-            const task = await this.tasksRepository.findOne(taskId);
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
                 throw new CannotCreateMessageError('Invalid task id');
             }
@@ -146,13 +177,13 @@ export class MessagesService implements IMessagesService {
         }
     }
 
-    // async increaseUnreadCount(taskId: string, userIds: string[]) {
-    //     await this.unreadCounterRepository.incrementUnread(taskId, userIds);
-    // }
+    async increaseUnreadCount(taskId: string, userIds: string[]) {
+        await this.unreadCountRepository.incrementUnread(taskId, userIds);
+    }
 
-    // async resetUnreadCount(taskId: string, userIds: string[]) {
-    //     await this.unreadCounterRepository.resetUnread(taskId, userIds);
-    // }
+    async resetUnreadCount(taskId: string, userId: string) {
+        await this.unreadCountRepository.resetUnread(taskId, userId);
+    }
 
     async getMessageHistory(
         taskId: string,
@@ -174,9 +205,9 @@ export class MessagesService implements IMessagesService {
         { message: IMessageDocument; task: ITaskDocument | undefined }[]
     > {
         const taskStatus: string[] =
-            status === 'active' ? ['In Progress'] : ['Completed', 'Canceled'];
+            status === 'active' ? ['InProgress'] : ['Completed', 'Canceled'];
         let tasks: ITaskDocument[] =
-            await this.tasksRepository.findTasksByUserIdAndStatus(
+            await this.tasksService.getTasksByUserIdAndStatus(
                 userId,
                 taskStatus,
             );
@@ -184,7 +215,6 @@ export class MessagesService implements IMessagesService {
         const taskIds: string[] = tasks.map(t => t._id);
         const messages =
             await this.messagesRepository.findLatestMessageEachTask(taskIds);
-
         const taskWithMessages = messages.map(message => {
             const task = tasks.find(
                 t => t._id.toString() === message.taskId.toString(),

@@ -81,6 +81,10 @@ export interface ITasksService {
     startTask: (taskId: string) => Promise<ITaskDocument | null>;
     dismissOpenTask: (taskId: string) => Promise<ITaskDocument | null>;
     dismissInProgressTask: (taskId: string) => Promise<ITaskDocument | null>;
+    getTasksByUserIdAndStatus(
+        userId: string,
+        status: string[],
+    ): Promise<ITaskDocument[]>;
 }
 
 @Service()
@@ -369,7 +373,7 @@ export class TasksService implements ITasksService {
                 ...filter,
                 status: status as
                     | 'Open'
-                    | 'In Progress'
+                    | 'InProgress'
                     | 'Completed'
                     | 'Closed',
             };
@@ -939,5 +943,20 @@ export class TasksService implements ITasksService {
             session.endSession();
             throw error;
         }
+    };
+
+    getTasksByUserIdAndStatus = async (
+        userId: string,
+        status: string[],
+    ): Promise<ITaskDocument[]> => {
+        const tasks = await this.tasksRepository.findTasksByUserIdAndStatus(
+            userId,
+            status,
+        );
+        return Promise.all(
+            tasks.map(async task => {
+                return await this.imagesRepository.updateTaskImageUrl(task);
+            }),
+        );
     };
 }
