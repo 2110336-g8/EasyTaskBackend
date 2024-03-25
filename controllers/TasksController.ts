@@ -160,11 +160,11 @@ class TasksController {
                     return;
                 }
                 const customerInfo = {
-                    id: user.id,
+                    _id: user.id,
                     firstName: user.firstName,
                     lastName: user.lastName,
                     phoneNumber: user.phoneNumber,
-                    ImageUrl: user.imageUrl,
+                    imageUrl: user.imageUrl,
                 };
 
                 const taskWithGeneralInfo =
@@ -188,7 +188,7 @@ class TasksController {
                             );
                         if (applicantUser) {
                             applicantsInfo.push({
-                                id: applicantUser.id,
+                                _id: applicantUser.id,
                                 firstName: applicantUser.firstName,
                                 lastName: applicantUser.lastName,
                                 imageUrl: applicantUser.imageUrl,
