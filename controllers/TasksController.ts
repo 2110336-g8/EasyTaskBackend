@@ -178,32 +178,68 @@ class TasksController {
                     res.status(404).json({ error: 'Task not found' });
                 }
             } else {
-                if (task.applicants && task.applicants.length > 0) {
-                    const applicantsInfo = [];
-                    for (const applicant of task.applicants) {
-                        const applicantId = applicant.userId;
-                        const applicantUser =
-                            await this.usersService.getUserById(
-                                applicantId.toString(),
-                            );
-                        if (applicantUser) {
-                            applicantsInfo.push({
-                                _id: applicantUser.id,
-                                firstName: applicantUser.firstName,
-                                lastName: applicantUser.lastName,
-                                imageUrl: applicantUser.imageUrl,
-                                phoneNumber: applicantUser.phoneNumber,
-                            });
+                if (task.status == 'Open') {
+                    if (task.applicants && task.applicants.length > 0) {
+                        const applicantsInfo = [];
+                        for (const applicant of task.applicants) {
+                            const applicantId = applicant.userId;
+                            const applicantUser =
+                                await this.usersService.getUserById(
+                                    applicantId.toString(),
+                                );
+                            if (applicantUser) {
+                                applicantsInfo.push({
+                                    _id: applicantUser.id,
+                                    firstName: applicantUser.firstName,
+                                    lastName: applicantUser.lastName,
+                                    imageUrl: applicantUser.imageUrl,
+                                    phoneNumber: applicantUser.phoneNumber,
+                                });
+                            }
                         }
+                        res.status(200).json({
+                            task: task,
+                            applicantsInfo: applicantsInfo,
+                        });
+                    } else {
+                        res.status(200).json({
+                            task: task,
+                            applicantsInfo: [],
+                        });
                     }
-                    res.status(200).json({
-                        task: task,
-                        applicantsInfo: applicantsInfo,
-                    });
+                } else if (task.status == 'InProgress') {
+                    if (task.hiredWorkers && task.hiredWorkers.length > 0) {
+                        const hiredWorkersInfo = [];
+                        for (const worker of task.hiredWorkers) {
+                            const workerId = worker.userId;
+                            const workerStatus = worker.status;
+                            const workerUser =
+                                await this.usersService.getUserById(
+                                    workerId.toString(),
+                                );
+                            if (workerUser) {
+                                hiredWorkersInfo.push({
+                                    _id: workerUser.id,
+                                    firstName: workerUser.firstName,
+                                    lastName: workerUser.lastName,
+                                    imageUrl: workerUser.imageUrl,
+                                    phoneNumber: workerUser.phoneNumber,
+                                });
+                            }
+                        }
+                        res.status(200).json({
+                            task: task,
+                            hiredWorkersInfo: hiredWorkersInfo,
+                        });
+                    } else {
+                        res.status(200).json({
+                            task: task,
+                            hiredWorkersInfo: [],
+                        });
+                    }
                 } else {
                     res.status(200).json({
                         task: task,
-                        applicantsInfo: [],
                     });
                 }
             }
