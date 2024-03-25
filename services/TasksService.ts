@@ -9,6 +9,7 @@ import {
     CannotUpdateApplicationStatusError,
     InvalidUpdateApplicationStatusError,
     CannotStartTaskError,
+    CannotGetTaskOfError,
 } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
@@ -19,6 +20,7 @@ import {
 
 import categoryData from '../assets/categories/categorieslist.json';
 import mongoose, { FilterQuery, Types } from 'mongoose';
+import { ITaskOf } from '../models/TaskOfModel';
 
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
@@ -34,11 +36,18 @@ export interface ITasksService {
         id: string,
         updateData: ITask,
     ) => Promise<ITaskDocument | null>;
-
-    getTaskExperience: (
+    getTasksOf: (
         userId: string,
         status: string | undefined,
+    ) => Promise<ITaskOf[]>;
+    getApplicationsOrTasksByStatus: (
+        userId: string,
+        status: string,
     ) => Promise<ITaskDocument[]>;
+    formatApplicationsOrTasksByStatus: (
+        status: string,
+        tasks: ITaskDocument[],
+    ) => Promise<ITaskOf>;
     getAdvertisement: (
         customerId: string,
         status: string,
@@ -189,28 +198,160 @@ export class TasksService implements ITasksService {
         }
     };
 
-    //taskOf
-    getTaskExperience = async (
+    getTasksOf = async (
         userId: string,
         status: string | undefined,
-    ): Promise<ITaskDocument[]> => {
+    ): Promise<ITaskOf[]> => {
         try {
-            const tasks =
-                await this.tasksRepository.findTaskByWorkerIdAndStatus(
+            // Initialize an array to store results
+            const taskOfArray: ITaskOf[] = [];
+
+            if (status === undefined || status === '') {
+                // Fetch tasks for each status and format them
+                const statusList = [
+                    'Pending',
+                    'Offering',
+                    'Accepted',
+                    'Rejected',
+                    'NotProceed',
+                    'InProgress',
+                    'Submitted',
+                    'Revising',
+                    'Resubmitted',
+                    'Completed',
+                ];
+
+                for (const stat of statusList) {
+                    const tasks = await this.getApplicationsOrTasksByStatus(
+                        userId,
+                        stat,
+                    );
+                    const result = await this.formatApplicationsOrTasksByStatus(
+                        stat,
+                        tasks,
+                    );
+                    taskOfArray.push(result);
+                }
+            } else {
+                // Check if the provided status is valid
+                if (
+                    ![
+                        'Pending',
+                        'Offering',
+                        'Accepted',
+                        'Rejected',
+                        'NotProceed',
+                        'InProgress',
+                        'Submitted',
+                        'Revising',
+                        'Resubmitted',
+                        'Completed',
+                    ].includes(status)
+                ) {
+                    throw new CannotGetTaskOfError('Invalid job status');
+                }
+                // Fetch tasks for the specified status and format them
+                const tasks = await this.getApplicationsOrTasksByStatus(
                     userId,
                     status,
                 );
-            // Update image URLs for each task
-            const tasksWithUpdatedUrls = await Promise.all(
-                tasks.map(async task => {
-                    return await this.imagesRepository.updateTaskImageUrl(task);
-                }),
-            );
+                const result = await this.formatApplicationsOrTasksByStatus(
+                    status,
+                    tasks,
+                );
+                taskOfArray.push(result);
+            }
 
-            return tasksWithUpdatedUrls;
+            // Return the combined taskOfArray
+            return taskOfArray;
         } catch (error) {
             throw error;
         }
+    };
+
+    getApplicationsOrTasksByStatus = async (
+        userId: string,
+        status: string,
+    ): Promise<ITaskDocument[]> => {
+        try {
+            const user = await this.usersRepository.findOne(userId);
+            if (!user) {
+                throw new CannotGetTaskOfError('User not found');
+            }
+            // task is in applicantion state
+            if (
+                [
+                    'Pending',
+                    'Offering',
+                    'Accepted',
+                    'Rejected',
+                    'NotProceed',
+                ].includes(status)
+            ) {
+                const taskIds = user.applications
+                    .filter(application => application.status === status)
+                    .map(application => application.taskId);
+                const tasks = await this.tasksRepository.findTasks({
+                    _id: { $in: taskIds },
+                });
+                return tasks;
+            }
+            // task is ongoing
+            else {
+                if (status === 'Completed') {
+                    const taskIds = user.tasks
+                        .filter(
+                            task =>
+                                task.status === 'Completed' ||
+                                task.status === 'Dismissed',
+                        )
+                        .map(task => task.taskId);
+                    const tasks = await this.tasksRepository.findTasks({
+                        _id: { $in: taskIds },
+                    });
+                    return tasks;
+                } else {
+                    const taskIds = user.tasks
+                        .filter(task => task.status === status)
+                        .map(task => task.taskId);
+                    const tasks = await this.tasksRepository.findTasks({
+                        _id: { $in: taskIds },
+                    });
+                    return tasks;
+                }
+            }
+        } catch (error) {
+            throw error;
+        }
+    };
+    formatApplicationsOrTasksByStatus = async (
+        status: string,
+        tasks: ITaskDocument[],
+    ): Promise<ITaskOf> => {
+        const taskOf: ITaskOf = {
+            status,
+            tasks: [],
+        };
+
+        const formattedTasks = tasks
+            .filter(
+                task =>
+                    !(status === 'Accepted' && task.status === 'InProgress'),
+            )
+            .map(task => ({
+                taskId: task._id,
+                title: task.title,
+                category: task.category,
+                imageUrl: task.imageUrl ?? null,
+                locationName: task.location?.name ?? undefined,
+                wages: task.wages,
+                startDate: task.startDate,
+                endDate: task.endDate,
+            }));
+
+        taskOf.tasks.push(...formattedTasks);
+
+        return taskOf;
     };
 
     //adsOf

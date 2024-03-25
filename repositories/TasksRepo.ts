@@ -16,10 +16,6 @@ export interface ITasksRepository extends IRepository<ITask> {
     findTask: (
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<ITaskDocument | null>;
-    findTaskByWorkerIdAndStatus: (
-        userId: string,
-        status: string | undefined,
-    ) => Promise<ITaskDocument[]>;
     findOneWithGeneralInfo: (id: string) => Promise<ITaskDocument | null>;
     updateStatus: (
         taskId: string,
@@ -51,6 +47,10 @@ export interface ITasksRepository extends IRepository<ITask> {
         oldStatus: string[],
         newStatus: string,
     ) => Promise<null>;
+    findTasksByUserIdAndStatus: (
+        userId: string,
+        status: string[],
+    ) => Promise<ITaskDocument[]>;
 }
 
 @Service()
@@ -136,30 +136,6 @@ export class TasksRepository
             console.error('Error finding task:', error);
             throw error;
         }
-    };
-
-    findTaskByWorkerIdAndStatus = async (
-        userId: string,
-        status: string | undefined,
-    ): Promise<ITaskDocument[]> => {
-        let query: any = {
-            hiredWorkers: {
-                $elemMatch: {
-                    userId: userId,
-                },
-            },
-        };
-
-        // If status is provided, include it in the query
-        if (status !== undefined && status !== '') {
-            query.hiredWorkers.$elemMatch.status = status;
-        }
-
-        const tasks = await this._model.find(query).select({
-            applicants: 0,
-            hiredWorkers: 0,
-        });
-        return tasks;
     };
 
     findOneWithGeneralInfo = async (

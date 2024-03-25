@@ -10,6 +10,7 @@ import {
     CannotUpdateApplicationStatusError,
     InvalidUpdateApplicationStatusError,
     CannotStartTaskError,
+    CannotGetTaskOfError,
 } from '../errors/TaskError';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
@@ -211,24 +212,23 @@ class TasksController {
         }
     };
 
-    getTaskExperience = async (req: Request, res: Response) => {
+    getTasksOf = async (req: Request, res: Response) => {
         try {
-            const userId = req.params.customerId;
+            const userId = req.params.userId;
             if (userId != req.user._id) {
                 res.status(403).json({
                     error: 'You are not authorized to view information',
                 });
             }
-            // const status = 'Completed';
             const status = req.query.status as string;
-            // console.log(status);
-            const task = await this.tasksService.getTaskExperience(
-                userId,
-                status,
-            );
-            res.status(200).json({ task: task });
+            const task = await this.tasksService.getTasksOf(userId, status);
+            res.status(200).json(task);
         } catch (error) {
-            res.status(500).json({ error: 'Internal Server Error' });
+            if (error instanceof CannotGetTaskOfError) {
+                res.status(400).json({ error: error.message });
+            } else {
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
         }
     };
 
