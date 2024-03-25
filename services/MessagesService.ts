@@ -29,6 +29,7 @@ export interface IMessagesService {
     ) => Promise<IMessage>;
     increaseUnreadCount: (taskId: string, userIds: string[]) => Promise<void>;
     resetUnreadCount: (taskId: string, userId: string) => Promise<void>;
+    getUnreadCount: (userId: string) => Promise<Map<string, number>>;
     getMessageHistory: (
         taskId: string,
         page: number,
@@ -41,6 +42,7 @@ export interface IMessagesService {
         { message: IMessageDocument; task: ITaskDocument | undefined }[]
     >;
     isJoinableIdRoom: (taskId: string, userId: string) => Promise<void>;
+    getUsersOfRoom: (taskId: string) => Promise<Set<string>>;
 }
 
 @Service()
@@ -53,6 +55,34 @@ export class MessagesService implements IMessagesService {
         @Inject(() => UnreadCountRepository)
         private unreadCountRepository: IUnreadCountRepository,
     ) {}
+
+    async getUnreadCount(userId: string): Promise<Map<string, number>> {
+        const unreadDoc =
+            await this.unreadCountRepository.getUnreadCountByUserId(userId);
+        const mapper = new Map<string, number>();
+        unreadDoc.forEach(value =>
+            mapper.set(value.taskId.toString(), value.count),
+        );
+
+        return mapper;
+    }
+
+    async getUsersOfRoom(taskId: string): Promise<Set<string>> {
+        try {
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                throw new Error('Invalid task id');
+            }
+            const users = new Set<string>();
+            users.add(task.customerId.toString());
+            task.hiredWorkers.forEach(hiredWorker =>
+                users.add(hiredWorker.userId.toString()),
+            );
+            return users;
+        } catch (err) {
+            throw err;
+        }
+    }
 
     async isJoinableIdRoom(taskId: string, userId: string): Promise<void> {
         try {
@@ -185,7 +215,6 @@ export class MessagesService implements IMessagesService {
         const taskIds: string[] = tasks.map(t => t._id);
         const messages =
             await this.messagesRepository.findLatestMessageEachTask(taskIds);
-
         const taskWithMessages = messages.map(message => {
             const task = tasks.find(
                 t => t._id.toString() === message.taskId.toString(),

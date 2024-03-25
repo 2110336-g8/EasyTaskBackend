@@ -50,6 +50,8 @@ export interface MessageRoomInfo {
 
 @Service()
 export class MessagesController {
+    private activeUsers: Map<string, Set<string>> = new Map();
+
     constructor(
         @Inject(() => MessagesService)
         private messagesService: IMessagesService,
@@ -60,6 +62,9 @@ export class MessagesController {
     respond = async (io: Server, socket: Socket) => {
         socket.on('join_room', this.handleJoinRoom(socket));
         socket.on('send_message', this.handleSendMessage(io));
+        socket.on('disconnect', () => {
+            this.handleDisconnect(socket);
+        });
     };
 
     private handleJoinRoom = (socket: Socket) => async (taskId: string) => {
@@ -68,6 +73,12 @@ export class MessagesController {
             await this.messagesService.isJoinableIdRoom(taskId, userId);
             socket.join(taskId);
             await this.messagesService.resetUnreadCount(taskId, userId);
+
+            if (!this.activeUsers.get(taskId)) {
+                this.activeUsers.set(taskId, new Set());
+            }
+            this.activeUsers.get(taskId)?.add(userId.toString());
+
             socket.emit('join_success', 'Room joined successfully');
             console.log(`User ${userId} joined room ${taskId}`);
         } catch (error) {
@@ -83,6 +94,30 @@ export class MessagesController {
         }
     };
 
+    private handleDisconnect = (socket: Socket) => {
+        try {
+            const userId = socket.data.user._id;
+            const activeRooms = Array.from(this.activeUsers.entries())
+                .filter(([_, users]) => users.has(userId.toString()))
+                .map(([room]) => room);
+
+            activeRooms.forEach(room => {
+                const usersInRoom = this.activeUsers.get(room);
+                if (usersInRoom) {
+                    usersInRoom.delete(userId.toString());
+                    if (usersInRoom.size === 0) {
+                        this.activeUsers.delete(room);
+                    }
+                    console.log(
+                        `User ${userId} disconnected from room ${room}`,
+                    );
+                }
+            });
+        } catch (error) {
+            console.error('Error handling disconnect:', error);
+        }
+    };
+
     private handleSendMessage =
         (io: Server) => async (data: SendMessageDTO) => {
             try {
@@ -94,10 +129,19 @@ export class MessagesController {
                     senderId,
                     text,
                 );
+                const userList: Set<string> =
+                    await this.messagesService.getUsersOfRoom(taskId);
+                this.activeUsers.get(taskId)?.forEach(userId => {
+                    userList.delete(userId);
+                });
+
+                await this.messagesService.increaseUnreadCount(
+                    taskId,
+                    Array.from(userList),
+                );
                 console.log(
                     `user ${senderId} sent \"${text}\" to room ${taskId}`,
                 );
-                console.log(io.sockets.in(taskId));
                 io.of('/messages').to(taskId).emit('chat_message', message);
             } catch (error) {
                 console.log(error);
@@ -110,14 +154,21 @@ export class MessagesController {
 
             const activeMessageTask =
                 await this.messagesService.getMessageRooms(userId, 'active');
+
             const archivedMessageTask =
                 await this.messagesService.getMessageRooms(userId, 'archived');
+            const unreadMapper =
+                await this.messagesService.getUnreadCount(userId);
 
             const activeRooms = await Promise.all(
-                activeMessageTask.map(this.mapMessageRoomPreview),
+                activeMessageTask.map(room =>
+                    this.mapMessageRoomPreview(room, unreadMapper),
+                ),
             );
             const archivedRooms = await Promise.all(
-                archivedMessageTask.map(this.mapMessageRoomPreview),
+                archivedMessageTask.map(room =>
+                    this.mapMessageRoomPreview(room, unreadMapper),
+                ),
             );
 
             res.status(200).json({
@@ -129,17 +180,21 @@ export class MessagesController {
         }
     };
 
-    private mapMessageRoomPreview = async (e: any) => {
+    private mapMessageRoomPreview = async (
+        e: any,
+        unreadMapper: Map<string, number>,
+    ) => {
         const latestMessage = await this.getMessagePreview(e.message);
+        const unreadCount = unreadMapper.get(e.message.taskId.toString()) ?? 0;
+
         return {
             _id: e.message.taskId.toString(),
             taskTitle: e.task?.title ?? '',
             imageUrl: e.task?.imageUrl,
             latestMessage,
-            unreadCount: 0,
+            unreadCount,
         };
     };
-
     private getMessagePreview = async (
         m: IMessageDocument,
     ): Promise<MessagePreview> => {
