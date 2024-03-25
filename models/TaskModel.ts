@@ -13,7 +13,7 @@ export interface ITask {
         latitude: number;
         longitude: number;
     };
-    status: 'Open' | 'InProgress' | 'Completed' | 'Closed' | 'Cancelled';
+    status: 'Open' | 'InProgress' | 'Dismissed' | 'Completed';
     wages: number; // smallest unit
     startDate: Date;
     endDate: Date;
@@ -26,8 +26,13 @@ export interface ITask {
     }>;
     hiredWorkers: Array<{
         userId: Types.ObjectId;
-        status: 'InProgress' | 'Submit' | 'Completed' | 'Cancelled';
-        isRevised: boolean;
+        status:
+            | 'InProgress'
+            | 'Submitted'
+            | 'Revising'
+            | 'Resubmitted'
+            | 'Completed'
+            | 'Dismissed';
         createdAt: Date;
     }>;
     createdAt: Date;
@@ -93,7 +98,7 @@ const TaskSchema = new Schema<ITaskDocument>(
         },
         status: {
             type: String,
-            enum: ['Open', 'InProgress', 'Completed', 'Closed'],
+            enum: ['Open', 'InProgress', 'Dismissed', 'Completed'],
             required: [true, 'Task status is required'],
             maxlength: [
                 255,
@@ -170,30 +175,27 @@ const TaskSchema = new Schema<ITaskDocument>(
                 {
                     userId: {
                         type: Schema.Types.ObjectId,
-                        required: [true, 'UserId for hiring is required'],
+                        required: [true, 'UserId for employee is required'],
                         ref: 'User',
                     },
                     status: {
                         type: String,
                         enum: [
                             'InProgress',
-                            'Submit',
+                            'Submitted',
+                            'Revising',
+                            'Resubmitted',
                             'Completed',
-                            'Cancelled',
+                            'Dismissed',
                         ],
-                        required: [true, 'Hired worker status is required'],
+                        required: [true, 'Employee status is required'],
                         default: 'InProgress',
-                    },
-                    isRevised: {
-                        type: Boolean,
-                        required: [true, 'IsRevised flag is required'],
-                        default: false,
                     },
                     createdAt: {
                         type: Date,
                         required: [
                             true,
-                            'Timestamp for application is required',
+                            'Timestamp for employee start time is required',
                         ],
                     },
                 },
