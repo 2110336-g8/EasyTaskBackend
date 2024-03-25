@@ -4,7 +4,7 @@ import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
 import { FilterQuery, Types } from 'mongoose';
 
-export interface IUsersRepositorty extends IRepository<IUser> {
+export interface IUsersRepository extends IRepository<IUser> {
     findById: (id: string) => Promise<IUserDocument | null>;
     findOneByEmail: (email: string) => Promise<IUserDocument | null>;
     isValidPassword: (
@@ -53,7 +53,7 @@ export interface IUsersRepositorty extends IRepository<IUser> {
 @Service()
 export class UsersRepository
     extends BaseMongooseRepository<IUser>
-    implements IUsersRepositorty
+    implements IUsersRepository
 {
     constructor() {
         super(UserModel);

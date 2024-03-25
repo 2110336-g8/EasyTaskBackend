@@ -1,11 +1,14 @@
-import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
+import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 import { IUser, IUserDocument } from '../models/UserModel';
 import { Service, Inject, Token } from 'typedi';
 import { CannotCreateUserError } from '../errors/UsersError';
 import { ValidationError } from '../errors/RepoError';
 import { IOtpRepository, OtpRepository } from '../repositories/OtpRepo';
 import Constants from '../config/constants';
-import e from 'express';
+import {
+    ImagesRepository,
+    IImagesRepository,
+} from '../repositories/ImagesRepository';
 
 export interface IUsersService {
     createUser: (userData: IUserDocument) => Promise<IUserDocument>;
@@ -26,21 +29,33 @@ export interface IUsersService {
         password: string,
         email: string,
     ) => Promise<IUserDocument | null>;
+    getUserProfileImage: (id: string) => Promise<string | null>;
+    updateUserProfileImage: (
+        userId: string,
+        fileBuffer: Buffer,
+        mimetype: string,
+        key: string,
+    ) => Promise<void>;
+    deleteUserProfileImage: (userId: string, imageKey: string) => Promise<void>;
 }
 
 @Service()
 export class UsersService implements IUsersService {
-    private userRepository: IUsersRepositorty;
+    private usersRepository: IUsersRepository;
     private otpRepository: IOtpRepository;
+    private imagesRepository: IImagesRepository;
 
     constructor(
         @Inject(() => UsersRepository)
-        userRepository: IUsersRepositorty,
+        usersRepository: IUsersRepository,
         @Inject(() => OtpRepository)
         otpRepository: IOtpRepository,
+        @Inject(() => ImagesRepository)
+        imagesRepository: IImagesRepository,
     ) {
-        this.userRepository = userRepository;
+        this.usersRepository = usersRepository;
         this.otpRepository = otpRepository;
+        this.imagesRepository = imagesRepository;
     }
 
     createUser = async (userData: IUser): Promise<IUserDocument> => {
@@ -62,7 +77,7 @@ export class UsersService implements IUsersService {
         }
 
         try {
-            const createdUser = await this.userRepository.create(userData);
+            const createdUser = await this.usersRepository.create(userData);
             return createdUser;
         } catch (error) {
             if (error instanceof ValidationError)
@@ -75,16 +90,22 @@ export class UsersService implements IUsersService {
 
     getUserById = async (id: string): Promise<IUserDocument | null> => {
         try {
-            const user = await this.userRepository.findOne(id);
-            return user;
+            const user = await this.usersRepository.findOne(id);
+            if (user) {
+                const updatedUser =
+                    await this.imagesRepository.updateUserImageUrl(user);
+                return updatedUser;
+            }
+            return null;
         } catch (error) {
+            console.error(error);
             return null;
         }
     };
 
     getUserByEmail = async (email: string): Promise<IUserDocument | null> => {
         try {
-            const user = await this.userRepository.findOneByEmail(email);
+            const user = await this.usersRepository.findOneByEmail(email);
             return user;
         } catch (error) {
             return null;
@@ -96,7 +117,7 @@ export class UsersService implements IUsersService {
         data: IUserDocument,
     ): Promise<IUserDocument | null> => {
         try {
-            const user = await this.userRepository.update(id, data);
+            const user = await this.usersRepository.update(id, data);
             return user;
         } catch (error) {
             throw error;
@@ -110,7 +131,7 @@ export class UsersService implements IUsersService {
         currentPassword: string,
     ): Promise<IUserDocument | null> => {
         try {
-            const user = await this.userRepository.isValidPassword(
+            const user = await this.usersRepository.isValidPassword(
                 email,
                 currentPassword,
             );
@@ -118,7 +139,7 @@ export class UsersService implements IUsersService {
                 return null;
             }
             try {
-                const user = await this.userRepository.update(id, data);
+                const user = await this.usersRepository.update(id, data);
                 return user;
             } catch (error) {
                 return null;
@@ -134,7 +155,7 @@ export class UsersService implements IUsersService {
         email: string,
     ): Promise<IUserDocument | null> => {
         try {
-            const user = await this.userRepository.isValidPassword(
+            const user = await this.usersRepository.isValidPassword(
                 email,
                 password,
             );
@@ -142,7 +163,7 @@ export class UsersService implements IUsersService {
                 return null;
             }
             try {
-                if (!this.userRepository.deleteOne(id)) {
+                if (!this.usersRepository.deleteOne(id)) {
                     return null;
                 }
                 return user;
@@ -153,4 +174,54 @@ export class UsersService implements IUsersService {
             return null;
         }
     };
+    //image ------------------------------------------------------------
+
+    async getUserProfileImage(id: string): Promise<string | null> {
+        const user = await this.getUserById(id);
+        if (!user) return null;
+
+        const updatedUser =
+            await this.imagesRepository.updateUserImageUrl(user);
+        if (!updatedUser.imageUrl) return null;
+        return updatedUser.imageUrl;
+    }
+
+    async updateUserProfileImage(
+        userId: string,
+        fileBuffer: Buffer,
+        mimetype: string,
+        key: string,
+    ): Promise<void> {
+        try {
+            // Update the user's imageKey
+            await this.updateUser(userId, {
+                imageKey: key,
+            } as IUserDocument);
+
+            // Upload the file to AWS S3
+            await this.imagesRepository.createImage(fileBuffer, mimetype, key);
+        } catch (error) {
+            throw new Error('Failed to update profile image');
+        }
+    }
+
+    async deleteUserProfileImage(
+        userId: string,
+        imageKey: string,
+    ): Promise<void> {
+        try {
+            // Delete the image from the repository
+            const success = await this.imagesRepository.deleteImage(imageKey);
+            if (success) {
+                const updatedUser = await this.updateUser(userId, {
+                    imageKey: null,
+                    imageUrl: null,
+                    imageUrlLastUpdateTime: null,
+                } as IUserDocument);
+                // console.log(updatedUser);
+            }
+        } catch (error) {
+            throw new Error('Failed to delete profile image');
+        }
+    }
 }

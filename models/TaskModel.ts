@@ -5,8 +5,8 @@ export interface ITask {
     title: string;
     category: string;
     description?: string;
-    imageKey?: string;
-    imageUrl?: string;
+    imageKey?: string | null;
+    imageUrl?: string | null;
     imageUrlLastUpdateTime?: Date | null;
     location?: {
         name: string;

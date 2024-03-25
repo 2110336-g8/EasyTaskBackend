@@ -9,9 +9,9 @@ export interface IUser {
     password: string;
     phoneNumber?: string;
     description?: string;
-    imageKey?: string;
-    imageUrl?: string;
-    imageUrlLastUpdateTime?: Date;
+    imageKey?: string | null;
+    imageUrl?: string | null;
+    imageUrlLastUpdateTime?: Date | null;
     bankId?: ObjectId;
     bankAccName?: string;
     bankAccNo?: string;

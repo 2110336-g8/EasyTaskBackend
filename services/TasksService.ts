@@ -1,6 +1,6 @@
 import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
-import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
+import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 import { ICandidate } from '../models/CandidateModel';
 import {
     CannotApplyTaskError,
@@ -12,15 +12,13 @@ import {
 } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
-import { ImageService } from '../services/ImageService';
+import {
+    ImagesRepository,
+    IImagesRepository,
+} from '../repositories/ImagesRepository';
 
 import categoryData from '../assets/categories/categorieslist.json';
 import mongoose, { FilterQuery, Types } from 'mongoose';
-
-import dotenv from 'dotenv';
-dotenv.config({ path: './config/config.env' });
-
-const IMAGE_EXPIRE_TIME_SECONDS = Number(process.env.IMAGE_EXPIRE_TIME); // Assuming IMAGE_EXPIRE_TIME is defined in your environment variables
 
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
@@ -46,6 +44,16 @@ export interface ITasksService {
         status: string,
     ) => Promise<ITaskDocument[] | null>;
 
+    getTaskImage: (id: string) => Promise<string | null>;
+    updateTaskImage: (
+        userId: string,
+        fileBuffer: Buffer,
+        mimetype: string,
+        key: string,
+    ) => Promise<void>;
+
+    deleteTaskImage: (taskId: string, imageKey: string) => Promise<void>;
+
     getCategories: () => Promise<String[]>;
     applyTask: (
         taskId: string,
@@ -68,30 +76,30 @@ export interface ITasksService {
 
 @Service()
 export class TasksService implements ITasksService {
-    private taskRepository: ITasksRepository;
-    private userRepository: IUsersRepositorty;
-    private imageService: ImageService;
+    private tasksRepository: ITasksRepository;
+    private usersRepository: IUsersRepository;
+    private imagesRepository: IImagesRepository;
 
     constructor(
         @Inject(() => TasksRepository)
-        taskRepository: ITasksRepository,
+        tasksRepository: ITasksRepository,
         @Inject(() => UsersRepository)
-        userRepository: IUsersRepositorty,
-        @Inject(() => ImageService)
-        imageService: ImageService,
+        usersRepository: IUsersRepository,
+        @Inject(() => ImagesRepository)
+        imagesRepository: IImagesRepository,
     ) {
-        this.taskRepository = taskRepository;
-        this.userRepository = userRepository;
-        this.imageService = imageService;
+        this.tasksRepository = tasksRepository;
+        this.usersRepository = usersRepository;
+        this.imagesRepository = imagesRepository;
     }
 
     createTask = async (taskData: ITask): Promise<ITaskDocument> => {
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
             const task: ITaskDocument =
-                await this.taskRepository.create(taskData);
-            const updatedUser = await this.userRepository.addOwnedTasks(
+                await this.tasksRepository.create(taskData);
+            const updatedUser = await this.usersRepository.addOwnedTasks(
                 task._id.toString(),
                 task.customerId.toString(),
             );
@@ -122,7 +130,7 @@ export class TasksService implements ITasksService {
         filter: FilterQuery<ITaskDocument> = {},
     ): Promise<{ tasks: ITaskDocument[]; count: number }> {
         try {
-            const result = await this.taskRepository.findTasksByPage(
+            const result = await this.tasksRepository.findTasksByPage(
                 page,
                 taskPerPage,
                 filter,
@@ -131,7 +139,7 @@ export class TasksService implements ITasksService {
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 result.tasks.map(async task => {
-                    return await this.updateTaskImageUrls(task);
+                    return await this.imagesRepository.updateTaskImageUrl(task);
                 }),
             );
 
@@ -144,7 +152,7 @@ export class TasksService implements ITasksService {
 
     async countTasks(): Promise<number | null> {
         try {
-            const count = await this.taskRepository.countAllTasks();
+            const count = await this.tasksRepository.countAllTasks();
             return count;
         } catch (error) {
             console.error(error);
@@ -154,10 +162,10 @@ export class TasksService implements ITasksService {
 
     async getTaskById(id: string): Promise<ITaskDocument | null> {
         try {
-            const task = await this.taskRepository.findOne(id);
+            const task = await this.tasksRepository.findOne(id);
             if (task) {
                 // Update image URL for the task
-                return await this.updateTaskImageUrls(task);
+                return await this.imagesRepository.updateTaskImageUrl(task);
             }
             return null;
         } catch (error) {
@@ -170,10 +178,10 @@ export class TasksService implements ITasksService {
         id: string,
     ): Promise<ITaskDocument | null> => {
         try {
-            const task = await this.taskRepository.findOneWithGeneralInfo(id);
+            const task = await this.tasksRepository.findOneWithGeneralInfo(id);
             if (task) {
                 // Update image URL for the task
-                return await this.updateTaskImageUrls(task);
+                return await this.imagesRepository.updateTaskImageUrl(task);
             }
             return null;
         } catch (error) {
@@ -187,14 +195,15 @@ export class TasksService implements ITasksService {
         status: string | undefined,
     ): Promise<ITaskDocument[]> => {
         try {
-            const tasks = await this.taskRepository.findTaskByWorkerIdAndStatus(
-                userId,
-                status,
-            );
+            const tasks =
+                await this.tasksRepository.findTaskByWorkerIdAndStatus(
+                    userId,
+                    status,
+                );
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 tasks.map(async task => {
-                    return await this.updateTaskImageUrls(task);
+                    return await this.imagesRepository.updateTaskImageUrl(task);
                 }),
             );
 
@@ -226,11 +235,11 @@ export class TasksService implements ITasksService {
         }
 
         try {
-            const tasks = await this.taskRepository.findTasks(filter);
+            const tasks = await this.tasksRepository.findTasks(filter);
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 tasks.map(async task => {
-                    return await this.updateTaskImageUrls(task);
+                    return await this.imagesRepository.updateTaskImageUrl(task);
                 }),
             );
 
@@ -247,7 +256,7 @@ export class TasksService implements ITasksService {
     ): Promise<ITaskDocument | null> => {
         try {
             if (updateData) {
-                const updatedTask = await this.taskRepository.update(
+                const updatedTask = await this.tasksRepository.update(
                     id,
                     updateData,
                 );
@@ -260,38 +269,50 @@ export class TasksService implements ITasksService {
             return null;
         }
     };
+    //image --------------------------------------------------------------------
+    async getTaskImage(id: string): Promise<string | null> {
+        const task = await this.getTaskById(id);
+        if (!task) return null;
 
-    async updateTaskImageUrls(task: ITaskDocument): Promise<ITaskDocument> {
-        let imageUrl: string | undefined = task.imageUrl;
-        const imageUrlLastUpdateTime = task.imageUrlLastUpdateTime;
+        const updatedTask =
+            await this.imagesRepository.updateTaskImageUrl(task);
+        if (!updatedTask.imageUrl) return null;
+        return updatedTask.imageUrl;
+    }
 
-        // Logic to update image URLs if needed
-        if (
-            !imageUrlLastUpdateTime ||
-            Date.now() >
-                imageUrlLastUpdateTime.getTime() +
-                    IMAGE_EXPIRE_TIME_SECONDS * 1000
-        ) {
-            const imageKey = task.imageKey;
-            if (imageKey) {
-                const fetchedImageUrl =
-                    await this.imageService.getImageByKey(imageKey);
-                if (fetchedImageUrl) {
-                    imageUrl = fetchedImageUrl;
-                    // Update imageUrl and imageUrlLastUpdateTime
-                    task.imageUrl = fetchedImageUrl;
-                    task.imageUrlLastUpdateTime = new Date();
-                    // Update the task in the database if necessary
-                    await this.taskRepository.update(task._id, {
-                        imageUrl: fetchedImageUrl,
-                        imageUrlLastUpdateTime: new Date(),
-                    } as ITaskDocument);
-                    console.log('Updated imageUrl successfully');
-                }
-            }
+    async updateTaskImage(
+        userId: string,
+        fileBuffer: Buffer,
+        mimetype: string,
+        key: string,
+    ): Promise<void> {
+        try {
+            // Update the user's imageKey
+            await this.updateTask(userId, {
+                imageKey: key,
+            } as ITaskDocument);
+
+            // Upload the file to AWS S3
+            await this.imagesRepository.createImage(fileBuffer, mimetype, key);
+        } catch (error) {
+            throw new Error('Failed to update task image');
         }
+    }
 
-        return task;
+    async deleteTaskImage(taskId: string, imageKey: string): Promise<void> {
+        try {
+            // Delete the image from the repository
+            const success = await this.imagesRepository.deleteImage(imageKey);
+            if (success) {
+                await this.updateTask(taskId, {
+                    imageKey: null,
+                    imageUrl: null,
+                    imageUrlLastUpdateTime: null,
+                } as ITaskDocument);
+            }
+        } catch (error) {
+            throw new Error('Failed to delete task image');
+        }
     }
 
     getCategories = async (): Promise<String[]> => {
@@ -308,11 +329,11 @@ export class TasksService implements ITasksService {
         userId: string,
     ): Promise<ITaskDocument | null> => {
         const timestamps = new Date();
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
             // Check if there is an existing application with the same taskId
-            const existingApplication = await this.userRepository.findUser({
+            const existingApplication = await this.usersRepository.findUser({
                 _id: userId,
                 'applications.taskId': taskId,
             });
@@ -328,7 +349,7 @@ export class TasksService implements ITasksService {
             }
 
             // If no existing application with the same taskId, proceed with the update
-            const updatedUser = await this.userRepository.addApplication(
+            const updatedUser = await this.usersRepository.addApplication(
                 taskId,
                 userId,
                 timestamps,
@@ -343,7 +364,7 @@ export class TasksService implements ITasksService {
             }
 
             // Check if there is an existing applicant with the same userId
-            const existingApplicant = await this.taskRepository.findTask({
+            const existingApplicant = await this.tasksRepository.findTask({
                 _id: taskId,
                 'applicants.userId': userId,
             });
@@ -359,7 +380,7 @@ export class TasksService implements ITasksService {
             }
 
             // If no existing applicant with the same userId, proceed with the update
-            const updatedTask = await this.taskRepository.addApplicant(
+            const updatedTask = await this.tasksRepository.addApplicant(
                 taskId,
                 userId,
                 timestamps,
@@ -394,7 +415,7 @@ export class TasksService implements ITasksService {
 
     getCandidate = async (taskId: string): Promise<ICandidate | null> => {
         try {
-            const task = await this.taskRepository.findOne(taskId);
+            const task = await this.tasksRepository.findOne(taskId);
             if (!task) {
                 return null;
             }
@@ -415,7 +436,7 @@ export class TasksService implements ITasksService {
                 ) {
                     continue;
                 }
-                const user = await this.userRepository.findOne(
+                const user = await this.usersRepository.findOne(
                     candidate.userId.toString(),
                 );
                 if (user) {
@@ -453,7 +474,7 @@ export class TasksService implements ITasksService {
         selectedCandidates: string[],
     ): Promise<ICandidate> => {
         // Check validation of selectedCandidateds
-        const task = await this.taskRepository.findOne(taskId);
+        const task = await this.tasksRepository.findOne(taskId);
         if (!task) {
             throw new CannotSelectCandidateError('Invalid task');
         }
@@ -471,11 +492,11 @@ export class TasksService implements ITasksService {
             }
         }
         // update status
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
             const updatedApplicant =
-                await this.taskRepository.updateApplicantStatus(
+                await this.tasksRepository.updateApplicantStatus(
                     taskId,
                     selectedCandidates,
                     ['Pending'],
@@ -488,7 +509,7 @@ export class TasksService implements ITasksService {
             );
 
             const updatedApplication =
-                await this.userRepository.updateApplicationStatus(
+                await this.usersRepository.updateApplicationStatus(
                     taskId,
                     selectedCandidates,
                     ['Pending'],
@@ -550,11 +571,11 @@ export class TasksService implements ITasksService {
     ): Promise<null> => {
         // if response = true, set status to 'Accepted', else set to 'Rejected'
         const status = response ? 'Accepted' : 'Rejected';
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
             const updatedApplicant =
-                await this.taskRepository.updateApplicantStatus(
+                await this.tasksRepository.updateApplicantStatus(
                     taskId,
                     [userId],
                     ['Offering'],
@@ -566,7 +587,7 @@ export class TasksService implements ITasksService {
                 updatedApplicant.modifiedCount,
             );
             const updatedApplication =
-                await this.userRepository.updateApplicationStatus(
+                await this.usersRepository.updateApplicationStatus(
                     taskId,
                     [userId],
                     ['Offering'],
@@ -589,10 +610,10 @@ export class TasksService implements ITasksService {
 
     startTask = async (taskId: string): Promise<ITaskDocument | null> => {
         const timestamps = new Date();
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
-            const task = await this.taskRepository.findOne(taskId);
+            const task = await this.tasksRepository.findOne(taskId);
             if (!task) {
                 throw new CannotStartTaskError('Invalid task id');
             }
@@ -614,7 +635,7 @@ export class TasksService implements ITasksService {
             for (const applicant of acceptedApplicants) {
                 // Step 2-1 : add task in user data
                 // Check if there is an existing task with the same taskId
-                const existingTask = await this.userRepository.findUser({
+                const existingTask = await this.usersRepository.findUser({
                     _id: applicant,
                     'tasks.taskId': taskId,
                 });
@@ -629,7 +650,7 @@ export class TasksService implements ITasksService {
                     );
                 }
                 // If no existing task with the same taskId, proceed with the update
-                const updatedUser = await this.userRepository.addTask(
+                const updatedUser = await this.usersRepository.addTask(
                     taskId,
                     applicant,
                     timestamps,
@@ -645,10 +666,12 @@ export class TasksService implements ITasksService {
 
                 // Step 2-2 : add hired worker in task data
                 // Check if there is an existing hired worker with the same userId
-                const existingHiredWorker = await this.taskRepository.findTask({
-                    _id: taskId,
-                    'hiredWorkers.userId': applicant,
-                });
+                const existingHiredWorker = await this.tasksRepository.findTask(
+                    {
+                        _id: taskId,
+                        'hiredWorkers.userId': applicant,
+                    },
+                );
 
                 // If an hired worker with the same userId exists
                 if (existingHiredWorker) {
@@ -660,7 +683,7 @@ export class TasksService implements ITasksService {
                     );
                 }
                 // If no existing hired worker with the same userId, proceed with the update
-                const updatedTask = await this.taskRepository.addHiredWorker(
+                const updatedTask = await this.tasksRepository.addHiredWorker(
                     taskId,
                     applicant,
                     timestamps,
@@ -677,7 +700,7 @@ export class TasksService implements ITasksService {
 
             // Step 3 : update application status in user model from 'Pending' or 'Offering' to 'NotProceed'
             const updatedApplication =
-                await this.userRepository.updateApplicationStatus(
+                await this.usersRepository.updateApplicationStatus(
                     taskId,
                     undefined,
                     ['Pending', 'Offering'],
@@ -690,7 +713,7 @@ export class TasksService implements ITasksService {
             );
             // Step 4 : update applicant status in task model from 'Pending' or 'Offering' to 'NotProceed'
             const updatedApplicant =
-                await this.taskRepository.updateApplicantStatus(
+                await this.tasksRepository.updateApplicantStatus(
                     taskId,
                     undefined,
                     ['Pending', 'Offering'],
@@ -702,7 +725,7 @@ export class TasksService implements ITasksService {
                 updatedApplicant.modifiedCount,
             );
             // Step 5 : update task status in task model
-            const updatedTask = this.taskRepository.updateStatus(
+            const updatedTask = this.tasksRepository.updateStatus(
                 taskId,
                 'InProgress',
             );
@@ -727,13 +750,13 @@ export class TasksService implements ITasksService {
 
     // To do..
     dismissOpenTask = async (taskId: string): Promise<ITaskDocument | null> => {
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
             // To pay 30%
             // To update status of tasks in user model
             // To update status of hiredWorkers in task model
-            const updatedTask = this.taskRepository.updateStatus(
+            const updatedTask = this.tasksRepository.updateStatus(
                 taskId,
                 'Dismissed',
             );
@@ -754,13 +777,13 @@ export class TasksService implements ITasksService {
     dismissInProgressTask = async (
         taskId: string,
     ): Promise<ITaskDocument | null> => {
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
             // To pay 30%
             // To update status of tasks in user model
             // To update status of hiredWorkers in task model
-            const updatedTask = this.taskRepository.updateStatus(
+            const updatedTask = this.tasksRepository.updateStatus(
                 taskId,
                 'Dismissed',
             );
