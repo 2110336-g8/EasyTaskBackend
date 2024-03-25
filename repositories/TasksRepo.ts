@@ -10,6 +10,9 @@ export interface ITasksRepository extends IRepository<ITask> {
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
     countAllTasks: () => Promise<number | null>;
+    findTasks: (
+        filter?: FilterQuery<ITaskDocument>,
+    ) => Promise<ITaskDocument[]>;
     findTaskByWorkerIdAndStatus: (
         userId: string,
         status: string | undefined,
@@ -21,9 +24,9 @@ export interface ITasksRepository extends IRepository<ITask> {
         timestamps: Date,
     ) => Promise<ITaskDocument | null>;
     closeTask: (taskId: string) => Promise<ITaskDocument | null>;
-    findTasks: (
-        filter?: FilterQuery<ITaskDocument>,
-    ) => Promise<ITaskDocument[]>;
+    findCandidate: (
+        taskId: string,
+    ) => Promise<{ applicants: Array<any> } | null>;
 }
 
 @Service()
@@ -57,6 +60,18 @@ export class TasksRepository
     async countAllTasks(): Promise<number> {
         const count = await this._model.countDocuments();
         return count;
+    }
+
+    async findTasks(
+        filter: FilterQuery<ITaskDocument> = {},
+    ): Promise<ITaskDocument[]> {
+        try {
+            const tasks = await this._model.find(filter);
+            return tasks;
+        } catch (error) {
+            console.error('Error finding tasks:', error);
+            throw error;
+        }
     }
 
     findTaskByWorkerIdAndStatus = async (
@@ -210,15 +225,27 @@ export class TasksRepository
         }
     };
 
-    async findTasks(
-        filter: FilterQuery<ITaskDocument> = {},
-    ): Promise<ITaskDocument[]> {
+    findCandidate = async (
+        taskId: string,
+    ): Promise<{ applicants: Array<any> } | null> => {
         try {
-            const tasks = await this._model.find(filter);
-            return tasks;
+            const candidate = await this._model
+                .findOne({
+                    _id: taskId,
+                    applicants: {
+                        $elemMatch: {
+                            status: {
+                                $in: ['Pending', 'Offering', 'Accepted'],
+                            },
+                        },
+                    },
+                })
+                .select('applicants');
+
+            return candidate;
         } catch (error) {
-            console.error('Error finding tasks:', error);
+            console.error('Error occurred while finding candidate:', error);
             throw error;
         }
-    }
+    };
 }

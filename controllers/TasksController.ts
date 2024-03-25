@@ -2,29 +2,27 @@ import e, { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
-import { ImageService } from '../services/ImageService';
+import { UsersService, IUsersService } from '../services/UsersService';
 import sharp from 'sharp';
 import {
     CannotApplyTaskError,
     CannotCancelTaskError,
 } from '../errors/TaskError';
-import { IUserDocument } from '../models/UserModel';
-import { ITask, ITaskDocument } from '../models/TaskModel';
+import { ITaskDocument } from '../models/TaskModel';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
 
 @Service()
 class TasksController {
     private tasksService: ITasksService;
-    private imageService: ImageService;
-    usersService: any;
+    private usersService: IUsersService;
 
     constructor(
         @Inject(() => TasksService) tasksService: ITasksService,
-        @Inject(() => ImageService) imageService: ImageService,
+        @Inject(() => UsersService) usersService: IUsersService,
     ) {
         this.tasksService = tasksService;
-        this.imageService = imageService;
+        this.usersService = usersService;
     }
 
     createTask = async (req: Request, res: Response): Promise<void> => {
@@ -144,30 +142,73 @@ class TasksController {
             const id = req.params.id;
             const userId = req.user._id;
             const task = await this.tasksService.getTaskById(id);
+
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
                 return;
             }
+
+            //not the task's owner
             if (userId.toString() !== task.customerId.toString()) {
-                const taskWithGeneralInfo =
-                    await this.tasksService.getTaskWithGeneralInfoById(id);
-                if (!taskWithGeneralInfo) {
-                    res.status(404).json({
-                        error: 'Task not found',
-                    });
+                const user = await this.usersService.getUserById(
+                    task.customerId.toString(),
+                );
+                if (!user) {
+                    console.log('user not found');
+                    res.status(404).json({ error: 'User not found' });
                     return;
                 }
-                res.status(200).json({
-                    task: taskWithGeneralInfo,
-                });
-                return;
-            }
+                const customerInfo = {
+                    id: user.id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    phoneNumber: user.phoneNumber,
+                    ImageUrl: user.imageUrl,
+                };
 
-            res.status(200).json({
-                task,
-            });
+                const taskWithGeneralInfo =
+                    await this.tasksService.getTaskWithGeneralInfoById(id);
+                if (taskWithGeneralInfo) {
+                    res.status(200).json({
+                        task: taskWithGeneralInfo,
+                        customerInfo: customerInfo,
+                    });
+                } else {
+                    res.status(404).json({ error: 'Task not found' });
+                }
+            } else {
+                if (task.applicants && task.applicants.length > 0) {
+                    const applicantsInfo = [];
+                    for (const applicant of task.applicants) {
+                        const applicantId = applicant.userId;
+                        const applicantUser =
+                            await this.usersService.getUserById(
+                                applicantId.toString(),
+                            );
+                        if (applicantUser) {
+                            applicantsInfo.push({
+                                id: applicantUser.id,
+                                firstName: applicantUser.firstName,
+                                lastName: applicantUser.lastName,
+                                imageUrl: applicantUser.imageUrl,
+                                phoneNumber: applicantUser.phoneNumber,
+                            });
+                        }
+                    }
+                    res.status(200).json({
+                        task: task,
+                        applicantsInfo: applicantsInfo,
+                    });
+                } else {
+                    res.status(200).json({
+                        task: task,
+                        applicantsInfo: [],
+                    });
+                }
+            }
         } catch (error) {
-            res.status(500).json({ error: 'Internal Server Error' });
+            const err = error as Error;
+            res.status(500).json({ error: err.message });
         }
     };
 
@@ -225,26 +266,19 @@ class TasksController {
             const id = req.params.id;
             const task = await this.tasksService.getTaskById(id);
             if (!task) {
-                res.status(404).json({ error: 'User not found' });
+                res.status(404).json({ error: 'task not found' });
                 return;
             }
-            const imageKey = task.imageKey;
+            const imageUrl = await this.tasksService.getTaskImage(id);
 
-            if (imageKey) {
-                const imageUrl = await this.imageService.getImageByKey(
-                    String(imageKey),
-                );
-
-                // If the image URL exists, redirect to the image
-                if (imageUrl) {
-                    res.status(200).json(imageUrl);
-                } else {
-                    res.status(404).json({ error: 'Task image not found' });
-                }
+            // If the image URL exists, redirect to the image
+            if (imageUrl) {
+                res.status(200).json(imageUrl);
             } else {
                 res.status(404).json({ error: 'Task image not found' });
             }
         } catch (error) {
+            console.log('cannot get by owner id');
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
@@ -263,28 +297,22 @@ class TasksController {
             // Use sharp to check if the file is an image
             try {
                 const metadata = await sharp(file).metadata();
-
                 // Extract the file extension from the originalname (e.g., '.jpg')
                 const fileExtension = metadata.format!.toLowerCase();
                 // console.log(fileExtension);
-
                 // Generate the imageKey using the userId and fileExtension
                 const key = `${taskId}.${fileExtension}`;
-                // console.log(key);
-                // Update the user's imageKey in your database
-                await this.tasksService.updateTask(taskId, {
-                    imageKey: key,
-                } as ITaskDocument);
+                console.log(key);
 
-                // Upload the file to AWS S3 or your preferred storage
-                const uploadedFile = await this.imageService.createImage(
+                await this.tasksService.updateTaskImage(
+                    taskId,
                     file.buffer,
                     file.mimeType,
                     key,
                 );
 
                 res.status(201).json({
-                    message: 'Profile image uploaded successfully',
+                    message: 'Task image uploaded successfully',
                 });
             } catch (error) {
                 res.status(400).json({
@@ -300,28 +328,23 @@ class TasksController {
 
     deleteTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const id = req.params.id;
-            const task = await this.tasksService.getTaskById(id);
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
-                res.status(404).json({ error: 'task not found' });
+                res.status(404).json({ error: 'Task not found' });
                 return;
             }
-            const imageKey = task.imageKey;
-            // console.log('Image Key:', imageKey);
 
-            if (imageKey === null || imageKey === '') {
+            // Delete the task's image
+            if (!task.imageKey || task.imageKey == undefined) {
                 res.status(200).json({
-                    message: 'There is no image for this task',
+                    message: 'There is no Task image',
                 });
             } else {
-                await this.imageService.deleteImage(String(imageKey));
-                await this.tasksService.updateTask(id, {
-                    imageKey: '',
-                    imageUrl: '',
-                    imageUrlLastUpdateTime: null,
-                } as ITaskDocument);
+                await this.tasksService.deleteTaskImage(taskId, task.imageKey);
+
                 res.status(200).json({
-                    message: 'image deleted successfully',
+                    message: 'Task image deleted successfully',
                 });
             }
         } catch (error) {

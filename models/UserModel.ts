@@ -9,9 +9,9 @@ export interface IUser {
     password: string;
     phoneNumber?: string;
     description?: string;
-    imageKey?: string;
-    imageUrl?: string;
-    imageUrlLastUpdateTime?: Date;
+    imageKey?: string | null;
+    imageUrl?: string | null;
+    imageUrlLastUpdateTime?: Date | null;
     bankId?: ObjectId;
     bankAccName?: string;
     bankAccNo?: string;
@@ -22,7 +22,7 @@ export interface IUser {
     }>;
     tasks: Array<{
         taskId: Types.ObjectId;
-        status: 'In Progress' | 'Completed' | 'Cancel';
+        status: 'InProgress' | 'Completed' | 'Cancel';
         createdAt: Date;
     }>;
     ownedTasks: Types.ObjectId[];
@@ -149,9 +149,9 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                     },
                     status: {
                         type: String,
-                        enum: ['In Progress', 'Completed', 'Cancel'],
+                        enum: ['InProgress', 'Completed', 'Cancel'],
                         required: [true, 'Task status is required'],
-                        default: 'In Progress',
+                        default: 'InProgress',
                     },
                     createdAt: {
                         type: Date,
