@@ -27,6 +27,8 @@ export interface IMessagesService {
         taskId: string,
         text: { title?: string; content?: string },
     ) => Promise<IMessage>;
+    // increaseUnreadCount: (taskId: string, userIds: string[]) => Promise<void>;
+    // resetUnreadCount: (taskId: string, userIds: string[]) => Promise<void>;
     getMessageHistory: (
         taskId: string,
         page: number,
@@ -49,6 +51,8 @@ export class MessagesService implements IMessagesService {
         @Inject(() => TasksRepository)
         private tasksRepository: ITasksRepository,
         @Inject(() => ImageService) private imageService: ImageService,
+        // @Inject(() => UnreadCounterRepository)
+        // private unreadCounterRepository: IUnreadCounterRepository,
     ) {}
 
     async isJoinableIdRoom(taskId: string, userId: string): Promise<void> {
@@ -143,6 +147,14 @@ export class MessagesService implements IMessagesService {
             throw error;
         }
     }
+
+    // async increaseUnreadCount(taskId: string, userIds: string[]) {
+    //     await this.unreadCounterRepository.incrementUnread(taskId, userIds);
+    // }
+
+    // async resetUnreadCount(taskId: string, userIds: string[]) {
+    //     await this.unreadCounterRepository.resetUnread(taskId, userIds);
+    // }
 
     async getMessageHistory(
         taskId: string,
