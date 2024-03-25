@@ -224,6 +224,7 @@ class TasksController {
                                     lastName: workerUser.lastName,
                                     imageUrl: workerUser.imageUrl,
                                     phoneNumber: workerUser.phoneNumber,
+                                    status: workerStatus,
                                 });
                             }
                         }
