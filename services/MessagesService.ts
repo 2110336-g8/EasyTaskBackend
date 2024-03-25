@@ -15,9 +15,7 @@ import dotenv from 'dotenv';
 import UnreadCountRepository, {
     IUnreadCountRepository,
 } from '../repositories/UnreadCountRepo';
-
-dotenv.config({ path: './config/config.env' });
-const IMAGE_EXPIRE_TIME_SECONDS = Number(process.env.IMAGE_EXPIRE_TIME);
+import { ITasksService, TasksService } from './TasksService';
 
 export interface IMessagesService {
     saveUserMessage: (
@@ -50,15 +48,15 @@ export class MessagesService implements IMessagesService {
     constructor(
         @Inject(() => MessagesRepository)
         private messagesRepository: IMessagesRepository,
-        @Inject(() => TasksRepository)
-        private tasksRepository: ITasksRepository,
+        @Inject(() => TasksService)
+        private tasksService: ITasksService,
         @Inject(() => UnreadCountRepository)
         private unreadCountRepository: IUnreadCountRepository,
     ) {}
 
     async isJoinableIdRoom(taskId: string, userId: string): Promise<void> {
         try {
-            const task = await this.tasksRepository.findOne(taskId);
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task || !['InProgress' || 'Closed'].includes(task.status)) {
                 throw new CannotJoinRoomError('Invalid task id');
             }
@@ -89,7 +87,7 @@ export class MessagesService implements IMessagesService {
         text: { title?: string; content?: string },
     ): Promise<IMessage> {
         try {
-            const task = await this.tasksRepository.findOne(taskId);
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
                 throw new CannotCreateMessageError('Invalid task id');
             }
@@ -115,7 +113,7 @@ export class MessagesService implements IMessagesService {
         text: string,
     ): Promise<IMessage> {
         try {
-            const task = await this.tasksRepository.findOne(taskId);
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
                 throw new CannotCreateMessageError('Invalid task id');
             }
@@ -179,7 +177,7 @@ export class MessagesService implements IMessagesService {
         const taskStatus: string[] =
             status === 'active' ? ['InProgress'] : ['Completed', 'Canceled'];
         let tasks: ITaskDocument[] =
-            await this.tasksRepository.findTasksByUserIdAndStatus(
+            await this.tasksService.getTasksByUserIdAndStatus(
                 userId,
                 taskStatus,
             );
