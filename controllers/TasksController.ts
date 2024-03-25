@@ -2,39 +2,38 @@ import e, { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
-import { ImageService } from '../services/ImageService';
+import { UsersService, IUsersService } from '../services/UsersService';
 import sharp from 'sharp';
 import {
     CannotApplyTaskError,
-    CannotCancelTaskError,
+    CannotSelectCandidateError,
+    CannotUpdateApplicationStatusError,
+    InvalidUpdateApplicationStatusError,
+    CannotStartTaskError,
 } from '../errors/TaskError';
-import { IUserDocument } from '../models/UserModel';
-import { ITask, ITaskDocument } from '../models/TaskModel';
+import { ITaskDocument } from '../models/TaskModel';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
 
 @Service()
 class TasksController {
     private tasksService: ITasksService;
-    private imageService: ImageService;
-    usersService: any;
+    private usersService: IUsersService;
 
     constructor(
         @Inject(() => TasksService) tasksService: ITasksService,
-        @Inject(() => ImageService) imageService: ImageService,
+        @Inject(() => UsersService) usersService: IUsersService,
     ) {
         this.tasksService = tasksService;
-        this.imageService = imageService;
+        this.usersService = usersService;
     }
 
     createTask = async (req: Request, res: Response): Promise<void> => {
         try {
             var data = req.body;
             data.customerId = req.user._id;
-            var data = req.body;
-            data.customerId = req.user._id;
             const task = await this.tasksService.createTask(data);
-            res.status(201).json({ task: task.toJSON() });
+            res.status(201).json({ success: true, task: task.toJSON() });
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
@@ -144,36 +143,79 @@ class TasksController {
             const id = req.params.id;
             const userId = req.user._id;
             const task = await this.tasksService.getTaskById(id);
+
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
                 return;
             }
+
+            //not the task's owner
             if (userId.toString() !== task.customerId.toString()) {
-                const taskWithGeneralInfo =
-                    await this.tasksService.getTaskWithGeneralInfoById(id);
-                if (!taskWithGeneralInfo) {
-                    res.status(404).json({
-                        error: 'Task not found',
-                    });
+                const user = await this.usersService.getUserById(
+                    task.customerId.toString(),
+                );
+                if (!user) {
+                    console.log('user not found');
+                    res.status(404).json({ error: 'User not found' });
                     return;
                 }
-                res.status(200).json({
-                    task: taskWithGeneralInfo,
-                });
-                return;
-            }
+                const customerInfo = {
+                    id: user.id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    phoneNumber: user.phoneNumber,
+                    ImageUrl: user.imageUrl,
+                };
 
-            res.status(200).json({
-                task,
-            });
+                const taskWithGeneralInfo =
+                    await this.tasksService.getTaskWithGeneralInfoById(id);
+                if (taskWithGeneralInfo) {
+                    res.status(200).json({
+                        task: taskWithGeneralInfo,
+                        customerInfo: customerInfo,
+                    });
+                } else {
+                    res.status(404).json({ error: 'Task not found' });
+                }
+            } else {
+                if (task.applicants && task.applicants.length > 0) {
+                    const applicantsInfo = [];
+                    for (const applicant of task.applicants) {
+                        const applicantId = applicant.userId;
+                        const applicantUser =
+                            await this.usersService.getUserById(
+                                applicantId.toString(),
+                            );
+                        if (applicantUser) {
+                            applicantsInfo.push({
+                                id: applicantUser.id,
+                                firstName: applicantUser.firstName,
+                                lastName: applicantUser.lastName,
+                                imageUrl: applicantUser.imageUrl,
+                                phoneNumber: applicantUser.phoneNumber,
+                            });
+                        }
+                    }
+                    res.status(200).json({
+                        task: task,
+                        applicantsInfo: applicantsInfo,
+                    });
+                } else {
+                    res.status(200).json({
+                        task: task,
+                        applicantsInfo: [],
+                    });
+                }
+            }
         } catch (error) {
-            res.status(500).json({ error: 'Internal Server Error' });
+            const err = error as Error;
+            res.status(500).json({ error: err.message });
         }
     };
 
     getTaskExperience = async (req: Request, res: Response) => {
         try {
-            const userId = req.params.id;
+            const userId = req.params.customerId;
             if (userId != req.user._id) {
                 res.status(403).json({
                     error: 'You are not authorized to view information',
@@ -225,26 +267,19 @@ class TasksController {
             const id = req.params.id;
             const task = await this.tasksService.getTaskById(id);
             if (!task) {
-                res.status(404).json({ error: 'User not found' });
+                res.status(404).json({ error: 'task not found' });
                 return;
             }
-            const imageKey = task.imageKey;
+            const imageUrl = await this.tasksService.getTaskImage(id);
 
-            if (imageKey) {
-                const imageUrl = await this.imageService.getImageByKey(
-                    String(imageKey),
-                );
-
-                // If the image URL exists, redirect to the image
-                if (imageUrl) {
-                    res.status(200).json(imageUrl);
-                } else {
-                    res.status(404).json({ error: 'Task image not found' });
-                }
+            // If the image URL exists, redirect to the image
+            if (imageUrl) {
+                res.status(200).json(imageUrl);
             } else {
                 res.status(404).json({ error: 'Task image not found' });
             }
         } catch (error) {
+            console.log('cannot get by owner id');
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
@@ -263,28 +298,22 @@ class TasksController {
             // Use sharp to check if the file is an image
             try {
                 const metadata = await sharp(file).metadata();
-
                 // Extract the file extension from the originalname (e.g., '.jpg')
                 const fileExtension = metadata.format!.toLowerCase();
                 // console.log(fileExtension);
-
                 // Generate the imageKey using the userId and fileExtension
                 const key = `${taskId}.${fileExtension}`;
-                // console.log(key);
-                // Update the user's imageKey in your database
-                await this.tasksService.updateTask(taskId, {
-                    imageKey: key,
-                } as ITaskDocument);
+                console.log(key);
 
-                // Upload the file to AWS S3 or your preferred storage
-                const uploadedFile = await this.imageService.createImage(
+                await this.tasksService.updateTaskImage(
+                    taskId,
                     file.buffer,
                     file.mimeType,
                     key,
                 );
 
                 res.status(201).json({
-                    message: 'Profile image uploaded successfully',
+                    message: 'Task image uploaded successfully',
                 });
             } catch (error) {
                 res.status(400).json({
@@ -300,28 +329,23 @@ class TasksController {
 
     deleteTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const id = req.params.id;
-            const task = await this.tasksService.getTaskById(id);
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
-                res.status(404).json({ error: 'task not found' });
+                res.status(404).json({ error: 'Task not found' });
                 return;
             }
-            const imageKey = task.imageKey;
-            // console.log('Image Key:', imageKey);
 
-            if (imageKey === null || imageKey === '') {
+            // Delete the task's image
+            if (!task.imageKey || task.imageKey == undefined) {
                 res.status(200).json({
-                    message: 'There is no image for this task',
+                    message: 'There is no Task image',
                 });
             } else {
-                await this.imageService.deleteImage(String(imageKey));
-                await this.tasksService.updateTask(id, {
-                    imageKey: '',
-                    imageUrl: '',
-                    imageUrlLastUpdateTime: null,
-                } as ITaskDocument);
+                await this.tasksService.deleteTaskImage(taskId, task.imageKey);
+
                 res.status(200).json({
-                    message: 'image deleted successfully',
+                    message: 'Task image deleted successfully',
                 });
             }
         } catch (error) {
@@ -348,8 +372,8 @@ class TasksController {
 
     applyTask = async (req: Request, res: Response) => {
         try {
-            const id = req.params.id;
-            const task = await this.tasksService.getTaskById(id);
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
                 res.status(404).json({
                     success: false,
@@ -372,10 +396,10 @@ class TasksController {
                 return;
             }
             const result = await this.tasksService.applyTask(
-                id,
+                taskId,
                 req.user._id.toString(),
             );
-            res.status(200).json({ success: true, result });
+            res.status(200).json({ success: true, task: result });
         } catch (error) {
             if (error instanceof CannotApplyTaskError) {
                 res.status(400).json({
@@ -391,10 +415,36 @@ class TasksController {
         }
     };
 
-    cancelTask = async (req: Request, res: Response) => {
+    getCandidate = async (req: Request, res: Response) => {
         try {
-            const id = req.params.id;
-            const task = await this.tasksService.getTaskById(id);
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({ error: 'Task Not Found' });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    error: 'You are not allowed to access the candidates of this task',
+                });
+                return;
+            }
+            const result = await this.tasksService.getCandidate(taskId);
+            if (!result) {
+                res.status(404).json({ error: 'Task Not Found' });
+                return;
+            }
+            res.status(200).json(result);
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
+    selectCandidate = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const selectedCandidates = req.body.selectedCandidates;
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
                 res.status(404).json({
                     success: false,
@@ -405,15 +455,126 @@ class TasksController {
             if (task.customerId.toString() != req.user._id) {
                 res.status(403).json({
                     success: false,
-                    error: 'Cannot Cancel This Task',
+                    error: 'You are not allowed to select candidate for this task',
                 });
                 return;
             }
-            const result = await this.tasksService.cancelTask(id);
-            res.status(200).json({ success: true, result });
+            const result = await this.tasksService.selectCandidate(
+                taskId,
+                selectedCandidates,
+            );
+            res.status(200).json({ success: true, tasks: result });
         } catch (error) {
-            if (error instanceof CannotCancelTaskError) {
+            if (
+                error instanceof InvalidUpdateApplicationStatusError ||
+                error instanceof CannotUpdateApplicationStatusError
+            ) {
                 res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotSelectCandidateError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
+        }
+    };
+
+    acceptOffer = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const userId = req.user._id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            await this.tasksService.responseOffer(taskId, userId, true);
+            res.status(200).json({ success: true });
+        } catch (error) {
+            if (error instanceof InvalidUpdateApplicationStatusError) {
+                res.status(400).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateApplicationStatusError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
+        }
+    };
+
+    rejectOffer = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const userId = req.user._id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            await this.tasksService.responseOffer(taskId, userId, false);
+            res.status(200).json({ success: true });
+        } catch (error) {
+            if (error instanceof InvalidUpdateApplicationStatusError) {
+                res.status(400).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateApplicationStatusError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
+        }
+    };
+
+    startTask = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'You are not allowed to start this task',
+                });
+                return;
+            }
+            const result = await this.tasksService.startTask(taskId);
+            res.status(200).json({ success: true, task: result });
+        } catch (error) {
+            if (error instanceof CannotStartTaskError) {
+                res.status(400).json({
                     success: false,
                     error: error.message,
                 });
@@ -423,6 +584,76 @@ class TasksController {
                     error: 'Internal Server Error',
                 });
             }
+        }
+    };
+
+    // To do
+    dismissTask = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'You are not allowed to dismiss this task',
+                });
+                return;
+            }
+            if (task.status === 'Open') {
+                const result = await this.tasksService.dismissOpenTask(taskId);
+                res.status(200).json({ success: true, result });
+            } else if (task.status === 'InProgress') {
+                const result =
+                    await this.tasksService.dismissInProgressTask(taskId);
+                res.status(200).json({ success: true, result });
+            }
+            res.status(400).json({
+                success: false,
+                error: 'This task cannot be dismissed',
+            });
+        } catch (error) {
+            res.status(500).json({
+                sucess: false,
+                error: 'Internal Server Error',
+            });
+        }
+    };
+
+    submitTask = async (req: Request, res: Response) => {
+        try {
+            res;
+        } catch (error) {
+            res.status(500).json({
+                sucess: false,
+                error: 'Internal Server Error',
+            });
+        }
+    };
+
+    requestRevision = async (req: Request, res: Response) => {
+        try {
+        } catch (error) {
+            res.status(500).json({
+                sucess: false,
+                error: 'Internal Server Error',
+            });
+        }
+    };
+
+    acceptWork = async (req: Request, res: Response) => {
+        try {
+        } catch (error) {
+            res.status(500).json({
+                sucess: false,
+                error: 'Internal Server Error',
+            });
         }
     };
 }

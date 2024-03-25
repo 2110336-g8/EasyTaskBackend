@@ -8,7 +8,6 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ITasksService, TasksService } from '../services/TasksService';
 import { IUsersService, UsersService } from '../services/UsersService';
-import { ImageService } from '../services/ImageService';
 import { IMessage, IMessageDocument } from '../models/MessageModel';
 export interface SendMessageDTO {
     taskId: string;
@@ -56,7 +55,6 @@ export class MessagesController {
         private messagesService: IMessagesService,
         @Inject(() => TasksService) private tasksService: ITasksService,
         @Inject(() => UsersService) private usersService: IUsersService,
-        @Inject(() => ImageService) private imagesService: ImageService,
     ) {}
 
     respond = async (io: Server, socket: Socket) => {
@@ -220,7 +218,7 @@ export class MessagesController {
         const user = await this.usersService.getUserById(userId.toString());
         if (!user) return null;
         const imageUrl = user.imageKey
-            ? await this.imagesService.getImageByKey(user.imageKey)
+            ? await this.usersService.getUserProfileImage(user._id)
             : undefined;
         return {
             _id: user._id,

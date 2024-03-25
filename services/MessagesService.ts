@@ -10,7 +10,6 @@ import {
     MessagesRepository,
 } from '../repositories/MessagesRepo';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
-import { ImageService } from './ImageService';
 import { MongooseError, Types } from 'mongoose';
 import dotenv from 'dotenv';
 
@@ -50,7 +49,6 @@ export class MessagesService implements IMessagesService {
         private messagesRepository: IMessagesRepository,
         @Inject(() => TasksRepository)
         private tasksRepository: ITasksRepository,
-        @Inject(() => ImageService) private imageService: ImageService,
         // @Inject(() => UnreadCounterRepository)
         // private unreadCounterRepository: IUnreadCounterRepository,
     ) {}
@@ -92,7 +90,7 @@ export class MessagesService implements IMessagesService {
             if (!task) {
                 throw new CannotCreateMessageError('Invalid task id');
             }
-            if (task.status !== 'In Progress') {
+            if (task.status !== 'InProgress') {
                 throw new CannotCreateMessageError(
                     'Invalid task status, must be in progress',
                 );
@@ -118,7 +116,7 @@ export class MessagesService implements IMessagesService {
             if (!task) {
                 throw new CannotCreateMessageError('Invalid task id');
             }
-            if (task.status !== 'In Progress') {
+            if (task.status !== 'InProgress') {
                 throw new CannotCreateMessageError(
                     'Invalid task status, must be in progress',
                 );
@@ -126,7 +124,7 @@ export class MessagesService implements IMessagesService {
             const isUserHired = task.hiredWorkers.some(
                 worker =>
                     worker.userId.toString() === senderId.toString() &&
-                    worker.status === 'In Progress',
+                    worker.status === 'InProgress',
             );
             if (
                 !isUserHired &&
@@ -182,35 +180,6 @@ export class MessagesService implements IMessagesService {
                 userId,
                 taskStatus,
             );
-
-        tasks = await Promise.all(
-            tasks.map(async task => {
-                let imageUrl = task.imageUrl;
-                const imageUrlLastUpdateTime = task.imageUrlLastUpdateTime;
-                if (
-                    !imageUrlLastUpdateTime ||
-                    Date.now() >
-                        imageUrlLastUpdateTime.getTime() +
-                            IMAGE_EXPIRE_TIME_SECONDS * 1000
-                ) {
-                    const imageKey = task.imageKey;
-                    if (imageKey) {
-                        const fetchedImageUrl =
-                            await this.imageService.getImageByKey(imageKey);
-                        if (fetchedImageUrl) {
-                            imageUrl = fetchedImageUrl;
-                            task.imageUrl = fetchedImageUrl;
-                            task.imageUrlLastUpdateTime = new Date();
-                            await this.tasksRepository.update(task._id, {
-                                imageUrl: fetchedImageUrl,
-                                imageUrlLastUpdateTime: new Date(),
-                            } as ITaskDocument);
-                        }
-                    }
-                }
-                return task;
-            }),
-        );
 
         const taskIds: string[] = tasks.map(t => t._id);
         const messages =

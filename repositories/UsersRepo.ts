@@ -2,33 +2,58 @@ import { compare } from 'bcrypt';
 import { IUser, IUserDocument, UserModel } from '../models/UserModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
-import { Error as MongooseError, StringSchemaDefinition } from 'mongoose';
-import { ValidationError } from '../errors/RepoError';
-import { MongoError } from 'mongodb';
+import { FilterQuery, Types } from 'mongoose';
 
-export interface IUsersRepositorty extends IRepository<IUser> {
+export interface IUsersRepository extends IRepository<IUser> {
     findById: (id: string) => Promise<IUserDocument | null>;
     findOneByEmail: (email: string) => Promise<IUserDocument | null>;
     isValidPassword: (
         email: string,
         password: string,
     ) => Promise<IUserDocument | null>;
+    findUsers: (
+        filter?: FilterQuery<IUserDocument>,
+    ) => Promise<IUserDocument[]>;
+    findUser: (
+        filter?: FilterQuery<IUserDocument>,
+    ) => Promise<IUserDocument | null>;
     addOwnedTasks: (
         taskId: string,
         userId: string,
     ) => Promise<IUserDocument | null>;
-    addApplications: (
+    addApplication: (
         taskId: string,
         userId: string,
         timestamps: Date,
     ) => Promise<IUserDocument | null>;
-    rejectAllApplicationsForOneTask: (taskId: string) => Promise<null>;
+    updateApplicationStatus: (
+        taskId: string,
+        userId: string[] | undefined,
+        oldStatus: string[],
+        newStatus: string,
+    ) => Promise<{
+        acknowledged: boolean;
+        matchedCount: number;
+        modifiedCount: number;
+    }>;
+
+    addTask: (
+        taskId: string,
+        userId: string,
+        timestamps: Date,
+    ) => Promise<IUserDocument | null>;
+    updateTaskStatus: (
+        taskId: string,
+        userId: string | undefined,
+        oldStatus: string[],
+        newStatus: string,
+    ) => Promise<null>;
 }
 
 @Service()
 export class UsersRepository
     extends BaseMongooseRepository<IUser>
-    implements IUsersRepositorty
+    implements IUsersRepository
 {
     constructor() {
         super(UserModel);
@@ -60,6 +85,30 @@ export class UsersRepository
         return isValid ? user : null;
     };
 
+    findUser = async (
+        filter: FilterQuery<IUserDocument> = {},
+    ): Promise<IUserDocument | null> => {
+        try {
+            const user = await this._model.findOne(filter);
+            return user;
+        } catch (error) {
+            console.error('Error finding user:', error);
+            throw error;
+        }
+    };
+
+    findUsers = async (
+        filter: FilterQuery<IUserDocument> = {},
+    ): Promise<IUserDocument[]> => {
+        try {
+            const users = await this._model.find(filter);
+            return users;
+        } catch (error) {
+            console.error('Error finding users:', error);
+            throw error;
+        }
+    };
+
     addOwnedTasks = async (
         taskId: string,
         userId: string,
@@ -74,12 +123,6 @@ export class UsersRepository
                 },
                 { new: true },
             );
-            if (!updatedUser) {
-                console.error(
-                    'Update failed: Document not found or constraint violated',
-                );
-                return null;
-            }
             return updatedUser;
         } catch (error) {
             console.error('Error updating ownedTasks:', error);
@@ -87,32 +130,12 @@ export class UsersRepository
         }
     };
 
-    addApplications = async (
+    addApplication = async (
         taskId: string,
         userId: string,
         timestamps: Date,
     ): Promise<IUserDocument | null> => {
         try {
-            // Check if there is an existing application with the same taskId
-            const existingApplication = await this._model.findOne(
-                { _id: userId, 'applications.taskId': taskId },
-                { 'applications.$': 1 },
-            );
-
-            // If an applications with the same taskId exists and its status is "Pending" or "Accepted", return null
-            if (
-                existingApplication &&
-                ['Pending', 'Accepted'].includes(
-                    existingApplication.applications[0].status,
-                )
-            ) {
-                console.error(
-                    'Update failed: An application with the same taskId already exists with status "Pending" or "Accepted"',
-                );
-                return null;
-            }
-
-            // If no existing application with the same taskId or its status is not "Pending" or "Accepted", proceed with the update
             const updatedUser = await this._model.findOneAndUpdate(
                 { _id: userId },
                 {
@@ -125,29 +148,113 @@ export class UsersRepository
                 },
                 { new: true },
             );
-            if (!updatedUser) {
-                console.error(
-                    'Update failed: Document not found or constraint violated',
-                );
-                return null;
-            }
             return updatedUser;
         } catch (error) {
-            console.error('Error updating applications:', error);
+            console.error('Error adding application:', error);
             throw error;
         }
     };
 
-    rejectAllApplicationsForOneTask = async (taskId: string): Promise<null> => {
+    updateApplicationStatus = async (
+        taskId: string,
+        userId: string[] | undefined,
+        oldStatus: string[],
+        newStatus: string,
+    ): Promise<{
+        acknowledged: boolean;
+        matchedCount: number;
+        modifiedCount: number;
+    }> => {
         try {
-            // Update all users with applications having the specific taskId to set their status to 'Rejected'
-            await this._model.updateMany(
-                { 'applications.taskId': taskId },
-                { $set: { 'applications.$.status': 'Rejected' } },
+            // Construct the base query without considering userId
+            const baseQuery: any = {
+                'applications.taskId': taskId,
+                'applications.status': { $in: oldStatus },
+            };
+
+            // If userId is defined and not empty, add it to the query
+            if (userId && userId.length > 0) {
+                baseQuery['_id'] = { $in: userId };
+            }
+
+            // Update the status to newStatus for applications matching the query
+            const result = await this._model.updateMany(
+                baseQuery,
+                { $set: { 'applications.$[elem].status': newStatus } }, // Update the status for all matching elements
+                {
+                    arrayFilters: [
+                        {
+                            'elem.taskId': { $in: taskId },
+                            'elem.status': { $in: oldStatus },
+                        },
+                    ],
+                }, // Filter the elements to update
             );
+            console.log(baseQuery);
+            console.log(result);
+            return {
+                acknowledged: result.acknowledged,
+                matchedCount: result.matchedCount,
+                modifiedCount: result.modifiedCount,
+            };
+        } catch (error) {
+            console.error('Error updating application status:', error);
+            throw error;
+        }
+    };
+
+    addTask = async (
+        taskId: string,
+        userId: string,
+        timestamps: Date,
+    ): Promise<IUserDocument | null> => {
+        try {
+            const updatedUser = await this._model.findOneAndUpdate(
+                { _id: userId },
+                {
+                    $push: {
+                        tasks: {
+                            taskId: taskId,
+                            createdAt: timestamps,
+                        },
+                    },
+                },
+                { new: true },
+            );
+            return updatedUser;
+        } catch (error) {
+            console.error('Error adding task:', error);
+            throw error;
+        }
+    };
+
+    // to edit
+    updateTaskStatus = async (
+        taskId: string,
+        userId: string | undefined,
+        oldStatus: string[],
+        newStatus: string,
+    ): Promise<null> => {
+        try {
+            // Construct the base query without considering userId
+            const baseQuery: any = {
+                'tasks.taskId': taskId,
+                'tasks.status': { $in: oldStatus },
+            };
+
+            // If userId is defined, add it to the query
+            if (userId) {
+                baseQuery['_id'] = userId;
+            }
+
+            // Update the status to newStatus for applications matching the query
+            await this._model.updateMany(baseQuery, {
+                $set: { 'tasks.$.status': newStatus },
+            });
+
             return null;
         } catch (error) {
-            console.error('Error updating applications:', error);
+            console.error('Error updating task status:', error);
             throw error;
         }
     };

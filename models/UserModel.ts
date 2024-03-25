@@ -9,20 +9,26 @@ export interface IUser {
     password: string;
     phoneNumber?: string;
     description?: string;
-    imageKey?: string;
-    imageUrl?: string;
-    imageUrlLastUpdateTime?: Date;
+    imageKey?: string | null;
+    imageUrl?: string | null;
+    imageUrlLastUpdateTime?: Date | null;
     bankId?: ObjectId;
     bankAccName?: string;
     bankAccNo?: string;
     applications: Array<{
         taskId: Types.ObjectId;
-        status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancel';
+        status: 'Pending' | 'Offering' | 'Accepted' | 'Rejected' | 'NotProceed';
         createAt: Date;
     }>;
     tasks: Array<{
         taskId: Types.ObjectId;
-        status: 'In Progress' | 'Completed' | 'Cancel';
+        status:
+            | 'InProgress'
+            | 'Submitted'
+            | 'Revising'
+            | 'Resubmitted'
+            | 'Completed'
+            | 'Dismissed';
         createdAt: Date;
     }>;
     ownedTasks: Types.ObjectId[];
@@ -124,7 +130,13 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                     },
                     status: {
                         type: String,
-                        enum: ['Pending', 'Accepted', 'Rejected', 'Cancel'],
+                        enum: [
+                            'Pending',
+                            'Offering',
+                            'Accepted',
+                            'Rejected',
+                            'NotProceed',
+                        ],
                         required: [true, 'Application status is required'],
                         default: 'Pending',
                     },
@@ -144,20 +156,27 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                 {
                     taskId: {
                         type: Schema.Types.ObjectId,
-                        required: [true, 'TaskId for work is required'],
+                        required: [true, 'TaskId for your task is required'],
                         ref: 'Task',
                     },
                     status: {
                         type: String,
-                        enum: ['In Progress', 'Completed', 'Cancel'],
-                        required: [true, 'Task status is required'],
-                        default: 'In Progress',
+                        enum: [
+                            'InProgress',
+                            'Submitted',
+                            'Revising',
+                            'Resubmitted',
+                            'Completed',
+                            'Dismissed',
+                        ],
+                        required: [true, 'Your task status is required'],
+                        default: 'InProgress',
                     },
                     createdAt: {
                         type: Date,
                         required: [
                             true,
-                            'Timestamp for application is required',
+                            'Timestamp for start time of your task is required',
                         ],
                     },
                 },

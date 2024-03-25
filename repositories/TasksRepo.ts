@@ -10,20 +10,47 @@ export interface ITasksRepository extends IRepository<ITask> {
         filter?: FilterQuery<ITaskDocument>,
     ) => Promise<{ tasks: ITaskDocument[]; count: number }>;
     countAllTasks: () => Promise<number | null>;
+    findTasks: (
+        filter?: FilterQuery<ITaskDocument>,
+    ) => Promise<ITaskDocument[]>;
+    findTask: (
+        filter?: FilterQuery<ITaskDocument>,
+    ) => Promise<ITaskDocument | null>;
     findTaskByWorkerIdAndStatus: (
         userId: string,
         status: string | undefined,
     ) => Promise<ITaskDocument[]>;
     findOneWithGeneralInfo: (id: string) => Promise<ITaskDocument | null>;
-    addApplicants: (
+    updateStatus: (
+        taskId: string,
+        status: string,
+    ) => Promise<ITaskDocument | null>;
+    addApplicant: (
         taskId: string,
         userId: string,
         timestamps: Date,
     ) => Promise<ITaskDocument | null>;
-    closeTask: (taskId: string) => Promise<ITaskDocument | null>;
-    findTasks: (
-        filter?: FilterQuery<ITaskDocument>,
-    ) => Promise<ITaskDocument[]>;
+    updateApplicantStatus: (
+        taskId: string,
+        userId: string[] | undefined,
+        oldStatus: string[],
+        newStatus: string,
+    ) => Promise<{
+        acknowledged: boolean;
+        matchedCount: number;
+        modifiedCount: number;
+    }>;
+    addHiredWorker: (
+        taskId: string,
+        userId: string,
+        timestamps: Date,
+    ) => Promise<ITaskDocument | null>;
+    updateHiredWorkerStatus: (
+        taskId: string,
+        userId: string | undefined,
+        oldStatus: string[],
+        newStatus: string,
+    ) => Promise<null>;
     findTasksByUserIdAndStatus: (
         userId: string,
         status: string[],
@@ -91,6 +118,30 @@ export class TasksRepository
         return count;
     }
 
+    async findTasks(
+        filter: FilterQuery<ITaskDocument> = {},
+    ): Promise<ITaskDocument[]> {
+        try {
+            const tasks = await this._model.find(filter);
+            return tasks;
+        } catch (error) {
+            console.error('Error finding tasks:', error);
+            throw error;
+        }
+    }
+
+    findTask = async (
+        filter: FilterQuery<ITaskDocument> = {},
+    ): Promise<ITaskDocument | null> => {
+        try {
+            const task = await this._model.findOne(filter);
+            return task;
+        } catch (error) {
+            console.error('Error finding task:', error);
+            throw error;
+        }
+    };
+
     findTaskByWorkerIdAndStatus = async (
         userId: string,
         status: string | undefined,
@@ -112,23 +163,7 @@ export class TasksRepository
             applicants: 0,
             hiredWorkers: 0,
         });
-        // console.log(tasks);
         return tasks;
-        // const tasks = await this._model
-        //     .find({
-        //         hiredWorkers: {
-        //             $elemMatch: {
-        //                 userId: userId,
-        //                 status: status,
-        //             },
-        //         },
-        //     })
-        //     .select({
-        //         applicants: 0,
-        //         hiredWorkers: 0,
-        //     });
-        // console.log(tasks);
-        // return tasks;
     };
 
     findOneWithGeneralInfo = async (
@@ -145,32 +180,29 @@ export class TasksRepository
         }
     };
 
-    addApplicants = async (
+    updateStatus = async (
+        taskId: string,
+        status: string,
+    ): Promise<ITaskDocument | null> => {
+        try {
+            const result = await this._model.findOneAndUpdate(
+                { _id: taskId }, // Filter: find task by its ID
+                { $set: { status: status } }, // Update status to the provided value
+                { new: true }, // Return the updated document
+            );
+            return result;
+        } catch (error) {
+            console.error('Error updating task status:', error);
+            throw error;
+        }
+    };
+
+    addApplicant = async (
         taskId: string,
         userId: string,
         timestamps: Date,
     ): Promise<ITaskDocument | null> => {
         try {
-            // Check if there is an existing applicant with the same userId
-            const existingApplicant = await this._model.findOne(
-                { _id: taskId, 'applicants.userId': userId },
-                { 'applicants.$': 1 },
-            );
-
-            // If an applicant with the same userId exists and its status is "Pending" or "Accepted", return null
-            if (
-                existingApplicant &&
-                ['Pending', 'Accepted'].includes(
-                    existingApplicant.applicants[0].status,
-                )
-            ) {
-                console.error(
-                    'Adding failed: An applicant with the same userId already exists with status "Pending" or "Accepted"',
-                );
-                return null;
-            }
-
-            // If no existing applicant with the same userId or its status is not "Pending" or "Accepted", proceed with the update
             const updatedTask = await this._model.findOneAndUpdate(
                 { _id: taskId },
                 {
@@ -183,74 +215,129 @@ export class TasksRepository
                 },
                 { new: true },
             );
-            if (!updatedTask) {
-                console.error(
-                    'Adding failed: Document not found or constraint violated',
-                );
-                return null;
-            }
-
             return updatedTask;
         } catch (error) {
-            console.error('Error adding applicants:', error);
+            console.error('Error adding applicant:', error);
             throw error;
         }
     };
 
-    closeTask = async (taskId: string): Promise<ITaskDocument | null> => {
+    updateApplicantStatus = async (
+        taskId: string,
+        userId: string[] | undefined, // Allow userId to be undefined
+        oldStatus: string[],
+        newStatus: string,
+    ): Promise<{
+        acknowledged: boolean;
+        matchedCount: number;
+        modifiedCount: number;
+    }> => {
         try {
-            // Update the task status to 'Closed' and update all applicants to 'Rejected'
-            // const updatedTask = await this._model.findOneAndUpdate(
-            //     { _id: taskId },
-            //     [
-            //         { $set: { status: 'Closed' } }, // Update the task status to 'Closed'
-            //         { $set: { 'applicants.$[].status': 'Rejected' } }, // Update all applicants to 'Rejected'
-            //     ],
-            //     { new: true }, // to return the updated document
-            // );
+            // Construct the base query without considering userId
+            const baseQuery: any = {
+                _id: taskId,
+                'applicants.status': { $in: oldStatus },
+            };
 
-            // if (!updatedTask) {
-            //     console.error(
-            //         'Close failed: Document not found or constraint violated',
-            //     );
-            //     return null;
-            // }
-
-            // Find the task within the session
-            const task = await this._model.findById(taskId);
-
-            if (!task) {
-                console.error('Close failed: Task not found');
-                return null;
+            // If userId is defined and not empty, add it to the query
+            if (userId && userId.length > 0) {
+                baseQuery['applicants.userId'] = { $in: userId };
+                // Update the status to newStatus for applicants matching the query
+                const result = await this._model.updateMany(
+                    baseQuery,
+                    { $set: { 'applicants.$[elem].status': newStatus } },
+                    {
+                        arrayFilters: [
+                            {
+                                'elem.userId': { $in: userId },
+                                'elem.status': { $in: oldStatus },
+                            },
+                        ],
+                    }, // Filter the elements to update
+                );
+                return {
+                    acknowledged: result.acknowledged,
+                    matchedCount: result.matchedCount,
+                    modifiedCount: result.modifiedCount,
+                };
+            } else {
+                // Update the status to newStatus for applicants matching the query
+                const result = await this._model.updateMany(
+                    baseQuery,
+                    { $set: { 'applicants.$[elem].status': newStatus } },
+                    {
+                        arrayFilters: [
+                            {
+                                'elem.status': { $in: oldStatus },
+                            },
+                        ],
+                    }, // Filter the elements to update
+                );
+                return {
+                    acknowledged: result.acknowledged,
+                    matchedCount: result.matchedCount,
+                    modifiedCount: result.modifiedCount,
+                };
             }
-
-            // Update the task status to 'Closed'
-            task.status = 'Closed';
-
-            // Update the status of all applicants to 'Rejected'
-            for (const applicant of task.applicants) {
-                applicant.status = 'Rejected';
-            }
-
-            // Save the changes to the task document
-            await task.save();
-
-            return task;
         } catch (error) {
-            console.error('Error closing task:', error);
+            console.error('Error updating applicant status:', error);
             throw error;
         }
     };
 
-    async findTasks(
-        filter: FilterQuery<ITaskDocument> = {},
-    ): Promise<ITaskDocument[]> {
+    addHiredWorker = async (
+        taskId: string,
+        userId: string,
+        timestamps: Date,
+    ): Promise<ITaskDocument | null> => {
         try {
-            const tasks = await this._model.find(filter);
-            return tasks;
+            const updatedTask = await this._model.findOneAndUpdate(
+                { _id: taskId },
+                {
+                    $push: {
+                        hiredWorkers: {
+                            userId: userId,
+                            createdAt: timestamps,
+                        },
+                    },
+                },
+                { new: true },
+            );
+            return updatedTask;
         } catch (error) {
-            console.error('Error finding tasks:', error);
+            console.error('Error adding hired worker:', error);
             throw error;
         }
-    }
+    };
+
+    // to edit
+    updateHiredWorkerStatus = async (
+        taskId: string,
+        userId: string | undefined, // Allow userId to be undefined
+        oldStatus: string[],
+        newStatus: string,
+    ): Promise<null> => {
+        try {
+            // Construct the base query without considering userId
+            const baseQuery: any = {
+                _id: taskId,
+                'hiredWorkers.status': { $in: oldStatus },
+            };
+
+            // If userId is defined, add it to the query
+            if (userId) {
+                baseQuery['hiredWorkers.userId'] = userId;
+            }
+
+            // Update the status to newStatus for applicants matching the query
+            await this._model.updateMany(baseQuery, {
+                $set: { 'hiredWorkers.$.status': newStatus },
+            });
+
+            return null;
+        } catch (error) {
+            console.error('Error updating hired worker status:', error);
+            throw error;
+        }
+    };
 }
