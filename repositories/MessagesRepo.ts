@@ -58,6 +58,9 @@ export class MessagesRepository
             {
                 $replaceRoot: { newRoot: '$latestMessage' },
             },
+            {
+                $sort: { sentAt: -1 }, // Add this stage to sort messages across tasks by sentAt
+            },
         ]);
         return messages;
     };

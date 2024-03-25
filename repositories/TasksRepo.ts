@@ -77,11 +77,9 @@ export class TasksRepository
                         {
                             $or: [
                                 {
-                                    hiredWorkers: {
-                                        $elemMatch: {
-                                            $eq: new Types.ObjectId(userId),
-                                        },
-                                    },
+                                    'hiredWorkers.userId': new Types.ObjectId(
+                                        userId,
+                                    ),
                                 },
                                 {
                                     customerId: new Types.ObjectId(userId),
