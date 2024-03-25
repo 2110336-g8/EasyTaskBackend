@@ -4,11 +4,11 @@ import {
     CannotGetImageError,
     CannotDeleteImageError,
 } from '../errors/ImageError';
-import { AWSS3Service, IBucketService } from './AWSS3Service';
+import { AWSS3Repository, IAWSS3Repository } from './AWSS3Repository';
 
-import { UsersRepository, IUsersRepository } from '../repositories/UsersRepo';
+import { UsersRepository, IUsersRepository } from './UsersRepo';
 import { IUser, IUserDocument } from '../models/UserModel';
-import { TasksRepository, ITasksRepository } from '../repositories/TasksRepo';
+import { TasksRepository, ITasksRepository } from './TasksRepo';
 import { ITask, ITaskDocument } from '../models/TaskModel';
 
 import dotenv from 'dotenv';
@@ -16,22 +16,32 @@ dotenv.config({ path: './config/config.env' });
 
 const IMAGE_EXPIRE_TIME_SECONDS = Number(process.env.IMAGE_EXPIRE_TIME); // Assuming IMAGE_EXPIRE_TIME is defined in your environment variables
 
+export interface IImagesRepository {
+    createImage(
+        fileBuffer: Buffer,
+        mimeType: string,
+        imageKey: string,
+    ): Promise<boolean>;
+    getImageByKey(imageKey: string): Promise<string | null>;
+    deleteImage(imageKey: string): Promise<boolean>;
+    updateTaskImageUrl(task: ITaskDocument): Promise<ITaskDocument>;
+    updateUserImageUrl(user: IUserDocument): Promise<IUserDocument>;
+}
+
 @Service()
-export class ImageService {
-    private awsS3Service: IBucketService;
-    private userRepository: IUsersRepository;
-    private taskRepository: ITasksRepository;
+export class ImagesRepository implements IImagesRepository {
+    private awsS3Repository: IAWSS3Repository;
+    private usersRepository: IUsersRepository;
+    private tasksRepository: ITasksRepository;
 
     constructor(
-        @Inject(() => AWSS3Service) awsS3Service: IBucketService,
-        @Inject(() => UsersRepository)
-        userRepository: IUsersRepository,
-        @Inject(() => TasksRepository)
-        taskRepository: ITasksRepository,
+        @Inject(() => AWSS3Repository) awsS3Repository: IAWSS3Repository,
+        @Inject(() => UsersRepository) usersRepository: IUsersRepository,
+        @Inject(() => TasksRepository) tasksRepository: ITasksRepository,
     ) {
-        this.awsS3Service = awsS3Service;
-        this.userRepository = userRepository;
-        this.taskRepository = taskRepository;
+        this.awsS3Repository = awsS3Repository;
+        this.usersRepository = usersRepository;
+        this.tasksRepository = tasksRepository;
     }
 
     createImage = async (
@@ -41,7 +51,11 @@ export class ImageService {
     ): Promise<boolean> => {
         try {
             // Upload the image to AWS S3
-            await this.awsS3Service.uploadFile(fileBuffer, imageKey, mimeType);
+            await this.awsS3Repository.uploadFile(
+                fileBuffer,
+                imageKey,
+                mimeType,
+            );
             return true;
         } catch (error) {
             throw new CannotCreateImageError(
@@ -57,7 +71,7 @@ export class ImageService {
                 throw new CannotGetImageError('Can not get the image');
             }
             const imageUrl =
-                await this.awsS3Service.getObjectSignedUrl(imageKey);
+                await this.awsS3Repository.getObjectSignedUrl(imageKey);
             // const imageUrl = await this.awsS3Service.getObjectSignedUrl('65b541c5f264a6557e00f08c.jpg') ////uncomment this to test
             return imageUrl;
         } catch (error) {
@@ -68,7 +82,7 @@ export class ImageService {
 
     deleteImage = async (imageKey: string): Promise<boolean> => {
         try {
-            await this.awsS3Service.deleteFile(imageKey);
+            await this.awsS3Repository.deleteFile(imageKey);
             return true;
         } catch (error) {
             throw new CannotDeleteImageError('Can not delete the image');
@@ -78,7 +92,7 @@ export class ImageService {
     //update imageUrl in user and task------------------------------------------
 
     async updateTaskImageUrl(task: ITaskDocument): Promise<ITaskDocument> {
-        let imageUrl: string | undefined = task.imageUrl;
+        let imageUrl: string | undefined | null = task.imageUrl;
         const imageUrlLastUpdateTime = task.imageUrlLastUpdateTime;
 
         // Logic to update image URLs if needed
@@ -97,7 +111,7 @@ export class ImageService {
                     task.imageUrl = fetchedImageUrl;
                     task.imageUrlLastUpdateTime = new Date();
                     // Update the task in the database if necessary
-                    await this.taskRepository.update(task._id, {
+                    await this.tasksRepository.update(task._id, {
                         imageUrl: fetchedImageUrl,
                         imageUrlLastUpdateTime: new Date(),
                     } as ITaskDocument);
@@ -110,7 +124,7 @@ export class ImageService {
     }
 
     async updateUserImageUrl(user: IUserDocument): Promise<IUserDocument> {
-        let imageUrl: string | undefined = user.imageUrl;
+        let imageUrl: string | undefined | null = user.imageUrl;
         const imageUrlLastUpdateTime = user.imageUrlLastUpdateTime;
 
         // Logic to update image URLs if needed
@@ -129,7 +143,7 @@ export class ImageService {
                     user.imageUrl = fetchedImageUrl;
                     user.imageUrlLastUpdateTime = new Date();
                     // Update the task in the database if necessary
-                    await this.userRepository.update(user._id, {
+                    await this.usersRepository.update(user._id, {
                         imageUrl: fetchedImageUrl,
                         imageUrlLastUpdateTime: new Date(),
                     } as IUserDocument);

@@ -8,7 +8,10 @@ import {
 } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
-import { ImageService } from '../services/ImageService';
+import {
+    ImagesRepository,
+    IImagesRepository,
+} from '../repositories/ImagesRepository';
 
 import categoryData from '../assets/categories/categorieslist.json';
 import mongoose, { FilterQuery, Types } from 'mongoose';
@@ -42,34 +45,43 @@ export interface ITasksService {
         customerId: string,
         status: string,
     ) => Promise<ITaskDocument[] | null>;
+    getTaskImage: (id: string) => Promise<string | null>;
+    updateTaskImage: (
+        userId: string,
+        fileBuffer: Buffer,
+        mimetype: string,
+        key: string,
+    ) => Promise<void>;
+
+    deleteTaskImage: (taskId: string, imageKey: string) => Promise<void>;
 }
 
 @Service()
 export class TasksService implements ITasksService {
-    private taskRepository: ITasksRepository;
-    private userRepository: IUsersRepository;
-    private imageService: ImageService;
+    private tasksRepository: ITasksRepository;
+    private usersRepository: IUsersRepository;
+    private imagesRepository: IImagesRepository;
 
     constructor(
         @Inject(() => TasksRepository)
-        taskRepository: ITasksRepository,
+        tasksRepository: ITasksRepository,
         @Inject(() => UsersRepository)
-        userRepository: IUsersRepository,
-        @Inject(() => ImageService)
-        imageService: ImageService,
+        usersRepository: IUsersRepository,
+        @Inject(() => ImagesRepository)
+        imagesRepository: IImagesRepository,
     ) {
-        this.taskRepository = taskRepository;
-        this.userRepository = userRepository;
-        this.imageService = imageService;
+        this.tasksRepository = tasksRepository;
+        this.usersRepository = usersRepository;
+        this.imagesRepository = imagesRepository;
     }
 
     createTask = async (taskData: ITask): Promise<ITaskDocument> => {
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
             const task: ITaskDocument =
-                await this.taskRepository.create(taskData);
-            const updatedUser = await this.userRepository.addOwnedTasks(
+                await this.tasksRepository.create(taskData);
+            const updatedUser = await this.usersRepository.addOwnedTasks(
                 task._id.toString(),
                 task.customerId.toString(),
             );
@@ -97,7 +109,7 @@ export class TasksService implements ITasksService {
         filter: FilterQuery<ITaskDocument> = {},
     ): Promise<{ tasks: ITaskDocument[]; count: number }> {
         try {
-            const result = await this.taskRepository.findTasksByPage(
+            const result = await this.tasksRepository.findTasksByPage(
                 page,
                 taskPerPage,
                 filter,
@@ -106,7 +118,7 @@ export class TasksService implements ITasksService {
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 result.tasks.map(async task => {
-                    return await this.imageService.updateTaskImageUrl(task);
+                    return await this.imagesRepository.updateTaskImageUrl(task);
                 }),
             );
 
@@ -119,7 +131,7 @@ export class TasksService implements ITasksService {
 
     async countTasks(): Promise<number | null> {
         try {
-            const count = await this.taskRepository.countAllTasks();
+            const count = await this.tasksRepository.countAllTasks();
             return count;
         } catch (error) {
             console.error(error);
@@ -129,10 +141,10 @@ export class TasksService implements ITasksService {
 
     async getTaskById(id: string): Promise<ITaskDocument | null> {
         try {
-            const task = await this.taskRepository.findOne(id);
+            const task = await this.tasksRepository.findOne(id);
             if (task) {
                 // Update image URL for the task
-                return await this.imageService.updateTaskImageUrl(task);
+                return await this.imagesRepository.updateTaskImageUrl(task);
             }
             return null;
         } catch (error) {
@@ -145,10 +157,10 @@ export class TasksService implements ITasksService {
         id: string,
     ): Promise<ITaskDocument | null> => {
         try {
-            const task = await this.taskRepository.findOneWithGeneralInfo(id);
+            const task = await this.tasksRepository.findOneWithGeneralInfo(id);
             if (task) {
                 // Update image URL for the task
-                return await this.imageService.updateTaskImageUrl(task);
+                return await this.imagesRepository.updateTaskImageUrl(task);
             }
             return null;
         } catch (error) {
@@ -162,14 +174,15 @@ export class TasksService implements ITasksService {
         status: string | undefined,
     ): Promise<ITaskDocument[]> => {
         try {
-            const tasks = await this.taskRepository.findTaskByWorkerIdAndStatus(
-                userId,
-                status,
-            );
+            const tasks =
+                await this.tasksRepository.findTaskByWorkerIdAndStatus(
+                    userId,
+                    status,
+                );
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 tasks.map(async task => {
-                    return await this.imageService.updateTaskImageUrl(task);
+                    return await this.imagesRepository.updateTaskImageUrl(task);
                 }),
             );
 
@@ -201,11 +214,11 @@ export class TasksService implements ITasksService {
         }
 
         try {
-            const tasks = await this.taskRepository.findTasks(filter);
+            const tasks = await this.tasksRepository.findTasks(filter);
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 tasks.map(async task => {
-                    return await this.imageService.updateTaskImageUrl(task);
+                    return await this.imagesRepository.updateTaskImageUrl(task);
                 }),
             );
 
@@ -222,7 +235,7 @@ export class TasksService implements ITasksService {
     ): Promise<ITaskDocument | null> => {
         try {
             if (updateData) {
-                const updatedTask = await this.taskRepository.update(
+                const updatedTask = await this.tasksRepository.update(
                     id,
                     updateData,
                 );
@@ -250,10 +263,10 @@ export class TasksService implements ITasksService {
         userId: string,
     ): Promise<ITaskDocument | null> => {
         const timestamps = new Date();
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
-            const updatedUser = await this.userRepository.addApplications(
+            const updatedUser = await this.usersRepository.addApplications(
                 taskId,
                 userId,
                 timestamps,
@@ -264,7 +277,7 @@ export class TasksService implements ITasksService {
                 );
             }
 
-            const updatedTask = await this.taskRepository.addApplicants(
+            const updatedTask = await this.tasksRepository.addApplicants(
                 taskId,
                 userId,
                 timestamps,
@@ -291,12 +304,12 @@ export class TasksService implements ITasksService {
     };
 
     cancelTask = async (taskId: string): Promise<ITaskDocument | null> => {
-        const session = await this.taskRepository.startSession();
+        const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
-            await this.userRepository.rejectAllApplicationsForOneTask(taskId);
+            await this.usersRepository.rejectAllApplicationsForOneTask(taskId);
 
-            const updatedTask = await this.taskRepository.closeTask(taskId);
+            const updatedTask = await this.tasksRepository.closeTask(taskId);
             if (!updatedTask) {
                 throw new CannotCancelTaskError('Failed to cancel task');
             }
@@ -309,4 +322,50 @@ export class TasksService implements ITasksService {
             throw error;
         }
     };
+
+    //image --------------------------------------------------------------------
+    async getTaskImage(id: string): Promise<string | null> {
+        const task = await this.getTaskById(id);
+        if (!task) return null;
+
+        const updatedTask =
+            await this.imagesRepository.updateTaskImageUrl(task);
+        if (!updatedTask.imageUrl) return null;
+        return updatedTask.imageUrl;
+    }
+
+    async updateTaskImage(
+        userId: string,
+        fileBuffer: Buffer,
+        mimetype: string,
+        key: string,
+    ): Promise<void> {
+        try {
+            // Update the user's imageKey
+            await this.updateTask(userId, {
+                imageKey: key,
+            } as ITaskDocument);
+
+            // Upload the file to AWS S3
+            await this.imagesRepository.createImage(fileBuffer, mimetype, key);
+        } catch (error) {
+            throw new Error('Failed to update task image');
+        }
+    }
+
+    async deleteTaskImage(taskId: string, imageKey: string): Promise<void> {
+        try {
+            // Delete the image from the repository
+            const success = await this.imagesRepository.deleteImage(imageKey);
+            if (success) {
+                await this.updateTask(taskId, {
+                    imageKey: null,
+                    imageUrl: null,
+                    imageUrlLastUpdateTime: null,
+                } as ITaskDocument);
+            }
+        } catch (error) {
+            throw new Error('Failed to delete task image');
+        }
+    }
 }

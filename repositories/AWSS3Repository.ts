@@ -10,7 +10,7 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: './config/config.env' });
 
-export interface IBucketService {
+export interface IAWSS3Repository {
     uploadFile(
         fileBuffer: Buffer,
         fileName: string,
@@ -21,7 +21,7 @@ export interface IBucketService {
 }
 
 @Service()
-export class AWSS3Service implements IBucketService {
+export class AWSS3Repository implements IAWSS3Repository {
     private s3Client: S3Client;
 
     constructor() {
@@ -96,4 +96,4 @@ export class AWSS3Service implements IBucketService {
     };
 }
 
-export default AWSS3Service;
+export default AWSS3Repository;
