@@ -1,4 +1,4 @@
-import e, { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
@@ -11,7 +11,6 @@ import {
     InvalidUpdateApplicationStatusError,
     CannotStartTaskError,
 } from '../errors/TaskError';
-import { ITaskDocument } from '../models/TaskModel';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
 
@@ -50,7 +49,6 @@ class TasksController {
     };
 
     getTasksPage = async (req: Request, res: Response) => {
-        console.log(req.user);
         try {
             const data = req.body;
 
