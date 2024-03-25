@@ -166,6 +166,35 @@ class TasksController {
                     phoneNumber: user.phoneNumber,
                     imageUrl: user.imageUrl,
                 };
+                //add status in the response
+                let viewStatus = '';
+                if (task.status == 'Open') {
+                    //check if userId is one of applicant's userId then set viewStatus = applicant's status
+                    const applicant = task.applicants.find(
+                        applicant =>
+                            applicant.userId.toString() === userId.toString(),
+                    );
+                    if (applicant) {
+                        viewStatus = applicant.status;
+                    } else {
+                        viewStatus = 'Open';
+                    }
+                } else if (task.status == 'InProgress') {
+                    //check if userId is one of hiredWorker's userId then set viewStatus = hiredworker's status
+                    const hiredWorker = task.hiredWorkers.find(
+                        worker =>
+                            worker.userId.toString() === userId.toString(),
+                    );
+                    if (hiredWorker) {
+                        viewStatus = hiredWorker.status;
+                    } else {
+                        viewStatus = 'InProgress';
+                    }
+                } else if (task.status == 'Dismissed') {
+                    viewStatus = 'Dismissed';
+                } else if (task.status == 'Completed') {
+                    viewStatus = 'Completed';
+                }
 
                 const taskWithGeneralInfo =
                     await this.tasksService.getTaskWithGeneralInfoById(id);
@@ -173,6 +202,7 @@ class TasksController {
                     res.status(200).json({
                         task: taskWithGeneralInfo,
                         customerInfo: customerInfo,
+                        status: viewStatus,
                     });
                 } else {
                     res.status(404).json({ error: 'Task not found' });
