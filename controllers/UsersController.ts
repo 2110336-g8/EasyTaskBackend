@@ -3,8 +3,7 @@ import {
     IUsersService,
     UsersService as UsersService,
 } from '../services/UsersService';
-import { ImageService } from '../services/ImageService';
-import { IUser, IUserDocument } from '../models/UserModel';
+import { IUser } from '../models/UserModel';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import sharp from 'sharp';
@@ -13,14 +12,9 @@ import { genSalt, hash } from 'bcrypt';
 @Service()
 class UsersController {
     private usersService: IUsersService;
-    private imageService: ImageService;
 
-    constructor(
-        @Inject(() => UsersService) userService: IUsersService,
-        @Inject(() => ImageService) imageService: ImageService,
-    ) {
+    constructor(@Inject(() => UsersService) userService: IUsersService) {
         this.usersService = userService;
-        this.imageService = imageService;
     }
     // TO BE DELETE
     // createUser = async (req: Request, res: Response): Promise<void> => {
@@ -156,19 +150,11 @@ class UsersController {
                 res.status(404).json({ error: 'User not found' });
                 return;
             }
-            const imageKey = user.imageKey;
+            const imageUrl = await this.usersService.getUserProfileImage(id);
 
-            if (imageKey) {
-                const imageUrl = await this.imageService.getImageByKey(
-                    String(imageKey),
-                );
-
-                // If the image URL exists, redirect to the image
-                if (imageUrl) {
-                    res.status(200).json(imageUrl);
-                } else {
-                    res.status(404).json({ error: 'Profile image not found' });
-                }
+            // If the image URL exists, redirect to the image
+            if (imageUrl) {
+                res.status(200).json(imageUrl);
             } else {
                 res.status(404).json({ error: 'Profile image not found' });
             }
@@ -192,21 +178,15 @@ class UsersController {
             // Use sharp to check if the file is an image
             try {
                 const metadata = await sharp(file).metadata();
-
                 // Extract the file extension from the originalname (e.g., '.jpg')
                 const fileExtension = metadata.format!.toLowerCase();
-                console.log(fileExtension);
-
+                // console.log(fileExtension);
                 // Generate the imageKey using the userId and fileExtension
                 const key = `${userId}.${fileExtension}`;
                 console.log(key);
-                // Update the user's imageKey in your database
-                await this.usersService.updateUser(userId, {
-                    imageKey: key,
-                } as IUserDocument);
 
-                // Upload the file to AWS S3 or your preferred storage
-                const uploadedFile = await this.imageService.createImage(
+                await this.usersService.updateUserProfileImage(
+                    userId,
                     file.buffer,
                     file.mimeType,
                     key,
@@ -229,24 +209,24 @@ class UsersController {
 
     deleteProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const id = req.params.id;
-            const user = await this.usersService.getUserById(id);
+            const userId = req.params.id;
+            const user = await this.usersService.getUserById(userId);
             if (!user) {
                 res.status(404).json({ error: 'User not found' });
                 return;
             }
-            const imageKey = user.imageKey;
-            console.log('Image Key:', imageKey);
 
-            if (imageKey === null || imageKey === '') {
+            // Delete the user's profile image
+            if (!user.imageKey) {
                 res.status(200).json({
-                    message: 'There is no profile image for this user',
+                    message: 'There is no Profile image',
                 });
             } else {
-                await this.imageService.deleteImage(String(imageKey));
-                await this.usersService.updateUser(id, {
-                    imageKey: '',
-                } as IUserDocument);
+                await this.usersService.deleteUserProfileImage(
+                    userId,
+                    user.imageKey,
+                );
+
                 res.status(200).json({
                     message: 'Profile image deleted successfully',
                 });
