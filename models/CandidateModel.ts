@@ -10,7 +10,7 @@ export interface ICandidate {
             email: string;
             phoneNumber?: string;
             description?: string;
-            imageUrl?: string;
+            imageUrl?: string | null;
             appliedAt: Date;
         }>;
         offering: Array<{
@@ -20,7 +20,7 @@ export interface ICandidate {
             email: string;
             phoneNumber?: string;
             description?: string;
-            imageUrl?: string;
+            imageUrl?: string | null;
             appliedAt: Date;
         }>;
         accepted: Array<{
@@ -30,7 +30,7 @@ export interface ICandidate {
             email: string;
             phoneNumber?: string;
             description?: string;
-            imageUrl?: string;
+            imageUrl?: string | null;
             appliedAt: Date;
         }>;
     };
