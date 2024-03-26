@@ -661,7 +661,6 @@ class TasksController {
         }
     };
 
-    // To do
     dismissTask = async (req: Request, res: Response) => {
         try {
             const taskId = req.params.id;
@@ -694,7 +693,7 @@ class TasksController {
                 });
             }
         } catch (error) {
-            if (error instanceof CannotStartTaskError) {
+            if (error instanceof CannotDismissTaskError) {
                 res.status(400).json({
                     success: false,
                     error: error.message,
