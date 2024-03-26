@@ -2,7 +2,7 @@ import { compare } from 'bcrypt';
 import { IUser, IUserDocument, UserModel } from '../models/UserModel';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { Service } from 'typedi';
-import { FilterQuery, Types } from 'mongoose';
+import { ClientSession, FilterQuery, Types } from 'mongoose';
 
 export interface IUsersRepository extends IRepository<IUser> {
     findById: (id: string) => Promise<IUserDocument | null>;
@@ -44,10 +44,14 @@ export interface IUsersRepository extends IRepository<IUser> {
     ) => Promise<IUserDocument | null>;
     updateTaskStatus: (
         taskId: string,
-        userId: string | undefined,
+        userId: string[] | undefined,
         oldStatus: string[],
         newStatus: string,
-    ) => Promise<null>;
+    ) => Promise<{
+        acknowledged: boolean;
+        matchedCount: number;
+        modifiedCount: number;
+    }>;
 }
 
 @Service()
@@ -226,13 +230,16 @@ export class UsersRepository
         }
     };
 
-    // to edit
     updateTaskStatus = async (
         taskId: string,
-        userId: string | undefined,
+        userId: string[] | undefined,
         oldStatus: string[],
         newStatus: string,
-    ): Promise<null> => {
+    ): Promise<{
+        acknowledged: boolean;
+        matchedCount: number;
+        modifiedCount: number;
+    }> => {
         try {
             // Construct the base query without considering userId
             const baseQuery: any = {
@@ -240,17 +247,29 @@ export class UsersRepository
                 'tasks.status': { $in: oldStatus },
             };
 
-            // If userId is defined, add it to the query
-            if (userId) {
-                baseQuery['_id'] = userId;
+            // If userId is defined and not empty, add it to the query
+            if (userId && userId.length > 0) {
+                baseQuery['_id'] = { $in: userId };
             }
 
-            // Update the status to newStatus for applications matching the query
-            await this._model.updateMany(baseQuery, {
-                $set: { 'tasks.$.status': newStatus },
-            });
-
-            return null;
+            // Update the status to newStatus for tasks matching the query
+            const result = await this._model.updateMany(
+                baseQuery,
+                { $set: { 'tasks.$[elem].status': newStatus } }, // Update the status for all matching elements
+                {
+                    arrayFilters: [
+                        {
+                            'elem.taskId': { $in: taskId },
+                            'elem.status': { $in: oldStatus },
+                        },
+                    ],
+                }, // Filter the elements to update
+            );
+            return {
+                acknowledged: result.acknowledged,
+                matchedCount: result.matchedCount,
+                modifiedCount: result.modifiedCount,
+            };
         } catch (error) {
             console.error('Error updating task status:', error);
             throw error;
