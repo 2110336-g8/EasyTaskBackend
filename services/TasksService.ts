@@ -3,13 +3,13 @@ import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 import { ICandidate } from '../models/CandidateModel';
 import {
-    CannotApplyTaskError,
-    CannotSelectCandidateError,
-    CannotDismissTaskError,
-    CannotUpdateApplicationStatusError,
-    InvalidUpdateApplicationStatusError,
-    CannotStartTaskError,
     CannotGetTaskOfError,
+    CannotApplyTaskError,
+    CannotUpdateStateError,
+    CannotSelectCandidateError,
+    CannotResponseOfferError,
+    CannotStartTaskError,
+    CannotDismissTaskError,
 } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
@@ -40,14 +40,6 @@ export interface ITasksService {
         userId: string,
         status: string | undefined,
     ) => Promise<ITaskOf[]>;
-    getApplicationsOrTasksByStatus: (
-        userId: string,
-        status: string,
-    ) => Promise<ITaskDocument[]>;
-    formatApplicationsOrTasksByStatus: (
-        status: string,
-        tasks: ITaskDocument[],
-    ) => Promise<ITaskOf>;
     getAdvertisement: (
         customerId: string,
         status: string,
@@ -78,7 +70,7 @@ export interface ITasksService {
         userId: string,
         response: boolean,
     ) => Promise<null>;
-    startTask: (taskId: string) => Promise<ITaskDocument | null>;
+    startTask: (taskId: string) => Promise<ITaskDocument>;
     dismissOpenTask: (taskId: string) => Promise<ITaskDocument | null>;
     dismissInProgressTask: (taskId: string) => Promise<ITaskDocument | null>;
     getTasksByUserIdAndStatus(
@@ -337,21 +329,32 @@ export class TasksService implements ITasksService {
             tasks: [],
         };
 
-        const formattedTasks = tasks
-            .filter(
-                task =>
-                    !(status === 'Accepted' && task.status === 'InProgress'),
-            )
-            .map(task => ({
-                taskId: task._id,
-                title: task.title,
-                category: task.category,
-                imageUrl: task.imageUrl ?? null,
-                locationName: task.location?.name ?? undefined,
-                wages: task.wages,
-                startDate: task.startDate,
-                endDate: task.endDate,
-            }));
+        const formattedTasks = await Promise.all(
+            tasks
+                .filter(
+                    task =>
+                        !(
+                            status === 'Accepted' &&
+                            task.status === 'InProgress'
+                        ),
+                )
+                .map(async task => {
+                    // Update image URL for the task
+                    task = await this.imagesRepository.updateTaskImageUrl(task);
+
+                    return {
+                        taskId: task._id,
+                        title: task.title,
+                        category: task.category,
+                        imageUrl: task.imageUrl ?? null,
+                        locationName: task.location?.name ?? undefined,
+                        wages: task.wages,
+                        startDate: task.startDate,
+                        endDate: task.endDate,
+                        applicationNumber: task.applicants.length,
+                    };
+                }),
+        );
 
         taskOf.tasks.push(...formattedTasks);
 
@@ -543,10 +546,13 @@ export class TasksService implements ITasksService {
                     'Validation error - document not found or constraint violated.',
                 );
             }
+            // Update task image URL
+            const updatedTaskWithImageUpdate =
+                await this.imagesRepository.updateTaskImageUrl(updatedTask);
 
-            // format return task
+            // Format return task
             const generalInfoTask = {
-                ...updatedTask.toObject(),
+                ...updatedTaskWithImageUpdate.toObject(),
                 imageKey: undefined,
                 applicants: undefined,
                 hiredWorkers: undefined,
@@ -589,6 +595,8 @@ export class TasksService implements ITasksService {
                     candidate.userId.toString(),
                 );
                 if (user) {
+                    const userWithImageUpdate =
+                        await this.imagesRepository.updateUserImageUrl(user);
                     const tmp = {
                         userId: user.id.toString(),
                         firstName: user.firstName,
@@ -596,7 +604,7 @@ export class TasksService implements ITasksService {
                         email: user.email,
                         phoneNumber: user.phoneNumber,
                         description: user.description,
-                        imageUrl: user.imageUrl,
+                        imageUrl: userWithImageUpdate.imageUrl,
                         appliedAt: candidate.createdAt,
                     };
 
@@ -616,6 +624,101 @@ export class TasksService implements ITasksService {
             console.error('Error occurred while fetching candidates:', error);
             throw error;
         }
+    };
+
+    updateApplicationState = async (
+        taskId: string,
+        userIds: string[] | undefined,
+        oldStatus: string[],
+        newStatus: string,
+    ): Promise<void> => {
+        // update applicant status in task model
+        const updatedApplicant =
+            await this.tasksRepository.updateApplicantStatus(
+                taskId,
+                userIds,
+                oldStatus,
+                newStatus,
+            );
+        // check update result
+        await this.checkStateUpdate(
+            updatedApplicant.acknowledged,
+            updatedApplicant.matchedCount,
+            updatedApplicant.modifiedCount,
+        );
+
+        // update application status in user model
+        const updatedApplication =
+            await this.usersRepository.updateApplicationStatus(
+                taskId,
+                userIds,
+                oldStatus,
+                newStatus,
+            );
+        // check update result
+        await this.checkStateUpdate(
+            updatedApplication.acknowledged,
+            updatedApplication.matchedCount,
+            updatedApplication.modifiedCount,
+        );
+    };
+
+    updateTaskState = async (
+        taskId: string,
+        userIds: string[] | undefined,
+        oldStatus: string[],
+        newStatus: string,
+    ): Promise<void> => {
+        // update hired worker status in task model
+        const updatedHiredWorker =
+            await this.tasksRepository.updateHiredWorkerStatus(
+                taskId,
+                userIds,
+                oldStatus,
+                newStatus,
+            );
+        // check update result
+        await this.checkStateUpdate(
+            updatedHiredWorker.acknowledged,
+            updatedHiredWorker.matchedCount,
+            updatedHiredWorker.modifiedCount,
+        );
+
+        // update task status in user model
+        const updatedTask = await this.usersRepository.updateTaskStatus(
+            taskId,
+            userIds,
+            oldStatus,
+            newStatus,
+        );
+        // check update result
+        await this.checkStateUpdate(
+            updatedTask.acknowledged,
+            updatedTask.matchedCount,
+            updatedTask.modifiedCount,
+        );
+    };
+
+    // Check result of calling this.taskRepository.updateApplicantStatus
+    // Check result of calling this.userRepository.updateApplicationStatus
+    // Check result of calling this.taskRepository.updateHiredWorkerStatus
+    // Check result of calling this.userRepository.updateTaskStatus
+    checkStateUpdate = async (
+        acknowledged: boolean,
+        matchedCount: number,
+        modifiedCount: number,
+    ): Promise<null> => {
+        if (!acknowledged) {
+            throw new CannotUpdateStateError(
+                'Update operation failed: Unexpected result.',
+            );
+        }
+        if (matchedCount != modifiedCount) {
+            throw new CannotUpdateStateError(
+                'Update operation failed: Matched count does not match modified count.',
+            );
+        }
+        return null;
     };
 
     selectCandidate = async (
@@ -640,36 +743,18 @@ export class TasksService implements ITasksService {
                 );
             }
         }
-        // update status
+        // update data
         const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
-            const updatedApplicant =
-                await this.tasksRepository.updateApplicantStatus(
-                    taskId,
-                    selectedCandidates,
-                    ['Pending'],
-                    'Offering',
-                );
-            await this.checkUpdatedApplication(
-                updatedApplicant.acknowledged,
-                updatedApplicant.matchedCount,
-                updatedApplicant.modifiedCount,
+            // update application of selected candidated
+            await this.updateApplicationState(
+                taskId,
+                selectedCandidates,
+                ['Pending'],
+                'Offering',
             );
-
-            const updatedApplication =
-                await this.usersRepository.updateApplicationStatus(
-                    taskId,
-                    selectedCandidates,
-                    ['Pending'],
-                    'Offering',
-                );
-            await this.checkUpdatedApplication(
-                updatedApplication.acknowledged,
-                updatedApplication.matchedCount,
-                updatedApplication.modifiedCount,
-            );
-
+            // get Candidate result to return
             const candidate = await this.getCandidate(taskId);
             if (!candidate) {
                 console.error(
@@ -688,31 +773,6 @@ export class TasksService implements ITasksService {
         }
     };
 
-    // Check result of calling this.taskRepository.updateApplicantStatus
-    // Check result of calling this.userRepository.updateApplicationStatus
-    checkUpdatedApplication = async (
-        acknowledged: boolean,
-        matchedCount: number,
-        modifiedCount: number,
-    ): Promise<null> => {
-        if (!acknowledged) {
-            throw new CannotUpdateApplicationStatusError(
-                'Update operation failed: Unexpected result.',
-            );
-        }
-        if (matchedCount === 0) {
-            throw new InvalidUpdateApplicationStatusError(
-                'Update operation failed: Document(s) not matched.',
-            );
-        }
-        if (matchedCount != modifiedCount) {
-            throw new CannotUpdateApplicationStatusError(
-                'Update operation failed: Matched count does not match modified count.',
-            );
-        }
-        return null;
-    };
-
     responseOffer = async (
         taskId: string,
         userId: string,
@@ -723,30 +783,51 @@ export class TasksService implements ITasksService {
         const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
-            const updatedApplicant =
-                await this.tasksRepository.updateApplicantStatus(
-                    taskId,
-                    [userId],
-                    ['Offering'],
-                    status,
+            const task = await this.tasksRepository.findOne(taskId);
+            if (!task) {
+                throw new CannotResponseOfferError('Task not found');
+            }
+            // task has been started, cannot response offer anymore
+            if (task.status !== 'Open') {
+                throw new CannotResponseOfferError(
+                    'Task is not open for accepting or rejecting applicants',
                 );
-            await this.checkUpdatedApplication(
-                updatedApplicant.acknowledged,
-                updatedApplicant.matchedCount,
-                updatedApplicant.modifiedCount,
+            }
+
+            // check if user have this task offer
+            const validUser = task.applicants.filter(
+                applicant => applicant.userId.toString() === userId,
             );
-            const updatedApplication =
-                await this.usersRepository.updateApplicationStatus(
-                    taskId,
-                    [userId],
-                    ['Offering'],
-                    status,
+            if (validUser.length != 1 || validUser[0].status != 'Offering') {
+                throw new CannotResponseOfferError(
+                    'You have no offer from this task',
                 );
-            await this.checkUpdatedApplication(
-                updatedApplication.acknowledged,
-                updatedApplication.matchedCount,
-                updatedApplication.modifiedCount,
+            }
+
+            // count accepted applicants
+            const acceptedApplicantsCount = task.applicants.filter(
+                applicant => applicant.status === 'Accepted',
+            ).length;
+
+            // update application of user who accept/reject the offer
+            await this.updateApplicationState(
+                taskId,
+                [userId],
+                ['Offering'],
+                status,
             );
+
+            // check acceptance availability of this task
+            // if task seat is full, change status of other pending or offering applicaiton to 'NotProceed'
+            if (response && acceptedApplicantsCount + 1 >= task.workers) {
+                // update application of other user
+                await this.updateApplicationState(
+                    taskId,
+                    undefined,
+                    ['Pending', 'Offering'],
+                    'NotProceed',
+                );
+            }
             await session.commitTransaction();
             session.endSession();
             return null;
@@ -757,7 +838,7 @@ export class TasksService implements ITasksService {
         }
     };
 
-    startTask = async (taskId: string): Promise<ITaskDocument | null> => {
+    startTask = async (taskId: string): Promise<ITaskDocument> => {
         const timestamps = new Date();
         const session = await this.tasksRepository.startSession();
         session.startTransaction();
@@ -778,7 +859,9 @@ export class TasksService implements ITasksService {
                 .filter(applicant => applicant.status === 'Accepted')
                 .map(applicant => applicant.userId.toString());
             if (acceptedApplicants.length === 0) {
-                throw new CannotStartTaskError('This task has no employee');
+                throw new CannotStartTaskError(
+                    'This task has no accepted candidates',
+                );
             }
             // Step 2 : adding data in user and task model
             for (const applicant of acceptedApplicants) {
@@ -847,34 +930,17 @@ export class TasksService implements ITasksService {
                 }
             }
 
-            // Step 3 : update application status in user model from 'Pending' or 'Offering' to 'NotProceed'
-            const updatedApplication =
-                await this.usersRepository.updateApplicationStatus(
-                    taskId,
-                    undefined,
-                    ['Pending', 'Offering'],
-                    'NotProceed',
-                );
-            await this.checkUpdatedApplication(
-                updatedApplication.acknowledged,
-                updatedApplication.matchedCount,
-                updatedApplication.modifiedCount,
+            // Step 3 : update application status from 'Pending' or 'Offering' to 'NotProceed'
+            // update application of other user
+            await this.updateApplicationState(
+                taskId,
+                undefined,
+                ['Pending', 'Offering'],
+                'NotProceed',
             );
-            // Step 4 : update applicant status in task model from 'Pending' or 'Offering' to 'NotProceed'
-            const updatedApplicant =
-                await this.tasksRepository.updateApplicantStatus(
-                    taskId,
-                    undefined,
-                    ['Pending', 'Offering'],
-                    'NotProceed',
-                );
-            await this.checkUpdatedApplication(
-                updatedApplicant.acknowledged,
-                updatedApplicant.matchedCount,
-                updatedApplicant.modifiedCount,
-            );
-            // Step 5 : update task status in task model
-            const updatedTask = this.tasksRepository.updateStatus(
+
+            // Step 4 : update task status in task model
+            const updatedTask = await this.tasksRepository.updateStatus(
                 taskId,
                 'InProgress',
             );
@@ -887,9 +953,12 @@ export class TasksService implements ITasksService {
                     'Validation error - document not found or constraint violated.',
                 );
             }
+
+            const updatedTaskWithImageUpdate =
+                await this.imagesRepository.updateTaskImageUrl(updatedTask);
             await session.commitTransaction();
             session.endSession();
-            return updatedTask;
+            return updatedTaskWithImageUpdate;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
@@ -897,41 +966,20 @@ export class TasksService implements ITasksService {
         }
     };
 
-    // To do..
     dismissOpenTask = async (taskId: string): Promise<ITaskDocument | null> => {
         const session = await this.tasksRepository.startSession();
         session.startTransaction();
         try {
-            // To pay 30%
-            // To update status of tasks in user model
-            // To update status of hiredWorkers in task model
-            const updatedTask = this.tasksRepository.updateStatus(
+            // Step 1 : update application status that is not 'Rejected' to 'NotProceed'
+            // update application state
+            await this.updateApplicationState(
                 taskId,
-                'Dismissed',
+                undefined,
+                ['Pending', 'Offering', 'Accepted'],
+                'NotProceed',
             );
-            if (!updatedTask) {
-                throw new CannotDismissTaskError('Task not found');
-            }
-            await session.commitTransaction();
-            session.endSession();
-            return updatedTask;
-        } catch (error) {
-            await session.abortTransaction();
-            session.endSession();
-            throw error;
-        }
-    };
 
-    // To do...
-    dismissInProgressTask = async (
-        taskId: string,
-    ): Promise<ITaskDocument | null> => {
-        const session = await this.tasksRepository.startSession();
-        session.startTransaction();
-        try {
-            // To pay 30%
-            // To update status of tasks in user model
-            // To update status of hiredWorkers in task model
+            // Step 2: update task status to 'Dismissed'
             const updatedTask = await this.tasksRepository.updateStatus(
                 taskId,
                 'Dismissed',
@@ -939,9 +987,52 @@ export class TasksService implements ITasksService {
             if (!updatedTask) {
                 throw new CannotDismissTaskError('Task not found');
             }
+            const updatedTaskWithImageUpdate =
+                await this.imagesRepository.updateTaskImageUrl(updatedTask);
             await session.commitTransaction();
             session.endSession();
-            return updatedTask;
+            return updatedTaskWithImageUpdate;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+    };
+
+    dismissInProgressTask = async (
+        taskId: string,
+    ): Promise<ITaskDocument | null> => {
+        const session = await this.tasksRepository.startSession();
+        session.startTransaction();
+        try {
+            // Payment procedure
+            // To pay 30%
+            // To return 70%
+            //
+
+            // Step 1 : update (individual) task status that is not 'Completed' to 'Dismissed'
+            // update task state
+            await this.updateTaskState(
+                taskId,
+                undefined,
+                ['InProgress', 'Submitted', 'Revising', 'Resubmitted'],
+                'Dismissed',
+            );
+
+            // Step 2: update task status to 'Dismissed'
+            const updatedTask = await this.tasksRepository.updateStatus(
+                taskId,
+                'Dismissed',
+            );
+
+            if (!updatedTask) {
+                throw new CannotDismissTaskError('Task not found');
+            }
+            const updatedTaskWithImageUpdate =
+                await this.imagesRepository.updateTaskImageUrl(updatedTask);
+            await session.commitTransaction();
+            session.endSession();
+            return updatedTaskWithImageUpdate;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
