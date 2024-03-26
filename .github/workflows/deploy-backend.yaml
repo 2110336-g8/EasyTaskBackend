@@ -49,5 +49,5 @@ jobs:
             docker compose up --build --force-recreate -d "${APP_CONFIGURATION}-${NODE_ENV_SHORT}"
             
             # Clear the fxxking cache
-            docker builder prune -a
-            docker image prune -a
+            docker builder prune -a -f
+            docker image prune -a -f
