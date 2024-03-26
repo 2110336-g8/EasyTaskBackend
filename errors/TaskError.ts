@@ -38,3 +38,10 @@ export class CannotDismissTaskError extends Error {
         this.name = 'Task Cancellation Error';
     }
 }
+
+export class CannotGetTaskOfError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'Getting TaskOf Error';
+    }
+}

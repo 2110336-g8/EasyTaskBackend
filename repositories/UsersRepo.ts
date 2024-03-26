@@ -190,8 +190,6 @@ export class UsersRepository
                     ],
                 }, // Filter the elements to update
             );
-            console.log(baseQuery);
-            console.log(result);
             return {
                 acknowledged: result.acknowledged,
                 matchedCount: result.matchedCount,
