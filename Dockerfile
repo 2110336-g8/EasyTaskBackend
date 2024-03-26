@@ -14,9 +14,11 @@ CMD npm run dev
 
 FROM base as prod
 
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 
-RUN npm install --omit=dev
+RUN npm install
+
+ENV NODE_ENV=production
 
 RUN npm run build
 

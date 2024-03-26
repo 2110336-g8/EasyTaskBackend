@@ -108,6 +108,8 @@
 
         /* TypeDI */
         "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
+        "experimentalDecorators": true
     },
+
+    "exclude": ["tests/**/*"]
 }
