@@ -362,25 +362,29 @@ export class TasksService implements ITasksService {
     getAdvertisement = async (
         customerId: string,
         status: string,
-    ): Promise<ITaskDocument[]> => {
+    ): Promise<ITaskDocument[] | null> => {
         let filter: FilterQuery<ITaskDocument> = {
             customerId: customerId,
         };
 
-        // Check if status is provided and not an empty string
-        if (status && status.trim() !== '') {
-            filter = {
-                ...filter,
-                status: status as
-                    | 'Open'
-                    | 'InProgress'
-                    | 'Completed'
-                    | 'Closed',
-            };
-        }
-
         try {
-            const tasks = await this.tasksRepository.findTasks(filter);
+            let tasks: ITaskDocument[] = [];
+
+            // Check if status is provided and not an empty string
+            if (status && status.trim() !== '') {
+                filter = {
+                    ...filter,
+                    status: status as
+                        | 'Open'
+                        | 'InProgress'
+                        | 'Completed'
+                        | 'Dismissed',
+                };
+            }
+
+            // Fetch tasks based on the filter
+            tasks = await this.tasksRepository.findTasks(filter);
+
             // Update image URLs for each task
             const tasksWithUpdatedUrls = await Promise.all(
                 tasks.map(async task => {
@@ -391,7 +395,7 @@ export class TasksService implements ITasksService {
             return tasksWithUpdatedUrls;
         } catch (error) {
             console.error(error);
-            return [];
+            return null; // Return null in case of error
         }
     };
 
