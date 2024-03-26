@@ -1,5 +1,6 @@
 import mongoose, { Document, ObjectId, Types, Schema } from 'mongoose';
 import { genSalt, hash } from 'bcrypt';
+import sanitize = require('sanitize-html');
 
 export interface IUser {
     firstName: string;
@@ -7,18 +8,27 @@ export interface IUser {
     email: string;
     password: string;
     phoneNumber?: string;
-    imageKey?: string;
+    description?: string;
+    imageKey?: string | null;
+    imageUrl?: string | null;
+    imageUrlLastUpdateTime?: Date | null;
     bankId?: ObjectId;
     bankAccName?: string;
     bankAccNo?: string;
     applications: Array<{
         taskId: Types.ObjectId;
-        status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancel';
+        status: 'Pending' | 'Offering' | 'Accepted' | 'Rejected' | 'NotProceed';
         createAt: Date;
     }>;
     tasks: Array<{
         taskId: Types.ObjectId;
-        status: 'In Progress' | 'Completed' | 'Cancel';
+        status:
+            | 'InProgress'
+            | 'Submitted'
+            | 'Revising'
+            | 'Resubmitted'
+            | 'Completed'
+            | 'Dismissed';
         createdAt: Date;
     }>;
     ownedTasks: Types.ObjectId[];
@@ -64,8 +74,24 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                 message: 'Invalid phone number format',
             },
         },
+        description: {
+            type: String,
+            validate: {
+                validator: function (value: string) {
+                    return value.length <= 1000;
+                },
+                message: 'Description must not exceed 1000 characters',
+            },
+            set: (value: string) => sanitize(value), // Sanitize the description before saving (prevent malicious code injection)
+        },
         imageKey: {
             type: String,
+        },
+        imageUrl: {
+            type: String,
+        },
+        imageUrlLastUpdateTime: {
+            type: Date,
         },
         bankId: {
             type: String,
@@ -104,7 +130,13 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                     },
                     status: {
                         type: String,
-                        enum: ['Pending', 'Accepted', 'Rejected', 'Cancel'],
+                        enum: [
+                            'Pending',
+                            'Offering',
+                            'Accepted',
+                            'Rejected',
+                            'NotProceed',
+                        ],
                         required: [true, 'Application status is required'],
                         default: 'Pending',
                     },
@@ -124,20 +156,27 @@ const UserSchema = new mongoose.Schema<IUserDocument>(
                 {
                     taskId: {
                         type: Schema.Types.ObjectId,
-                        required: [true, 'TaskId for work is required'],
+                        required: [true, 'TaskId for your task is required'],
                         ref: 'Task',
                     },
                     status: {
                         type: String,
-                        enum: ['In Progress', 'Completed', 'Cancel'],
-                        required: [true, 'Task status is required'],
-                        default: 'In Progress',
+                        enum: [
+                            'InProgress',
+                            'Submitted',
+                            'Revising',
+                            'Resubmitted',
+                            'Completed',
+                            'Dismissed',
+                        ],
+                        required: [true, 'Your task status is required'],
+                        default: 'InProgress',
                     },
                     createdAt: {
                         type: Date,
                         required: [
                             true,
-                            'Timestamp for application is required',
+                            'Timestamp for start time of your task is required',
                         ],
                     },
                 },
@@ -166,6 +205,5 @@ UserSchema.pre('save', async function (next) {
     this.password = hashedPassword;
     next();
 });
-
 
 export const UserModel = mongoose.model<IUserDocument>('User', UserSchema);

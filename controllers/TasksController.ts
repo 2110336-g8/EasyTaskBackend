@@ -1,37 +1,39 @@
-import e, { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
-import { ImageService } from '../services/ImageService';
+import { UsersService, IUsersService } from '../services/UsersService';
 import sharp from 'sharp';
 import {
     CannotApplyTaskError,
-    CannotCancelTaskError,
+    CannotSelectCandidateError,
+    CannotUpdateApplicationStatusError,
+    InvalidUpdateApplicationStatusError,
+    CannotStartTaskError,
+    CannotGetTaskOfError,
 } from '../errors/TaskError';
-import { IUserDocument } from '../models/UserModel';
+import dotenv from 'dotenv';
+dotenv.config({ path: './config/config.env' });
 
 @Service()
 class TasksController {
     private tasksService: ITasksService;
-    private imageService: ImageService;
-    usersService: any;
+    private usersService: IUsersService;
 
     constructor(
         @Inject(() => TasksService) tasksService: ITasksService,
-        @Inject(() => ImageService) imageService: ImageService,
+        @Inject(() => UsersService) usersService: IUsersService,
     ) {
         this.tasksService = tasksService;
-        this.imageService = imageService;
+        this.usersService = usersService;
     }
 
     createTask = async (req: Request, res: Response): Promise<void> => {
         try {
             var data = req.body;
             data.customerId = req.user._id;
-            var data = req.body;
-            data.customerId = req.user._id;
             const task = await this.tasksService.createTask(data);
-            res.status(201).json({ task: task.toJSON() });
+            res.status(201).json({ success: true, task: task.toJSON() });
         } catch (error) {
             if (error instanceof ValidationError) {
                 res.status(400).json({
@@ -48,7 +50,6 @@ class TasksController {
     };
 
     getTasksPage = async (req: Request, res: Response) => {
-        console.log(req.user);
         try {
             const data = req.body;
 
@@ -141,75 +142,160 @@ class TasksController {
             const id = req.params.id;
             const userId = req.user._id;
             const task = await this.tasksService.getTaskById(id);
+
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
                 return;
             }
+
+            //not the task's owner
             if (userId.toString() !== task.customerId.toString()) {
-                const taskWithGeneralInfo = await this.tasksService.getTaskWithGeneralInfoById(id);
-                if (!taskWithGeneralInfo) {
-                    res.status(404).json({ 
-                        error: 'Task not found'
-                    });
+                const user = await this.usersService.getUserById(
+                    task.customerId.toString(),
+                );
+                if (!user) {
+                    console.log('user not found');
+                    res.status(404).json({ error: 'User not found' });
                     return;
                 }
+                const customerInfo = {
+                    _id: user.id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    phoneNumber: user.phoneNumber,
+                    imageUrl: user.imageUrl,
+                };
+                //add status in the response
+                let viewStatus = '';
+                if (task.status == 'Open') {
+                    //check if userId is one of applicant's userId then set viewStatus = applicant's status
+                    const applicant = task.applicants.find(
+                        applicant =>
+                            applicant.userId.toString() === userId.toString(),
+                    );
+                    if (applicant) {
+                        viewStatus = applicant.status;
+                    } else {
+                        viewStatus = 'Open';
+                    }
+                } else if (task.status == 'InProgress') {
+                    //check if userId is one of hiredWorker's userId then set viewStatus = hiredworker's status
+                    const hiredWorker = task.hiredWorkers.find(
+                        worker =>
+                            worker.userId.toString() === userId.toString(),
+                    );
+                    if (hiredWorker) {
+                        viewStatus = hiredWorker.status;
+                    } else {
+                        viewStatus = 'InProgress';
+                    }
+                } else if (task.status == 'Dismissed') {
+                    viewStatus = 'Dismissed';
+                } else if (task.status == 'Completed') {
+                    viewStatus = 'Completed';
+                }
 
-                res.status(200).json({ 
-                    task: taskWithGeneralInfo.toJSON()
-                });
-                return;
+                const taskWithGeneralInfo =
+                    await this.tasksService.getTaskWithGeneralInfoById(id);
+                if (taskWithGeneralInfo) {
+                    res.status(200).json({
+                        task: taskWithGeneralInfo,
+                        customerInfo: customerInfo,
+                        status: viewStatus,
+                    });
+                } else {
+                    res.status(404).json({ error: 'Task not found' });
+                }
+            } else {
+                if (task.status == 'Open') {
+                    if (task.applicants && task.applicants.length > 0) {
+                        const applicantsInfo = [];
+                        for (const applicant of task.applicants) {
+                            const applicantId = applicant.userId;
+                            const applicantUser =
+                                await this.usersService.getUserById(
+                                    applicantId.toString(),
+                                );
+                            if (applicantUser) {
+                                applicantsInfo.push({
+                                    _id: applicantUser.id,
+                                    firstName: applicantUser.firstName,
+                                    lastName: applicantUser.lastName,
+                                    imageUrl: applicantUser.imageUrl,
+                                    phoneNumber: applicantUser.phoneNumber,
+                                });
+                            }
+                        }
+                        res.status(200).json({
+                            task: task,
+                            applicantsInfo: applicantsInfo,
+                        });
+                    } else {
+                        res.status(200).json({
+                            task: task,
+                            applicantsInfo: [],
+                        });
+                    }
+                } else if (task.status == 'InProgress') {
+                    if (task.hiredWorkers && task.hiredWorkers.length > 0) {
+                        const hiredWorkersInfo = [];
+                        for (const worker of task.hiredWorkers) {
+                            const workerId = worker.userId;
+                            const workerStatus = worker.status;
+                            const workerUser =
+                                await this.usersService.getUserById(
+                                    workerId.toString(),
+                                );
+                            if (workerUser) {
+                                hiredWorkersInfo.push({
+                                    _id: workerUser.id,
+                                    firstName: workerUser.firstName,
+                                    lastName: workerUser.lastName,
+                                    imageUrl: workerUser.imageUrl,
+                                    phoneNumber: workerUser.phoneNumber,
+                                    status: workerStatus,
+                                });
+                            }
+                        }
+                        res.status(200).json({
+                            task: task,
+                            hiredWorkersInfo: hiredWorkersInfo,
+                        });
+                    } else {
+                        res.status(200).json({
+                            task: task,
+                            hiredWorkersInfo: [],
+                        });
+                    }
+                } else {
+                    res.status(200).json({
+                        task: task,
+                    });
+                }
             }
-            // if (userId.toString() !== task.customerId.toString()) {
-            //     const filteredTask = { ...task.toObject() };
-            //     delete filteredTask.applications;
-            //     delete filteredTask.hiredWorkers;
-            //     res.status(200).json({ task: filteredTask });
-            //     return;
-            // }
-            // const customer = await this.usersService.getUserById(task.customerId);
-            //     if (!customer) {
-            //         res.status(404).json({ 
-            //             error: 'Owner not found' 
-            //         });
-            //         return;
-            //     }
-                
-            // const customerImage = customer.imageKey ? await this.imageService.getImageByKey(customer.imageKey) : null;
-
-
-                // for (let i = 0; i < taskWithGeneralInfo.applicants.length; i++) {
-                //     const worker = await this.usersService.getUserById(taskWithGeneralInfo.applicants[i].userId);
-                //     taskWithGeneralInfo.applicants[i].userId = worker;
-                // }
-
-            res.status(200).json({ 
-                task: task.toJSON(),
-                // customer: customer.toJSON(),
-                // customerImage: customerImage?.toString()
-            });
         } catch (error) {
-            res.status(500).json({ error: 'Internal Server Error' });
+            const err = error as Error;
+            res.status(500).json({ error: err.message });
         }
     };
 
-    getTaskExperience = async (req: Request, res: Response) => {
+    getTasksOf = async (req: Request, res: Response) => {
         try {
-            const userId = req.params.id;
+            const userId = req.params.userId;
             if (userId != req.user._id) {
                 res.status(403).json({
                     error: 'You are not authorized to view information',
                 });
             }
-            // const status = 'Completed';
             const status = req.query.status as string;
-            // console.log(status);
-            const task = await this.tasksService.getTaskExperience(
-                userId,
-                status,
-            );
-            res.status(200).json({ task: task });
+            const task = await this.tasksService.getTasksOf(userId, status);
+            res.status(200).json(task);
         } catch (error) {
-            res.status(500).json({ error: 'Internal Server Error' });
+            if (error instanceof CannotGetTaskOfError) {
+                res.status(400).json({ error: error.message });
+            } else {
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
         }
     };
 
@@ -220,7 +306,7 @@ class TasksController {
 
             const allowedStatusValues = [
                 'Open',
-                'In Progress',
+                'InProgress',
                 'Completed',
                 'Closed',
             ];
@@ -241,96 +327,53 @@ class TasksController {
     };
 
     // image ---------------------------------------------------------------------------------
-    getTaskImages = async (req: Request, res: Response): Promise<void> => {
+    getTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
             const id = req.params.id;
             const task = await this.tasksService.getTaskById(id);
             if (!task) {
-                res.status(404).json({ error: 'Task not found' });
+                res.status(404).json({ error: 'task not found' });
                 return;
             }
-            const imageKeys = task.imageKeys;
+            const imageUrl = await this.tasksService.getTaskImage(id);
 
-            if (imageKeys) {
-                const response = [];
-
-                for (const imageKey of imageKeys) {
-                    const seq = imageKey.seq;
-                    const key = imageKey.imageKey;
-
-                    // Get the image URL from the ImageService
-                    const imageUrl = await this.imageService.getImageByKey(
-                        String(key),
-                    );
-
-                    if (imageUrl) {
-                        response.push({ seq, imageUrl });
-                    }
-                }
-
-                res.status(200).json(response);
+            // If the image URL exists, redirect to the image
+            if (imageUrl) {
+                res.status(200).json(imageUrl);
             } else {
-                // Handle the case where imageKeys is undefined
-                res.status(404).json({
-                    error: 'ImageKeys not found for the task',
-                });
+                res.status(404).json({ error: 'Task image not found' });
             }
         } catch (error) {
+            console.log('cannot get by owner id');
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
 
-    // upload 1 image
     uploadTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
             const taskId = req.params.id;
-            const { seq } = req.body;
-            const file = req.file;
-
-            if (!file || isNaN(Number(seq))) {
-                res.status(400).json({ error: 'Invalid input' });
+            const file = req.body;
+            // console.log(req.body);
+            if (!file) {
+                console.log('no file');
+                res.status(400).json({ error: 'No file uploaded' });
                 return;
             }
-
-            // Generate a random number between 1 and 100000 (adjust the range as needed)
-            const randomNum = Math.floor(Math.random() * 100000) + 1;
-
+            // Use sharp to check if the file is an image
             try {
-                const metadata = await sharp(file.buffer).metadata();
+                const metadata = await sharp(file).metadata();
+                // Extract the file extension from the originalname (e.g., '.jpg')
                 const fileExtension = metadata.format!.toLowerCase();
-                const key = `${taskId}_${randomNum}.${fileExtension}`;
+                // console.log(fileExtension);
+                // Generate the imageKey using the userId and fileExtension
+                const key = `${taskId}.${fileExtension}`;
+                console.log(key);
 
-                const task = await this.tasksService.getTaskById(taskId);
-
-                if (!task) {
-                    res.status(404).json({ error: 'Task not found' });
-                    return;
-                }
-
-                // Get the current imageKeys array
-                const currentImageKeys = task.imageKeys || [];
-
-                const seqExists = currentImageKeys.find(
-                    image => Number(image.seq) === Number(seq),
-                );
-
-                if (seqExists) {
-                    res.status(400).json({ error: 'Image seq already exists' });
-                    return;
-                }
-
-                // Update the array with the new image information
-                currentImageKeys.push({ seq, imageKey: key });
-
-                task.imageKeys = currentImageKeys;
-
-                await this.tasksService.updateTask(taskId, task);
-
-                // Upload the file to AWS S3 or your preferred storage
-                await this.imageService.createImage(
+                await this.tasksService.updateTaskImage(
+                    taskId,
                     file.buffer,
-                    file.mimetype,
+                    file.mimeType,
                     key,
                 );
 
@@ -339,7 +382,7 @@ class TasksController {
                 });
             } catch (error) {
                 res.status(400).json({
-                    error,
+                    error: 'Uploaded file is not a valid image',
                 });
                 return;
             }
@@ -349,41 +392,25 @@ class TasksController {
         }
     };
 
-    // Change the sequence number in imageKeys (image that have seq = oldSeq to be newSeq)
-    changeImageSeq = async (req: Request, res: Response): Promise<void> => {
+    deleteTaskImage = async (req: Request, res: Response): Promise<void> => {
         try {
             const taskId = req.params.id;
-            const { oldSeq, newSeq } = req.body;
-
-            if (typeof oldSeq !== 'number' || typeof newSeq !== 'number') {
-                res.status(400).json({ error: 'Invalid input' });
-                return;
-            }
-
             const task = await this.tasksService.getTaskById(taskId);
-
             if (!task) {
                 res.status(404).json({ error: 'Task not found' });
                 return;
             }
 
-            const imageKeys = task.imageKeys;
-
-            if (imageKeys) {
-                // Update the sequence number in imageKeys array
-                task.imageKeys = imageKeys.map(imageKey => {
-                    if (imageKey.seq === oldSeq) {
-                        return { ...imageKey, seq: newSeq };
-                    }
-                    return imageKey;
+            // Delete the task's image
+            if (!task.imageKey || task.imageKey == undefined) {
+                res.status(200).json({
+                    message: 'There is no Task image',
                 });
-                await this.tasksService.updateTask(taskId, task);
-
-                res.status(200).json({ success: true });
             } else {
-                // Handle the case where imageKeys is undefined
-                res.status(404).json({
-                    error: 'ImageKeys not found for the task',
+                await this.tasksService.deleteTaskImage(taskId, task.imageKey);
+
+                res.status(200).json({
+                    message: 'Task image deleted successfully',
                 });
             }
         } catch (error) {
@@ -392,112 +419,7 @@ class TasksController {
         }
     };
 
-    //delete every image that have seq number in the seqs list input
-    deleteTaskImagesBySeqs = async (
-        req: Request,
-        res: Response,
-    ): Promise<void> => {
-        try {
-            const taskId = req.params.id;
-            const { seqs } = req.body;
-            if (
-                !seqs ||
-                !Array.isArray(seqs) ||
-                seqs.some(seq => isNaN(Number(seq)))
-            ) {
-                res.status(400).json({
-                    error: 'Invalid input or non-numeric seq in the array',
-                });
-                return;
-            }
-
-            const task = await this.tasksService.getTaskById(taskId);
-
-            if (!task) {
-                res.status(404).json({ error: 'Task not found' });
-                return;
-            }
-
-            const imageKeys = task.imageKeys;
-
-            if (imageKeys) {
-                // Filter out the imageKeys with seqs to be deleted
-                const remainingImageKeys = imageKeys.filter(
-                    imageKey => !seqs.includes(imageKey.seq),
-                );
-
-                // Delete images from AWS S3 bucket
-                for (const imageKey of imageKeys) {
-                    if (seqs.includes(imageKey.seq)) {
-                        const key = imageKey.imageKey;
-                        await this.imageService.deleteImage(String(key));
-                    }
-                }
-
-                // Update the task with the remaining imageKeys
-                task.imageKeys = remainingImageKeys;
-                await this.tasksService.updateTask(taskId, task);
-
-                res.status(200).json(remainingImageKeys);
-            } else {
-                // Handle the case where imageKeys is undefined
-                res.status(404).json({
-                    error: 'ImageKeys not found for the task',
-                });
-            }
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
-    };
-
-    deleteTaskAllImages = async (
-        req: Request,
-        res: Response,
-    ): Promise<void> => {
-        try {
-            const id = req.params.id;
-            const task = await this.tasksService.getTaskById(id);
-            if (!task) {
-                res.status(404).json({ error: 'Task not found' });
-                return;
-            }
-            const imageKeys = task.imageKeys;
-
-            if (imageKeys && imageKeys.length > 0) {
-                for (const imageKey of imageKeys) {
-                    const key = imageKey.imageKey;
-
-                    try {
-                        // Delete image from AWS S3 bucket
-                        await this.imageService.deleteImage(String(key));
-                    } catch (deleteError) {
-                        console.error(
-                            `Error deleting image with key ${key}:`,
-                            deleteError,
-                        );
-                        // Continue with the deletion process even if one image deletion fails
-                    }
-                }
-
-                // Clear the imageKeys array in the task
-                task.imageKeys = [];
-
-                // Update the task to remove all imageKeys
-                await this.tasksService.updateTask(id, task);
-
-                res.status(200).json(true);
-            } else {
-                // Handle the case where imageKeys is undefined
-                res.status(404).json({
-                    error: 'ImageKeys not found for the task',
-                });
-            }
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
-    };
+    //-----------------------------------------------------------------------------------------
 
     getCategories = async (req: Request, res: Response) => {
         try {
@@ -515,8 +437,8 @@ class TasksController {
 
     applyTask = async (req: Request, res: Response) => {
         try {
-            const id = req.params.id;
-            const task = await this.tasksService.getTaskById(id);
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
                 res.status(404).json({
                     success: false,
@@ -539,10 +461,10 @@ class TasksController {
                 return;
             }
             const result = await this.tasksService.applyTask(
-                id,
+                taskId,
                 req.user._id.toString(),
             );
-            res.status(200).json({ success: true, result });
+            res.status(200).json({ success: true, task: result });
         } catch (error) {
             if (error instanceof CannotApplyTaskError) {
                 res.status(400).json({
@@ -558,10 +480,36 @@ class TasksController {
         }
     };
 
-    cancelTask = async (req: Request, res: Response) => {
+    getCandidate = async (req: Request, res: Response) => {
         try {
-            const id = req.params.id;
-            const task = await this.tasksService.getTaskById(id);
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({ error: 'Task Not Found' });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    error: 'You are not allowed to access the candidates of this task',
+                });
+                return;
+            }
+            const result = await this.tasksService.getCandidate(taskId);
+            if (!result) {
+                res.status(404).json({ error: 'Task Not Found' });
+                return;
+            }
+            res.status(200).json(result);
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    };
+
+    selectCandidate = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const selectedCandidates = req.body.selectedCandidates;
+            const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
                 res.status(404).json({
                     success: false,
@@ -572,15 +520,126 @@ class TasksController {
             if (task.customerId.toString() != req.user._id) {
                 res.status(403).json({
                     success: false,
-                    error: 'Cannot Cancel This Task',
+                    error: 'You are not allowed to select candidate for this task',
                 });
                 return;
             }
-            const result = await this.tasksService.cancelTask(id);
-            res.status(200).json({ success: true, result });
+            const result = await this.tasksService.selectCandidate(
+                taskId,
+                selectedCandidates,
+            );
+            res.status(200).json({ success: true, tasks: result });
         } catch (error) {
-            if (error instanceof CannotCancelTaskError) {
+            if (
+                error instanceof InvalidUpdateApplicationStatusError ||
+                error instanceof CannotUpdateApplicationStatusError
+            ) {
                 res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotSelectCandidateError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
+        }
+    };
+
+    acceptOffer = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const userId = req.user._id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            await this.tasksService.responseOffer(taskId, userId, true);
+            res.status(200).json({ success: true });
+        } catch (error) {
+            if (error instanceof InvalidUpdateApplicationStatusError) {
+                res.status(400).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateApplicationStatusError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
+        }
+    };
+
+    rejectOffer = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const userId = req.user._id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            await this.tasksService.responseOffer(taskId, userId, false);
+            res.status(200).json({ success: true });
+        } catch (error) {
+            if (error instanceof InvalidUpdateApplicationStatusError) {
+                res.status(400).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateApplicationStatusError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
+        }
+    };
+
+    startTask = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'You are not allowed to start this task',
+                });
+                return;
+            }
+            const result = await this.tasksService.startTask(taskId);
+            res.status(200).json({ success: true, task: result });
+        } catch (error) {
+            if (error instanceof CannotStartTaskError) {
+                res.status(400).json({
                     success: false,
                     error: error.message,
                 });
@@ -590,6 +649,76 @@ class TasksController {
                     error: 'Internal Server Error',
                 });
             }
+        }
+    };
+
+    // To do
+    dismissTask = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'You are not allowed to dismiss this task',
+                });
+                return;
+            }
+            if (task.status === 'Open') {
+                const result = await this.tasksService.dismissOpenTask(taskId);
+                res.status(200).json({ success: true, result });
+            } else if (task.status === 'InProgress') {
+                const result =
+                    await this.tasksService.dismissInProgressTask(taskId);
+                res.status(200).json({ success: true, result });
+            }
+            res.status(400).json({
+                success: false,
+                error: 'This task cannot be dismissed',
+            });
+        } catch (error) {
+            res.status(500).json({
+                sucess: false,
+                error: 'Internal Server Error',
+            });
+        }
+    };
+
+    submitTask = async (req: Request, res: Response) => {
+        try {
+            res;
+        } catch (error) {
+            res.status(500).json({
+                sucess: false,
+                error: 'Internal Server Error',
+            });
+        }
+    };
+
+    requestRevision = async (req: Request, res: Response) => {
+        try {
+        } catch (error) {
+            res.status(500).json({
+                sucess: false,
+                error: 'Internal Server Error',
+            });
+        }
+    };
+
+    acceptWork = async (req: Request, res: Response) => {
+        try {
+        } catch (error) {
+            res.status(500).json({
+                sucess: false,
+                error: 'Internal Server Error',
+            });
         }
     };
 }

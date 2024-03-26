@@ -3,25 +3,18 @@ import {
     IUsersService,
     UsersService as UsersService,
 } from '../services/UsersService';
-import { ImageService } from '../services/ImageService';
-import { IUser, IUserDocument } from '../models/UserModel';
+import { IUser } from '../models/UserModel';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
-import { CannotCreateUserError } from '../errors/UsersError';
 import sharp from 'sharp';
 import { genSalt, hash } from 'bcrypt';
 
 @Service()
 class UsersController {
     private usersService: IUsersService;
-    private imageService: ImageService;
 
-    constructor(
-        @Inject(() => UsersService) userService: IUsersService,
-        @Inject(() => ImageService) imageService: ImageService
-    ) {
+    constructor(@Inject(() => UsersService) userService: IUsersService) {
         this.usersService = userService;
-        this.imageService = imageService;
     }
     // TO BE DELETE
     // createUser = async (req: Request, res: Response): Promise<void> => {
@@ -44,13 +37,15 @@ class UsersController {
     getUserbyId = async (req: Request, res: Response): Promise<void> => {
         try {
             const id = req.params.id;
-            const user = await this.usersService.getUserById(id);
+            const user: IUser | null = await this.usersService.getUserById(id);
+
             if (!user) {
                 res.status(404).json({ error: 'User not found' });
                 return;
             }
-            res.status(200).json({ user: user.toJSON() });
+            res.status(200).json({ user });
         } catch (error) {
+            console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     };
@@ -61,10 +56,10 @@ class UsersController {
             const data = req.body;
 
             if (data.password) {
-                res.status(403).json({ error : 'Cannot update password' });
+                res.status(403).json({ error: 'Cannot update password' });
                 return;
-            };
-            
+            }
+
             const user = await this.usersService.updateUser(id, data);
             if (!user) {
                 res.status(404).json({
@@ -90,12 +85,20 @@ class UsersController {
             const id: string = req.params.id;
             const email: string = req.user.email as string;
             const currentPassword: string = req.body.currentPassword as string;
-            
-            const salt = await genSalt(10);
-            const hashedPassword: string = await hash(req.body.newPassword as string, salt);
-            const data: IUser = { password : hashedPassword } as IUser;
 
-            const user = await this.usersService.updatePassword(id, email, data, currentPassword);
+            const salt = await genSalt(10);
+            const hashedPassword: string = await hash(
+                req.body.newPassword as string,
+                salt,
+            );
+            const data: IUser = { password: hashedPassword } as IUser;
+
+            const user = await this.usersService.updatePassword(
+                id,
+                email,
+                data,
+                currentPassword,
+            );
             if (!user) {
                 res.status(401).json({
                     error: 'Unauthorized',
@@ -114,7 +117,30 @@ class UsersController {
             }
         }
     };
-    
+
+    deleteUser = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const id = req.params.id;
+            const email: string = req.user.email as string;
+            const password = req.body.password;
+
+            const user = await this.usersService.deleteUser(
+                id,
+                password,
+                email,
+            );
+            if (!user) {
+                res.status(401).json({
+                    error: 'Unauthorized',
+                });
+                return;
+            }
+            res.status(200).json({ user: user.toJSON() });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    };
+
     // image ---------------------------------------------------------------------------------
     getProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {
@@ -124,19 +150,11 @@ class UsersController {
                 res.status(404).json({ error: 'User not found' });
                 return;
             }
-            const imageKey = user.imageKey;
+            const imageUrl = await this.usersService.getUserProfileImage(id);
 
-            if (imageKey) {
-                const imageUrl = await this.imageService.getImageByKey(
-                    String(imageKey),
-                );
-
-                // If the image URL exists, redirect to the image
-                if (imageUrl) {
-                    res.status(200).json(imageUrl);
-                } else {
-                    res.status(404).json({ error: 'Profile image not found' });
-                }
+            // If the image URL exists, redirect to the image
+            if (imageUrl) {
+                res.status(200).json(imageUrl);
             } else {
                 res.status(404).json({ error: 'Profile image not found' });
             }
@@ -160,21 +178,15 @@ class UsersController {
             // Use sharp to check if the file is an image
             try {
                 const metadata = await sharp(file).metadata();
-
                 // Extract the file extension from the originalname (e.g., '.jpg')
                 const fileExtension = metadata.format!.toLowerCase();
-                console.log(fileExtension);
-
+                // console.log(fileExtension);
                 // Generate the imageKey using the userId and fileExtension
                 const key = `${userId}.${fileExtension}`;
                 console.log(key);
-                // Update the user's imageKey in your database
-                await this.usersService.updateUser(userId, {
-                    imageKey: key,
-                } as IUserDocument);
 
-                // Upload the file to AWS S3 or your preferred storage
-                const uploadedFile = await this.imageService.createImage(
+                await this.usersService.updateUserProfileImage(
+                    userId,
                     file.buffer,
                     file.mimeType,
                     key,
@@ -197,24 +209,24 @@ class UsersController {
 
     deleteProfileImage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const id = req.params.id;
-            const user = await this.usersService.getUserById(id);
+            const userId = req.params.id;
+            const user = await this.usersService.getUserById(userId);
             if (!user) {
                 res.status(404).json({ error: 'User not found' });
                 return;
             }
-            const imageKey = user.imageKey;
-            console.log('Image Key:', imageKey);
 
-            if (imageKey === null || imageKey === '') {
+            // Delete the user's profile image
+            if (!user.imageKey) {
                 res.status(200).json({
-                    message: 'There is no profile image for this user',
+                    message: 'There is no Profile image',
                 });
             } else {
-                await this.imageService.deleteImage(String(imageKey));
-                await this.usersService.updateUser(id, {
-                    imageKey: '',
-                } as IUserDocument);
+                await this.usersService.deleteUserProfileImage(
+                    userId,
+                    user.imageKey,
+                );
+
                 res.status(200).json({
                     message: 'Profile image deleted successfully',
                 });

@@ -4,7 +4,7 @@ import { Inject, Service } from 'typedi';
 import { ILogin } from '../models/AuthModel';
 import { IUsersService, UsersService } from './UsersService';
 import { IUserDocument } from '../models/UserModel';
-import { IUsersRepositorty, UsersRepository } from '../repositories/UsersRepo';
+import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 
 export interface IAuthService {
     generateToken: (id: string, sessionMinutes?: number) => string;
@@ -13,15 +13,13 @@ export interface IAuthService {
 }
 @Service()
 export class AuthService implements IAuthService {
-    private usersRepository: IUsersRepositorty;
+    private usersRepository: IUsersRepository;
     private key_pair = {
         key: fs.readFileSync(`${__dirname}/../config/rs256.key`),
         pub: fs.readFileSync(`${__dirname}/../config/rs256.key.pub`),
     };
 
-    constructor(
-        @Inject(() => UsersRepository) usersService: IUsersRepositorty,
-    ) {
+    constructor(@Inject(() => UsersRepository) usersService: IUsersRepository) {
         this.usersRepository = usersService;
     }
 

@@ -1,0 +1,49 @@
+name: Deploy Backend using Docker and SSH
+
+# Ensure to run one at a time.
+concurrency:
+  group: ${{ github.workflow }}
+on:
+  push:
+    branches: [ main, develop ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy using ssh
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # Application
+            export APP_CONFIGURATION="backend"
+            
+            # Set production/development aliases from git branch
+            if [ "${{ github.ref_name }}" = "main" ]; then \
+              export NODE_ENV_SHORT="prod"; \
+            elif [ "${{ github.ref_name }}" = "develop" ]; then \
+              export NODE_ENV_SHORT="dev"; \
+            fi
+            
+            # Application Directory
+            export APP_DIRECTORY="/home/${{ secrets.SSH_USERNAME }}/${APP_CONFIGURATION}-${NODE_ENV_SHORT}/"
+            
+            # Go to application repository
+            mkdir -p "${APP_DIRECTORY}"
+            cd "${APP_DIRECTORY}"
+            
+            # Git from GitHub
+            export REMOTE_URL="${{ github.server_url }}/${{ github.repository }}"
+            git init
+            git remote -v | grep -w origin && \
+            git remote set-url origin ${REMOTE_URL} || \
+            git remote add origin ${REMOTE_URL}
+            git reset --hard origin/${{ github.ref_name }}
+            git pull origin ${{ github.ref_name }}
+            
+            # Rebuild from configuration
+            cd "../deploy/"
+            docker compose up --build --force-recreate -d "${APP_CONFIGURATION}-${NODE_ENV_SHORT}"

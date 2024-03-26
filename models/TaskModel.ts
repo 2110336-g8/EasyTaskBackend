@@ -5,13 +5,15 @@ export interface ITask {
     title: string;
     category: string;
     description?: string;
-    imageKeys?: Array<{ seq: number; imageKey: string }>;
+    imageKey?: string | null;
+    imageUrl?: string | null;
+    imageUrlLastUpdateTime?: Date | null;
     location?: {
         name: string;
         latitude: number;
         longitude: number;
     };
-    status: 'Open' | 'In Progress' | 'Completed' | 'Closed';
+    status: 'Open' | 'InProgress' | 'Dismissed' | 'Completed';
     wages: number; // smallest unit
     startDate: Date;
     endDate: Date;
@@ -19,12 +21,18 @@ export interface ITask {
     customerId: Types.ObjectId;
     applicants: Array<{
         userId: Types.ObjectId;
-        status: 'Pending' | 'Accepted' | 'Rejected' | 'Canceled';
+        status: 'Pending' | 'Offering' | 'Accepted' | 'Rejected' | 'NotProceed';
         createdAt: Date;
     }>;
     hiredWorkers: Array<{
         userId: Types.ObjectId;
-        status: 'In Progress' | 'Completed' | 'Canceled';
+        status:
+            | 'InProgress'
+            | 'Submitted'
+            | 'Revising'
+            | 'Resubmitted'
+            | 'Completed'
+            | 'Dismissed';
         createdAt: Date;
     }>;
     createdAt: Date;
@@ -54,19 +62,14 @@ const TaskSchema = new Schema<ITaskDocument>(
         description: {
             type: String,
         },
-        imageKeys: {
-            type: [
-                {
-                    seq: {
-                        type: Number,
-                        required: [true, 'Sequence number is required'],
-                    },
-                    imageKey: {
-                        type: String,
-                        required: [true, 'Image key is required'],
-                    },
-                },
-            ],
+        imageKey: {
+            type: String,
+        },
+        imageUrl: {
+            type: String,
+        },
+        imageUrlLastUpdateTime: {
+            type: Date,
         },
         location: {
             type: {
@@ -95,7 +98,7 @@ const TaskSchema = new Schema<ITaskDocument>(
         },
         status: {
             type: String,
-            enum: ['Open', 'In Progress', 'Completed', 'Closed'],
+            enum: ['Open', 'InProgress', 'Dismissed', 'Completed'],
             required: [true, 'Task status is required'],
             maxlength: [
                 255,
@@ -146,7 +149,13 @@ const TaskSchema = new Schema<ITaskDocument>(
                     },
                     status: {
                         type: String,
-                        enum: ['Pending', 'Accepted', 'Rejected', 'Cancel'],
+                        enum: [
+                            'Pending',
+                            'Offering',
+                            'Accepted',
+                            'Rejected',
+                            'NotProceed',
+                        ],
                         required: [true, 'Application status is required'],
                         default: 'Pending',
                     },
@@ -166,20 +175,27 @@ const TaskSchema = new Schema<ITaskDocument>(
                 {
                     userId: {
                         type: Schema.Types.ObjectId,
-                        required: [true, 'UserId for hiring is required'],
+                        required: [true, 'UserId for employee is required'],
                         ref: 'User',
                     },
                     status: {
                         type: String,
-                        enum: ['In Progress', 'Completed', 'Cancel'],
-                        required: [true, 'Hired worker status is required'],
-                        default: 'In Progress',
+                        enum: [
+                            'InProgress',
+                            'Submitted',
+                            'Revising',
+                            'Resubmitted',
+                            'Completed',
+                            'Dismissed',
+                        ],
+                        required: [true, 'Employee status is required'],
+                        default: 'InProgress',
                     },
                     createdAt: {
                         type: Date,
                         required: [
                             true,
-                            'Timestamp for application is required',
+                            'Timestamp for employee start time is required',
                         ],
                     },
                 },
@@ -191,53 +207,5 @@ const TaskSchema = new Schema<ITaskDocument>(
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
 );
-
-// TaskSchema.pre('save', function (next) {
-
-//     // Check uniqueness of userIds within the same task applications or the same hired workers
-//     // Check if customerId is equal to any userIds
-
-//     const task = this as ITaskDocument;
-//     const applicantIds = new Set();
-//     for (const applicant of task.applicants) {
-//         if (applicant.status == 'Pending' || applicant.status == 'Accepted') {
-//             if (applicantIds.has(applicant.userId.toString())) {
-//                 const error = new ValidationError(
-//                     `Duplicate (pending or accepted) userId '${applicant.userId}' within the same task application.`,
-//                 );
-//                 return next(error);
-//             }
-//             applicantIds.add(applicant.userId.toString());
-//         }
-
-//         if (task.customerId.toString() === applicant.userId.toString()) {
-//             const error = new ValidationError(
-//                 `CustomerId '${task.customerId}' cannot be equal to any userId in the task application.`,
-//             );
-//             return next(error);
-//         }
-//     }
-//     console.log(applicantIds);
-//
-//     const workerIds = new Set();
-//     for (const worker of task.hiredWorkers) {
-//         if (workerIds.has(worker.userId.toString())) {
-//             const error = new ValidationError(
-//                 `Duplicate userId '${worker.userId}' within the same task hiring.`,
-//             );
-//             return next(error);
-//         }
-//         workerIds.add(worker.userId.toString());
-
-//         if (task.customerId.toString() === worker.userId.toString()) {
-//             const error = new ValidationError(
-//                 `CustomerId '${task.customerId}' cannot be equal to any userId in the task hiring.`,
-//             );
-//             return next(error);
-//         }
-//     }
-
-//     next();
-// });
 
 export const TaskModel = mongoose.model<ITaskDocument>('Task', TaskSchema);
