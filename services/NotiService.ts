@@ -5,7 +5,10 @@ import { ITask, ITaskDocument } from '../models/TaskModel';
 import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 
-export interface INotiService {}
+export interface INotiService {
+    notiEndDateTask: (task: ITaskDocument) => Promise<boolean>;
+    notiFullAcceptedApplicant: (customerId: string) => Promise<boolean>;
+}
 
 @Service()
 export class NotiService implements INotiService {
@@ -104,13 +107,31 @@ export class NotiService implements INotiService {
                 'An error occurred during notification process:',
                 error,
             );
-            return false; // Task not dismissed
+            return false;
+        }
+    };
+
+    notiFullAcceptedApplicant = async (
+        customerId: string,
+    ): Promise<boolean> => {
+        try {
+            const customerEmail =
+                await this.usersRepository.findUserEmail(customerId);
+            if (!customerEmail) {
+                throw new Error('Customer email not found');
+            }
+            await this.notiCustomerFullAcceptedApplicant(customerEmail);
+            return true;
+        } catch (error) {
+            return false;
         }
     };
 
     //private ---------------------------------------------------------------------------------------------
 
+    // Noti customer --------------------------
     private async notiCustomerToStart(customerEmail: string): Promise<void> {
+        //noti to start within 1 week
         const mail = {
             receiverEmail: customerEmail,
             subject: '',
@@ -135,6 +156,23 @@ export class NotiService implements INotiService {
         } as IMail;
         this.mailService.sendGeneralMail(mail);
     }
+
+    private async notiCustomerFullAcceptedApplicant(
+        customerEmail: string,
+    ): Promise<void> {
+        //like noti to start
+        const mail = {
+            receiverEmail: customerEmail,
+            subject: '',
+            textPart: '',
+            htmlPart: '',
+            createAt: new Date(),
+            sendAt: new Date(),
+        } as IMail;
+        this.mailService.sendGeneralMail(mail);
+    }
+
+    // Noti applicant---------------------
 
     private async notifyPendingApplicant(
         applicantEmail: string,
