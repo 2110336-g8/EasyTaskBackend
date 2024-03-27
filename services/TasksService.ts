@@ -1135,6 +1135,12 @@ export class TasksService implements ITasksService {
             if (!task) {
                 throw new CannotAcceptTaskError('Task not found');
             }
+            // the task status (overall) must be 'InProgress'
+            if (task.status != 'InProgress') {
+                throw new CannotAcceptTaskError(
+                    'This task has not yet started, been dismissed, or completed.',
+                );
+            }
             const validUser = task.hiredWorkers.filter(
                 worker => worker.userId.toString() === userId,
             );
@@ -1143,7 +1149,7 @@ export class TasksService implements ITasksService {
                 validUser.length != 1 ||
                 !['Submitted', 'Resubmitted'].includes(validUser[0].status)
             ) {
-                throw new CannotSubmitTaskError(
+                throw new CannotAcceptTaskError(
                     'Employee is not assigned to this task or has not submitted any work.',
                 );
             }
@@ -1152,7 +1158,7 @@ export class TasksService implements ITasksService {
             await this.updateTaskState(
                 taskId,
                 [userId],
-                ['Submitted, Resubmitted'],
+                ['Submitted', 'Resubmitted'],
                 'Completed',
             );
             // Step 3 : Check if every worker (employee) has completed the task.
