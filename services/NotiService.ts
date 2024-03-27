@@ -180,7 +180,7 @@ export class NotiService implements INotiService {
         } as IMail;
         this.mailService.sendGeneralMail(mail);
     }
-
+    
     private async notiCustomerToStartLastChance(
         customerEmail: string,
     ): Promise<void> {
@@ -195,7 +195,7 @@ export class NotiService implements INotiService {
         } as IMail;
         this.mailService.sendGeneralMail(mail);
     }
-
+    
     private async notiCustomerFullAcceptedApplicant(
         customerEmail: string,
     ): Promise<void> {
