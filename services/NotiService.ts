@@ -73,6 +73,12 @@ export class NotiService implements INotiService {
                         throw new Error('Pending applicant email not found');
                     }
                     await this.notifyPendingApplicant(applicantEmail);
+                    await this.tasksRepository.updateApplicantStatus(
+                        task.id,
+                        [app.userId.toString()],
+                        ['Pending'],
+                        'NotProceed',
+                    );
                 }
             }
 
@@ -87,8 +93,15 @@ export class NotiService implements INotiService {
                         throw new Error('Offering applicant email not found');
                     }
                     await this.notifyOfferingApplicant(applicantEmail);
+                    await this.tasksRepository.updateApplicantStatus(
+                        task.id,
+                        [app.userId.toString()],
+                        ['Offering'],
+                        'NotProceed',
+                    );
                 }
             }
+
             // Notify accepted applicants
             for (const app of acceptedApplicants) {
                 if (app.userId) {
@@ -180,7 +193,7 @@ export class NotiService implements INotiService {
         } as IMail;
         this.mailService.sendGeneralMail(mail);
     }
-    
+
     private async notiCustomerToStartLastChance(
         customerEmail: string,
     ): Promise<void> {
@@ -195,7 +208,7 @@ export class NotiService implements INotiService {
         } as IMail;
         this.mailService.sendGeneralMail(mail);
     }
-    
+
     private async notiCustomerFullAcceptedApplicant(
         customerEmail: string,
     ): Promise<void> {
