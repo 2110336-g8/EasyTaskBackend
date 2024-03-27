@@ -8,10 +8,10 @@ import { IUserDocument } from '../models/UserModel';
 import { MailRepository, IMailRepository } from '../repositories/MailsRepo';
 import '../assets/logo.svg';
 
-const fs = require('fs');
-const logoSvg = fs.readFileSync('logo.svg', { encoding: 'utf-8' });
-const logoBase64 = Buffer.from(logoSvg).toString('base64');
-const logoUrl = `data:image/svg+xml;base64,${logoBase64}`;
+// const fs = require('fs');
+// const logoSvg = fs.readFileSync('logo.svg', { encoding: 'utf-8' });
+// const logoBase64 = Buffer.from(logoSvg).toString('base64');
+// const logoUrl = `data:image/svg+xml;base64,${logoBase64}`;
 export interface INotiService {
     notiEndDateTask: (task: ITaskDocument) => Promise<boolean>;
     notiFullAcceptedApplicant: (task: ITaskDocument) => Promise<boolean>;
@@ -201,7 +201,7 @@ export class NotiService implements INotiService {
             Easy Task Team
             `,
             htmlPart: `
-            <div><img src="${logoUrl}" alt="Logo"></div>
+ 
             <p> Dear ${customer?.firstName} ${customer?.lastName},</p>
             <p> The application period for the <b>${taskTitle}</b> has ended. 
             <b> Kindly ensure all wages are paid within one week to avoid automatic job dismissal. </b> Once paid, proceed to assign the job via our website's messaging service. </p>
@@ -236,7 +236,7 @@ export class NotiService implements INotiService {
             Easy Task Team
             `,
             htmlPart: `
-            <div><img src="${logoUrl}" alt="Logo"></div>
+ 
             <p> Dear ${customer?.firstName} ${customer?.lastName},</p>
             <p> I regret to inform you that the application period for the <b>${taskTitle}</b> advertisement has closed without receiving any applicants. Consequently, the advertisement will be dismissed. </p>
             
@@ -271,7 +271,7 @@ export class NotiService implements INotiService {
             Easy Task Team
             `,
             htmlPart: `
-            <div><img src="${logoUrl}" alt="Logo"></div>
+ 
             <p> Dear ${customer?.firstName} ${customer?.lastName},</p>
             <p> Gentle reminder that the application period for the <b>${taskTitle}</b> as now concluded. As of now, wages for the task have not been paid. Kindly ensure payment is made by tomorrow to prevent the task from being dismissed.
             </p>
@@ -307,7 +307,7 @@ export class NotiService implements INotiService {
             Easy Task Team
             `,
             htmlPart: `
-            <div><img src="${logoUrl}" alt="Logo"></div>
+ 
             <p> Dear ${customer?.firstName} ${customer?.lastName},</p>
             <p> We're pleased to inform you that the preferred employees for the <b>${taskTitle}</b> have been selected, and the desired team size has been reached. You can now proceed with the job as planned. Kindly ensure all wages are paid promptly to avoid any delays.
             </p>
@@ -343,7 +343,7 @@ export class NotiService implements INotiService {
             Easy Task Team
             `,
             htmlPart: `
-            <div><img src="${logoUrl}" alt="Logo"></div>
+ 
             <p> Dear ${applicant?.firstName} ${applicant?.lastName},</p>
             <p> After the client has been carefully considerate all applicants, we regret to inform you that we will not be proceeding with your application for the <b>${taskTitle}</b> We appreciate your interest and wish you success in your job search.
             </p>
@@ -377,7 +377,7 @@ export class NotiService implements INotiService {
             Easy Task Team
             `,
             htmlPart: `
-            <div><img src="${logoUrl}" alt="Logo"></div>
+ 
             <p> Dear ${applicant?.firstName} ${applicant?.lastName},</p>
             <p> Congratulations on being selected for the <b>${taskTitle}</b> 
             
@@ -412,7 +412,7 @@ export class NotiService implements INotiService {
             Easy Task Team
             `,
             htmlPart: `
-            <div><img src="${logoUrl}" alt="Logo"></div>
+ 
             <p> Dear ${applicant?.firstName} ${applicant?.lastName},</p>
             <p> Congratulations on being selected for the <b>${taskTitle}</b> 
             
