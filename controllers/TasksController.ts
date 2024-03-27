@@ -4,6 +4,7 @@ import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
 import { UsersService, IUsersService } from '../services/UsersService';
 import sharp from 'sharp';
+import { groupBy } from 'lodash';
 import {
     CannotGetTaskOfError,
     CannotApplyTaskError,
@@ -227,6 +228,7 @@ class TasksController {
                                     lastName: applicantUser.lastName,
                                     imageUrl: applicantUser.imageUrl,
                                     phoneNumber: applicantUser.phoneNumber,
+                                    status: applicant.status,
                                 });
                             }
                         }
@@ -312,17 +314,20 @@ class TasksController {
                 'Open',
                 'InProgress',
                 'Completed',
-                'Closed',
+                'Dismissed',
             ];
             if (status && !allowedStatusValues.includes(status)) {
                 res.status(400).json({ error: 'Invalid status parameter' });
                 return;
             }
-
             const tasks = await this.tasksService.getAdvertisement(
                 customerId,
                 status || '',
             );
+            if (status == undefined || !status) {
+                const groupedTasks = groupBy(tasks, 'status');
+                res.status(200).json({ tasks: groupedTasks });
+            }
             res.status(200).json({ tasks });
         } catch (error) {
             console.error(error);
