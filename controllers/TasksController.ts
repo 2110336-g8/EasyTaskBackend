@@ -285,6 +285,53 @@ class TasksController {
                     applicantsInfo: applicantsInfo,
                     hiredWorkersInfo: hiredWorkersInfo,
                 });
+                //user is the task owner
+                const applicantsInfo = [];
+                const hiredWorkersInfo = [];
+
+                if (task.applicants && task.applicants.length > 0) {
+                    for (const applicant of task.applicants) {
+                        const applicantId = applicant.userId;
+                        const applicantUser =
+                            await this.usersService.getUserById(
+                                applicantId.toString(),
+                            );
+                        if (applicantUser) {
+                            applicantsInfo.push({
+                                _id: applicantUser.id,
+                                firstName: applicantUser.firstName,
+                                lastName: applicantUser.lastName,
+                                imageUrl: applicantUser.imageUrl,
+                                phoneNumber: applicantUser.phoneNumber,
+                                status: applicant.status,
+                            });
+                        }
+                    }
+                }
+                if (task.hiredWorkers && task.hiredWorkers.length > 0) {
+                    for (const worker of task.hiredWorkers) {
+                        const workerId = worker.userId;
+                        const workerStatus = worker.status;
+                        const workerUser = await this.usersService.getUserById(
+                            workerId.toString(),
+                        );
+                        if (workerUser) {
+                            hiredWorkersInfo.push({
+                                _id: workerUser.id,
+                                firstName: workerUser.firstName,
+                                lastName: workerUser.lastName,
+                                imageUrl: workerUser.imageUrl,
+                                phoneNumber: workerUser.phoneNumber,
+                                status: workerStatus,
+                            });
+                        }
+                    }
+                }
+                res.status(200).json({
+                    task: task,
+                    applicantsInfo: applicantsInfo,
+                    hiredWorkersInfo: hiredWorkersInfo,
+                });
             }
         } catch (error) {
             const err = error as Error;
@@ -469,17 +516,24 @@ class TasksController {
                 });
                 return;
             }
-            if (task.endDate < new Date()) {
-                res.status(403).json({
-                    success: false,
-                    error: 'Task is closed. The application period has ended.',
-                });
-                return;
-            }
             if (task.status != 'Open') {
                 res.status(403).json({
                     success: false,
                     error: 'Task is not open for applications. The owner has already started the task.',
+                });
+                return;
+            }
+            // check application date has expired
+            const endDatePlus1hr59min = new Date(task.endDate);
+            endDatePlus1hr59min.setHours(endDatePlus1hr59min.getHours() + 1);
+            endDatePlus1hr59min.setMinutes(
+                endDatePlus1hr59min.getMinutes() + 59,
+            );
+
+            if (endDatePlus1hr59min < new Date()) {
+                res.status(403).json({
+                    success: false,
+                    error: 'Task is closed. The application period has ended.',
                 });
                 return;
             }
