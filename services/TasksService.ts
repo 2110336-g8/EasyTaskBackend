@@ -344,11 +344,7 @@ export class TasksService implements ITasksService {
         const formattedTasks = await Promise.all(
             tasks
                 .filter(
-                    task =>
-                        !(
-                            status === 'Accepted' &&
-                            task.status === 'InProgress'
-                        ),
+                    task => !(status === 'Accepted' && task.status != 'Open'),
                 )
                 .map(async task => {
                     // Update image URL for the task
