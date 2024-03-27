@@ -1142,7 +1142,7 @@ export class TasksService implements ITasksService {
             // the task status (overall) must be 'InProgress'
             if (task.status != 'InProgress') {
                 throw new CannotAcceptTaskError(
-                    'This task has not yet started, been dismissed, or completed.',
+                    'This task has not yet started, has been dismissed, or completed.',
                 );
             }
             const validUser = task.hiredWorkers.filter(
@@ -1205,6 +1205,12 @@ export class TasksService implements ITasksService {
             const task = await this.tasksRepository.findOne(taskId);
             if (!task) {
                 throw new CannotRequestRevisionError('Task not found');
+            }
+            // the task status (overall) must be 'InProgress'
+            if (task.status != 'InProgress') {
+                throw new CannotRequestRevisionError(
+                    'This task has not yet started, has been dismissed, or completed.',
+                );
             }
             const validUser = task.hiredWorkers.filter(
                 worker => worker.userId.toString() === userId,
