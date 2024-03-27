@@ -16,6 +16,7 @@ import {
     CannotSubmitTaskError,
     CannotAcceptTaskError,
     CannotRequestRevisionError,
+
 } from '../errors/TaskError';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
@@ -186,8 +187,8 @@ class TasksController {
                 } else if (task.status == 'InProgress') {
                     //check if userId is one of hiredWorker's userId then set viewStatus = hiredworker's status
                     const hiredWorker = task.hiredWorkers.find(
-                        worker =>
-                            worker.userId.toString() === userId.toString(),
+                        hiredWorker =>
+                            hiredWorker.userId.toString() === userId.toString(),
                     );
                     if (hiredWorker) {
                         viewStatus = hiredWorker.status;

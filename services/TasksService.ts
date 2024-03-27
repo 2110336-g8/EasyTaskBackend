@@ -86,10 +86,12 @@ export interface ITasksService {
         taskId: string,
         userId: string,
     ) => Promise<ITaskDocument | null>;
+
     getTasksByUserIdAndStatus(
         userId: string,
         status: string[],
     ): Promise<ITaskDocument[]>;
+
     getTasksForNotiEndApply: (today: Date) => Promise<ITaskDocument[] | null>;
 }
 
@@ -435,6 +437,7 @@ export class TasksService implements ITasksService {
             return null;
         }
     };
+
     //image --------------------------------------------------------------------
     async getTaskImage(id: string): Promise<string | null> {
         const task = await this.getTaskById(id);
@@ -1010,6 +1013,8 @@ export class TasksService implements ITasksService {
             if (!updatedTask) {
                 throw new CannotDismissTaskError('Task not found');
             }
+            const updatedTaskWithImageUpdate =
+                await this.imagesRepository.updateTaskImageUrl(updatedTask);
             await session.commitTransaction();
             session.endSession();
         } catch (error) {
@@ -1054,7 +1059,6 @@ export class TasksService implements ITasksService {
             if (!updatedTask) {
                 throw new CannotDismissTaskError('Task not found');
             }
-
             await session.commitTransaction();
             session.endSession();
         } catch (error) {
@@ -1138,7 +1142,7 @@ export class TasksService implements ITasksService {
             // the task status (overall) must be 'InProgress'
             if (task.status != 'InProgress') {
                 throw new CannotAcceptTaskError(
-                    'This task has not yet started, been dismissed, or completed.',
+                    'This task has not yet started, has been dismissed, or completed.',
                 );
             }
             const validUser = task.hiredWorkers.filter(
@@ -1201,6 +1205,12 @@ export class TasksService implements ITasksService {
             const task = await this.tasksRepository.findOne(taskId);
             if (!task) {
                 throw new CannotRequestRevisionError('Task not found');
+            }
+            // the task status (overall) must be 'InProgress'
+            if (task.status != 'InProgress') {
+                throw new CannotRequestRevisionError(
+                    'This task has not yet started, has been dismissed, or completed.',
+                );
             }
             const validUser = task.hiredWorkers.filter(
                 worker => worker.userId.toString() === userId,
