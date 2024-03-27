@@ -9,5 +9,6 @@ export interface ITaskOf {
         wages: number; // smallest unit
         startDate: Date;
         endDate: Date;
+        applicationNumber: number;
     }>;
 }

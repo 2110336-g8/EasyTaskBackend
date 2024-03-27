@@ -1,13 +1,7 @@
-export class CannotUpdateApplicationStatusError extends Error {
+export class CannotUpdateStateError extends Error {
     constructor(message: string) {
         super(message);
-        this.name = 'Application Status Update Error';
-    }
-}
-export class InvalidUpdateApplicationStatusError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = 'Invalid Application Status Update';
+        this.name = 'Application/Task Status Update Error';
     }
 }
 
@@ -22,6 +16,13 @@ export class CannotSelectCandidateError extends Error {
     constructor(message: string) {
         super(message);
         this.name = 'Candidate Selection Error';
+    }
+}
+
+export class CannotResponseOfferError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'Offer Response Error';
     }
 }
 
