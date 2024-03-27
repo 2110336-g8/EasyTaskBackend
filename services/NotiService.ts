@@ -8,6 +8,7 @@ import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 export interface INotiService {
     notiEndDateTask: (task: ITaskDocument) => Promise<boolean>;
     notiFullAcceptedApplicant: (customerId: string) => Promise<boolean>;
+    notiSixDayAfterEndApply: (task: ITaskDocument) => Promise<boolean>;
 }
 
 @Service()
@@ -111,6 +112,29 @@ export class NotiService implements INotiService {
         }
     };
 
+    notiSixDayAfterEndApply = async (task: ITaskDocument): Promise<boolean> => {
+        try {
+            const customerId = task.customerId;
+            let customerEmail: string | undefined | null;
+            if (customerId) {
+                customerEmail = await this.usersRepository.findUserEmail(
+                    customerId.toString(),
+                );
+            }
+            if (!customerEmail) {
+                throw new Error('Customer email not found');
+            }
+            await this.notiCustomerToStartLastChance(customerEmail.toString());
+            return true;
+        } catch (error) {
+            console.error(
+                'An error occurred during notification process:',
+                error,
+            );
+            return false;
+        }
+    };
+
     notiFullAcceptedApplicant = async (
         customerId: string,
     ): Promise<boolean> => {
@@ -156,7 +180,22 @@ export class NotiService implements INotiService {
         } as IMail;
         this.mailService.sendGeneralMail(mail);
     }
-
+    
+    private async notiCustomerToStartLastChance(
+        customerEmail: string,
+    ): Promise<void> {
+        //noti to start within 1 week
+        const mail = {
+            receiverEmail: customerEmail,
+            subject: '',
+            textPart: '',
+            htmlPart: '',
+            createAt: new Date(),
+            sendAt: new Date(),
+        } as IMail;
+        this.mailService.sendGeneralMail(mail);
+    }
+    
     private async notiCustomerFullAcceptedApplicant(
         customerEmail: string,
     ): Promise<void> {
