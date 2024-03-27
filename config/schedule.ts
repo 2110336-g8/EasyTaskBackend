@@ -15,14 +15,31 @@ cron.schedule('0 * * * *', () => {
 // every day at 23:59
 cron.schedule('59 23 * * *', async () => {
     try {
-        console.log('Log: Checking for tasks with end date equal to today');
+        console.log(
+            'Log: Checking for tasks with end date equal to today or six days ago',
+        );
+
         const today = new Date();
         today.setHours(23, 59, 0, 0);
-        //task that endDate = today and status = Open
-        const tasks = await tasksService.getTasksForNotiEndApply(today);
-        if (tasks && tasks.length > 0) {
-            for (const task of tasks) {
+
+        const sixDaysAgo = new Date();
+        sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+        sixDaysAgo.setHours(23, 59, 0, 0);
+
+        // Tasks that end today
+        const endApplyTasks = await tasksService.getTasksForNotiEndApply(today);
+        if (endApplyTasks && endApplyTasks.length > 0) {
+            for (const task of endApplyTasks) {
                 await notiService.notiEndDateTask(task);
+            }
+        }
+
+        // Tasks that ended six days ago
+        const EndedSixDaysAgoTasks =
+            await tasksService.getTasksForNotiEndApply(sixDaysAgo);
+        if (EndedSixDaysAgoTasks && EndedSixDaysAgoTasks.length > 0) {
+            for (const task of EndedSixDaysAgoTasks) {
+                await notiService.notiSixDayAfterEndApply(task);
             }
         }
     } catch (error) {
