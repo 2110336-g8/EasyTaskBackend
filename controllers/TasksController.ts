@@ -192,16 +192,9 @@ class TasksController {
                     if (hiredWorker) {
                         viewStatus = hiredWorker.status;
                     } else {
-                        const applicant = task.applicants.find(
-                            applicant =>
-                                applicant.userId.toString() ===
-                                userId.toString(),
+                        throw new Error(
+                            'You are not allowed to view this task',
                         );
-                        if (applicant) {
-                            viewStatus = applicant.status;
-                        } else {
-                            viewStatus = 'Inprogress';
-                        }
                     }
                 } else if (task.status == 'Dismissed') {
                     viewStatus = 'Dismissed';
