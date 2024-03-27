@@ -86,11 +86,14 @@ export interface ITasksService {
         taskId: string,
         userId: string,
     ) => Promise<ITaskDocument | null>;
+
     getTasksByUserIdAndStatus(
         userId: string,
         status: string[],
     ): Promise<ITaskDocument[]>;
+
     getTasksForNotiEndApply: (today: Date) => Promise<ITaskDocument[] | null>;
+    dismissPassedEndDateTasks: (expire: Date) => Promise<boolean>;
 }
 
 @Service()
@@ -302,37 +305,57 @@ export class TasksService implements ITasksService {
                     'NotProceed',
                 ].includes(status)
             ) {
-                const taskIds = user.applications
-                    .filter(application => application.status === status)
-                    .map(application => application.taskId);
-                const tasks = await this.tasksRepository.findTasks({
-                    _id: { $in: taskIds },
-                });
-                return tasks;
-            }
-            // task is ongoing
-            else {
-                if (status === 'Completed') {
-                    const taskIds = user.tasks
-                        .filter(
-                            task =>
-                                task.status === 'Completed' ||
-                                task.status === 'Dismissed',
-                        )
-                        .map(task => task.taskId);
+                if (status === 'Accepted') {
+                    const taskIdsInApplication = user.applications
+                        .filter(application => application.status === status)
+                        .map(application => application.taskId);
+
+                    const taskIds = user.tasks.map(task => task.taskId);
+
+                    // Exclude taskIds present in user.tasks
+                    const filteredTaskIdsInApplication =
+                        taskIdsInApplication.filter(
+                            taskId => !taskIds.includes(taskId),
+                        );
+
                     const tasks = await this.tasksRepository.findTasks({
-                        _id: { $in: taskIds },
+                        _id: { $in: filteredTaskIdsInApplication },
+                    });
+                    return tasks;
+                } else if (status === 'NotProceed') {
+                    const taskIdsInApplication = user.applications
+                        .filter(application => application.status === status)
+                        .map(application => application.taskId);
+                    const taskIds = user.tasks
+                        .filter(task => task.status === 'Dismissed')
+                        .map(task => task.taskId);
+
+                    // Combine taskIds from user.applications and user.tasks
+                    const allTaskIds = [...taskIdsInApplication, ...taskIds];
+
+                    const tasks = await this.tasksRepository.findTasks({
+                        _id: { $in: allTaskIds },
                     });
                     return tasks;
                 } else {
-                    const taskIds = user.tasks
-                        .filter(task => task.status === status)
-                        .map(task => task.taskId);
+                    const taskIds = user.applications
+                        .filter(application => application.status === status)
+                        .map(application => application.taskId);
                     const tasks = await this.tasksRepository.findTasks({
                         _id: { $in: taskIds },
                     });
                     return tasks;
                 }
+            }
+            // task is ongoing
+            else {
+                const taskIds = user.tasks
+                    .filter(task => task.status === status)
+                    .map(task => task.taskId);
+                const tasks = await this.tasksRepository.findTasks({
+                    _id: { $in: taskIds },
+                });
+                return tasks;
             }
         } catch (error) {
             throw error;
@@ -348,26 +371,22 @@ export class TasksService implements ITasksService {
         };
 
         const formattedTasks = await Promise.all(
-            tasks
-                .filter(
-                    task => !(status === 'Accepted' && task.status != 'Open'),
-                )
-                .map(async task => {
-                    // Update image URL for the task
-                    task = await this.imagesRepository.updateTaskImageUrl(task);
+            tasks.map(async task => {
+                // Update image URL for the task
+                task = await this.imagesRepository.updateTaskImageUrl(task);
 
-                    return {
-                        taskId: task._id,
-                        title: task.title,
-                        category: task.category,
-                        imageUrl: task.imageUrl ?? null,
-                        locationName: task.location?.name ?? undefined,
-                        wages: task.wages,
-                        startDate: task.startDate,
-                        endDate: task.endDate,
-                        applicationNumber: task.applicants.length,
-                    };
-                }),
+                return {
+                    taskId: task._id,
+                    title: task.title,
+                    category: task.category,
+                    imageUrl: task.imageUrl ?? null,
+                    locationName: task.location?.name ?? undefined,
+                    wages: task.wages,
+                    startDate: task.startDate,
+                    endDate: task.endDate,
+                    applicationNumber: task.applicants.length,
+                };
+            }),
         );
 
         taskOf.tasks.push(...formattedTasks);
@@ -435,6 +454,7 @@ export class TasksService implements ITasksService {
             return null;
         }
     };
+
     //image --------------------------------------------------------------------
     async getTaskImage(id: string): Promise<string | null> {
         const task = await this.getTaskById(id);
@@ -1010,6 +1030,8 @@ export class TasksService implements ITasksService {
             if (!updatedTask) {
                 throw new CannotDismissTaskError('Task not found');
             }
+            const updatedTaskWithImageUpdate =
+                await this.imagesRepository.updateTaskImageUrl(updatedTask);
             await session.commitTransaction();
             session.endSession();
         } catch (error) {
@@ -1036,16 +1058,25 @@ export class TasksService implements ITasksService {
             // To return 70%
             //
 
-            // Step 1 : update (individual) task status that is not 'Completed' to 'Dismissed'
+            // Step 1 : update (individual) task status that is 'InProgress' to 'Dismissed'
             // update task state
             await this.updateTaskState(
                 taskId,
                 undefined,
-                ['InProgress', 'Submitted', 'Revising', 'Resubmitted'],
+                ['InProgress'],
                 'Dismissed',
             );
 
-            // Step 2: update task status to 'Dismissed'
+            // Step 2 : update (individual) task status that is 'Submitted', 'Revising', or 'Resubmitted' to 'Completed'
+            // update task state
+            await this.updateTaskState(
+                taskId,
+                undefined,
+                ['Submitted', 'Revising', 'Resubmitted'],
+                'Completed',
+            );
+
+            // Step 3: update task status to 'Dismissed'
             const updatedTask = await this.tasksRepository.updateStatus(
                 taskId,
                 'Dismissed',
@@ -1054,7 +1085,6 @@ export class TasksService implements ITasksService {
             if (!updatedTask) {
                 throw new CannotDismissTaskError('Task not found');
             }
-
             await session.commitTransaction();
             session.endSession();
         } catch (error) {
@@ -1138,7 +1168,7 @@ export class TasksService implements ITasksService {
             // the task status (overall) must be 'InProgress'
             if (task.status != 'InProgress') {
                 throw new CannotAcceptTaskError(
-                    'This task has not yet started, been dismissed, or completed.',
+                    'This task has not yet started, has been dismissed, or completed.',
                 );
             }
             const validUser = task.hiredWorkers.filter(
@@ -1202,6 +1232,12 @@ export class TasksService implements ITasksService {
             if (!task) {
                 throw new CannotRequestRevisionError('Task not found');
             }
+            // the task status (overall) must be 'InProgress'
+            if (task.status != 'InProgress') {
+                throw new CannotRequestRevisionError(
+                    'This task has not yet started, has been dismissed, or completed.',
+                );
+            }
             const validUser = task.hiredWorkers.filter(
                 worker => worker.userId.toString() === userId,
             );
@@ -1261,5 +1297,23 @@ export class TasksService implements ITasksService {
         });
         if (tasks) return tasks;
         else return null;
+    };
+
+    dismissPassedEndDateTasks = async (expire: Date): Promise<boolean> => {
+        try {
+            const tasks = await this.tasksRepository.findTasks({
+                endDate: { $lt: expire },
+                status: { $eq: 'Open' },
+            });
+            if (tasks) {
+                for (const task of tasks) {
+                    await this.dismissOpenTask(task.id);
+                }
+            }
+            return true;
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
     };
 }

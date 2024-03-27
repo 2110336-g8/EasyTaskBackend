@@ -186,8 +186,8 @@ class TasksController {
                 } else if (task.status == 'InProgress') {
                     //check if userId is one of hiredWorker's userId then set viewStatus = hiredworker's status
                     const hiredWorker = task.hiredWorkers.find(
-                        worker =>
-                            worker.userId.toString() === userId.toString(),
+                        hiredWorker =>
+                            hiredWorker.userId.toString() === userId.toString(),
                     );
                     if (hiredWorker) {
                         viewStatus = hiredWorker.status;
@@ -200,13 +200,30 @@ class TasksController {
                         if (applicant) {
                             viewStatus = applicant.status;
                         } else {
-                            viewStatus = 'Inprogress';
+                            throw new Error(
+                                'You are not allowed to view this task',
+                            );
                         }
                     }
-                } else if (task.status == 'Dismissed') {
-                    viewStatus = 'Dismissed';
-                } else if (task.status == 'Completed') {
-                    viewStatus = 'Completed';
+                } else {
+                    const hiredWorker = task.hiredWorkers.find(
+                        hiredWorker =>
+                            hiredWorker.userId.toString() === userId.toString(),
+                    );
+                    if (hiredWorker) {
+                        viewStatus = hiredWorker.status;
+                    } else {
+                        const applicant = task.applicants.find(
+                            applicant =>
+                                applicant.userId.toString() ===
+                                userId.toString(),
+                        );
+                        if (applicant) {
+                            viewStatus = applicant.status;
+                        } else {
+                            viewStatus = task.status;
+                        }
+                    }
                 }
 
                 const taskWithGeneralInfo =
@@ -221,72 +238,53 @@ class TasksController {
                     res.status(404).json({ error: 'Task not found' });
                 }
             } else {
-                if (task.status == 'Open') {
-                    if (task.applicants && task.applicants.length > 0) {
-                        const applicantsInfo = [];
-                        for (const applicant of task.applicants) {
-                            const applicantId = applicant.userId;
-                            const applicantUser =
-                                await this.usersService.getUserById(
-                                    applicantId.toString(),
-                                );
-                            if (applicantUser) {
-                                applicantsInfo.push({
-                                    _id: applicantUser.id,
-                                    firstName: applicantUser.firstName,
-                                    lastName: applicantUser.lastName,
-                                    imageUrl: applicantUser.imageUrl,
-                                    phoneNumber: applicantUser.phoneNumber,
-                                    status: applicant.status,
-                                });
-                            }
+                //user is the task owner
+                const applicantsInfo = [];
+                const hiredWorkersInfo = [];
+
+                if (task.applicants && task.applicants.length > 0) {
+                    for (const applicant of task.applicants) {
+                        const applicantId = applicant.userId;
+                        const applicantUser =
+                            await this.usersService.getUserById(
+                                applicantId.toString(),
+                            );
+                        if (applicantUser) {
+                            applicantsInfo.push({
+                                _id: applicantUser.id,
+                                firstName: applicantUser.firstName,
+                                lastName: applicantUser.lastName,
+                                imageUrl: applicantUser.imageUrl,
+                                phoneNumber: applicantUser.phoneNumber,
+                                status: applicant.status,
+                            });
                         }
-                        res.status(200).json({
-                            task: task,
-                            applicantsInfo: applicantsInfo,
-                        });
-                    } else {
-                        res.status(200).json({
-                            task: task,
-                            applicantsInfo: [],
-                        });
                     }
-                } else if (task.status == 'InProgress') {
-                    if (task.hiredWorkers && task.hiredWorkers.length > 0) {
-                        const hiredWorkersInfo = [];
-                        for (const worker of task.hiredWorkers) {
-                            const workerId = worker.userId;
-                            const workerStatus = worker.status;
-                            const workerUser =
-                                await this.usersService.getUserById(
-                                    workerId.toString(),
-                                );
-                            if (workerUser) {
-                                hiredWorkersInfo.push({
-                                    _id: workerUser.id,
-                                    firstName: workerUser.firstName,
-                                    lastName: workerUser.lastName,
-                                    imageUrl: workerUser.imageUrl,
-                                    phoneNumber: workerUser.phoneNumber,
-                                    status: workerStatus,
-                                });
-                            }
-                        }
-                        res.status(200).json({
-                            task: task,
-                            hiredWorkersInfo: hiredWorkersInfo,
-                        });
-                    } else {
-                        res.status(200).json({
-                            task: task,
-                            hiredWorkersInfo: [],
-                        });
-                    }
-                } else {
-                    res.status(200).json({
-                        task: task,
-                    });
                 }
+                if (task.hiredWorkers && task.hiredWorkers.length > 0) {
+                    for (const worker of task.hiredWorkers) {
+                        const workerId = worker.userId;
+                        const workerStatus = worker.status;
+                        const workerUser = await this.usersService.getUserById(
+                            workerId.toString(),
+                        );
+                        if (workerUser) {
+                            hiredWorkersInfo.push({
+                                _id: workerUser.id,
+                                firstName: workerUser.firstName,
+                                lastName: workerUser.lastName,
+                                imageUrl: workerUser.imageUrl,
+                                phoneNumber: workerUser.phoneNumber,
+                                status: workerStatus,
+                            });
+                        }
+                    }
+                }
+                res.status(200).json({
+                    task: task,
+                    applicantsInfo: applicantsInfo,
+                    hiredWorkersInfo: hiredWorkersInfo,
+                });
             }
         } catch (error) {
             const err = error as Error;
@@ -471,17 +469,24 @@ class TasksController {
                 });
                 return;
             }
-            if (task.endDate < new Date()) {
-                res.status(403).json({
-                    success: false,
-                    error: 'Task is closed. The application period has ended.',
-                });
-                return;
-            }
             if (task.status != 'Open') {
                 res.status(403).json({
                     success: false,
                     error: 'Task is not open for applications. The owner has already started the task.',
+                });
+                return;
+            }
+            // check application date has expired
+            const endDatePlus1hr59min = new Date(task.endDate);
+            endDatePlus1hr59min.setHours(endDatePlus1hr59min.getHours() + 1);
+            endDatePlus1hr59min.setMinutes(
+                endDatePlus1hr59min.getMinutes() + 59,
+            );
+
+            if (endDatePlus1hr59min < new Date()) {
+                res.status(403).json({
+                    success: false,
+                    error: 'Task is closed. The application period has ended.',
                 });
                 return;
             }

@@ -9,6 +9,7 @@ import { Server, Socket } from 'socket.io';
 import { ITasksService, TasksService } from '../services/TasksService';
 import { IUsersService, UsersService } from '../services/UsersService';
 import { IMessage, IMessageDocument } from '../models/MessageModel';
+import { ITaskDocument } from '../models/TaskModel';
 export interface SendMessageDTO {
     taskId: string;
     senderId: string;
@@ -34,8 +35,7 @@ export interface MessagesRoomList {
 }
 
 export interface MessageRoomInfo {
-    taskId: string;
-    taskTitle: string;
+    task: ITaskDocument;
     client: {
         _id: string;
         name: string;
@@ -247,7 +247,6 @@ export class MessagesController {
                     .status(404)
                     .json({ success: false, error: 'Task Not Found' });
             }
-            const taskTitle = task.title;
 
             const customer = await this.getUserInfo(task.customerId.toString());
             if (!customer) {
@@ -262,7 +261,7 @@ export class MessagesController {
 
             res.status(200).json({
                 success: true,
-                info: { taskId, taskTitle, customer, hiredWorkers: workers },
+                info: { task, customer, hiredWorkers: workers },
             });
         } catch (error) {
             this.handleError(res, error);
