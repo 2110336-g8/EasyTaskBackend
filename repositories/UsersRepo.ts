@@ -48,6 +48,7 @@ export interface IUsersRepository extends IRepository<IUser> {
         oldStatus: string[],
         newStatus: string,
     ) => Promise<null>;
+    findUserEmail: (id: string) => Promise<string | null>;
 }
 
 @Service()
@@ -253,6 +254,16 @@ export class UsersRepository
             return null;
         } catch (error) {
             console.error('Error updating task status:', error);
+            throw error;
+        }
+    };
+
+    findUserEmail = async (id: string): Promise<string | null> => {
+        try {
+            const user = await this._model.findById(id);
+            return user?.email ?? null;
+        } catch (error) {
+            console.error('User not found:', error);
             throw error;
         }
     };
