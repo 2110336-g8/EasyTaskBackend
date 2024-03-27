@@ -13,7 +13,6 @@ import {
     CannotSubmitTaskError,
     CannotAcceptTaskError,
     CannotRequestRevisionError,
-  
 } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
@@ -87,10 +86,12 @@ export interface ITasksService {
         taskId: string,
         userId: string,
     ) => Promise<ITaskDocument | null>;
+
     getTasksByUserIdAndStatus(
         userId: string,
         status: string[],
     ): Promise<ITaskDocument[]>;
+
     getTasksForNotiEndApply: (today: Date) => Promise<ITaskDocument[] | null>;
 }
 
@@ -436,6 +437,7 @@ export class TasksService implements ITasksService {
             return null;
         }
     };
+
     //image --------------------------------------------------------------------
     async getTaskImage(id: string): Promise<string | null> {
         const task = await this.getTaskById(id);
@@ -857,7 +859,7 @@ export class TasksService implements ITasksService {
         }
     };
 
-    startTask = async (taskId: string): Promise<ITaskDocument> => {
+    startTask = async (taskId: string): Promise<ITaskDocument | null> => {
         const timestamps = new Date();
         const session = await this.tasksRepository.startSession();
         session.startTransaction();
