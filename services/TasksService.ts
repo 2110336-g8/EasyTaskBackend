@@ -13,6 +13,7 @@ import {
     CannotSubmitTaskError,
     CannotAcceptTaskError,
     CannotRequestRevisionError,
+  
 } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
@@ -856,7 +857,7 @@ export class TasksService implements ITasksService {
         }
     };
 
-    startTask = async (taskId: string): Promise<ITaskDocument | null> => {
+    startTask = async (taskId: string): Promise<ITaskDocument> => {
         const timestamps = new Date();
         const session = await this.tasksRepository.startSession();
         session.startTransaction();
@@ -1010,6 +1011,8 @@ export class TasksService implements ITasksService {
             if (!updatedTask) {
                 throw new CannotDismissTaskError('Task not found');
             }
+            const updatedTaskWithImageUpdate =
+                await this.imagesRepository.updateTaskImageUrl(updatedTask);
             await session.commitTransaction();
             session.endSession();
         } catch (error) {
@@ -1054,7 +1057,6 @@ export class TasksService implements ITasksService {
             if (!updatedTask) {
                 throw new CannotDismissTaskError('Task not found');
             }
-
             await session.commitTransaction();
             session.endSession();
         } catch (error) {
