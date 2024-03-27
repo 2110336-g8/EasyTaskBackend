@@ -193,6 +193,7 @@ class TasksController {
                                 lastName: applicantUser.lastName,
                                 imageUrl: applicantUser.imageUrl,
                                 phoneNumber: applicantUser.phoneNumber,
+                                status: applicant.status,
                             });
                         }
                     }
