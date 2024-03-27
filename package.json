@@ -30,7 +30,7 @@
         "node-cron": "^3.0.3",
         "node-mailjet": "^6.0.5",
         "reflect-metadata": "^0.2.1",
-        "sanitize-html": "^2.12.1",
+        "sanitize-html": "^2.13.0",
         "sharp": "^0.33.2",
         "socket.io": "^4.7.5",
         "typedi": "^0.10.0"
