@@ -21,7 +21,7 @@ router.route('/adsOf/:customerId').get(tasksController.getAdvertisements);
 
 // For employee
 router.route('/:id/apply').post(tasksController.applyTask);
-router.route('/:id/accpet-offer').post(tasksController.acceptOffer);
+router.route('/:id/accept-offer').post(tasksController.acceptOffer);
 router.route('/:id/reject-offer').post(tasksController.rejectOffer);
 router.route('/:id/submit').post(tasksController.submitTask);
 

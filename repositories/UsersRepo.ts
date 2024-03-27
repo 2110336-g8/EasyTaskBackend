@@ -17,6 +17,7 @@ export interface IUsersRepository extends IRepository<IUser> {
     findUser: (
         filter?: FilterQuery<IUserDocument>,
     ) => Promise<IUserDocument | null>;
+    findUserEmail: (id: string) => Promise<string | null>;
     addOwnedTasks: (
         taskId: string,
         userId: string,
@@ -36,7 +37,6 @@ export interface IUsersRepository extends IRepository<IUser> {
         matchedCount: number;
         modifiedCount: number;
     }>;
-
     addTask: (
         taskId: string,
         userId: string,
@@ -272,6 +272,16 @@ export class UsersRepository
             };
         } catch (error) {
             console.error('Error updating task status:', error);
+            throw error;
+        }
+    };
+
+    findUserEmail = async (id: string): Promise<string | null> => {
+        try {
+            const user = await this._model.findById(id);
+            return user?.email ?? null;
+        } catch (error) {
+            console.error('User not found:', error);
             throw error;
         }
     };
