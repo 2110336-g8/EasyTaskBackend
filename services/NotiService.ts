@@ -6,7 +6,7 @@ import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 import { IUserDocument } from '../models/UserModel';
 import { MailRepository, IMailRepository } from '../repositories/MailsRepo';
-import '../assets/logo.svg';
+
 
 // const fs = require('fs');
 // const logoSvg = fs.readFileSync('logo.svg', { encoding: 'utf-8' });
