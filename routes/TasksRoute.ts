@@ -30,7 +30,7 @@ router.route('/:id/candidates').get(tasksController.getCandidate);
 router.route('/:id/candidates').post(tasksController.selectCandidate);
 router.route('/:id/start').post(tasksController.startTask);
 router.route('/:id/dismiss').post(tasksController.dismissTask);
-router.route('/:id/accept-work').post(tasksController.acceptWork);
+router.route('/:id/accept-task').post(tasksController.acceptTask);
 router.route('/:id/revision').post(tasksController.requestRevision);
 
 router
