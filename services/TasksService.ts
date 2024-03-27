@@ -1065,6 +1065,12 @@ export class TasksService implements ITasksService {
             if (!task) {
                 throw new CannotSubmitTaskError('Task not found');
             }
+            // the task status (overall) must be 'InProgress'
+            if (task.status != 'InProgress') {
+                throw new CannotSubmitTaskError(
+                    'This task has not yet started, been dismissed, or completed.',
+                );
+            }
             const validUser = task.hiredWorkers.filter(
                 worker => worker.userId.toString() === userId,
             );

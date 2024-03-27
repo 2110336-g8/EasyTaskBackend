@@ -570,7 +570,11 @@ class TasksController {
                 });
                 return;
             }
-            await this.tasksService.responseOffer(taskId, userId, true);
+            await this.tasksService.responseOffer(
+                taskId,
+                userId.toString(),
+                true,
+            );
             res.status(200).json({
                 success: true,
                 message: 'You have successfully accepted the offer.',
@@ -607,7 +611,11 @@ class TasksController {
                 });
                 return;
             }
-            await this.tasksService.responseOffer(taskId, userId, false);
+            await this.tasksService.responseOffer(
+                taskId,
+                userId.toString(),
+                false,
+            );
             res.status(200).json({
                 success: true,
                 message: 'You have successfully rejected the offer.',
@@ -735,7 +743,7 @@ class TasksController {
                 });
                 return;
             }
-            await this.tasksService.submitTask(taskId, userId);
+            await this.tasksService.submitTask(taskId, userId.toString());
             res.status(200).json({
                 success: true,
                 message: 'You have successfully submitted work.',
