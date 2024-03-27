@@ -16,7 +16,6 @@ import {
     CannotSubmitTaskError,
     CannotAcceptTaskError,
     CannotRequestRevisionError,
-
 } from '../errors/TaskError';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
@@ -472,17 +471,24 @@ class TasksController {
                 });
                 return;
             }
-            if (task.endDate < new Date()) {
-                res.status(403).json({
-                    success: false,
-                    error: 'Task is closed. The application period has ended.',
-                });
-                return;
-            }
             if (task.status != 'Open') {
                 res.status(403).json({
                     success: false,
                     error: 'Task is not open for applications. The owner has already started the task.',
+                });
+                return;
+            }
+            // check application date has expired
+            const endDatePlus1hr59min = new Date(task.endDate);
+            endDatePlus1hr59min.setHours(endDatePlus1hr59min.getHours() + 1);
+            endDatePlus1hr59min.setMinutes(
+                endDatePlus1hr59min.getMinutes() + 59,
+            );
+
+            if (endDatePlus1hr59min < new Date()) {
+                res.status(403).json({
+                    success: false,
+                    error: 'Task is closed. The application period has ended.',
                 });
                 return;
             }
