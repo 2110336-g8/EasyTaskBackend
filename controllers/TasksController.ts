@@ -1,4 +1,4 @@
-import e, { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
@@ -10,8 +10,8 @@ import {
     CannotUpdateApplicationStatusError,
     InvalidUpdateApplicationStatusError,
     CannotStartTaskError,
+    CannotGetTaskOfError,
 } from '../errors/TaskError';
-import { ITaskDocument } from '../models/TaskModel';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
 
@@ -50,7 +50,6 @@ class TasksController {
     };
 
     getTasksPage = async (req: Request, res: Response) => {
-        console.log(req.user);
         try {
             const data = req.body;
 
@@ -166,6 +165,35 @@ class TasksController {
                     phoneNumber: user.phoneNumber,
                     imageUrl: user.imageUrl,
                 };
+                //add status in the response
+                let viewStatus = '';
+                if (task.status == 'Open') {
+                    //check if userId is one of applicant's userId then set viewStatus = applicant's status
+                    const applicant = task.applicants.find(
+                        applicant =>
+                            applicant.userId.toString() === userId.toString(),
+                    );
+                    if (applicant) {
+                        viewStatus = applicant.status;
+                    } else {
+                        viewStatus = 'Open';
+                    }
+                } else if (task.status == 'InProgress') {
+                    //check if userId is one of hiredWorker's userId then set viewStatus = hiredworker's status
+                    const hiredWorker = task.hiredWorkers.find(
+                        worker =>
+                            worker.userId.toString() === userId.toString(),
+                    );
+                    if (hiredWorker) {
+                        viewStatus = hiredWorker.status;
+                    } else {
+                        viewStatus = 'InProgress';
+                    }
+                } else if (task.status == 'Dismissed') {
+                    viewStatus = 'Dismissed';
+                } else if (task.status == 'Completed') {
+                    viewStatus = 'Completed';
+                }
 
                 const taskWithGeneralInfo =
                     await this.tasksService.getTaskWithGeneralInfoById(id);
@@ -173,38 +201,76 @@ class TasksController {
                     res.status(200).json({
                         task: taskWithGeneralInfo,
                         customerInfo: customerInfo,
+                        status: viewStatus,
                     });
                 } else {
                     res.status(404).json({ error: 'Task not found' });
                 }
             } else {
-                if (task.applicants && task.applicants.length > 0) {
-                    const applicantsInfo = [];
-                    for (const applicant of task.applicants) {
-                        const applicantId = applicant.userId;
-                        const applicantUser =
-                            await this.usersService.getUserById(
-                                applicantId.toString(),
-                            );
-                        if (applicantUser) {
-                            applicantsInfo.push({
-                                _id: applicantUser.id,
-                                firstName: applicantUser.firstName,
-                                lastName: applicantUser.lastName,
-                                imageUrl: applicantUser.imageUrl,
-                                phoneNumber: applicantUser.phoneNumber,
+                if (task.status == 'Open') {
+                    if (task.applicants && task.applicants.length > 0) {
+                        const applicantsInfo = [];
+                        for (const applicant of task.applicants) {
+                            const applicantId = applicant.userId;
+                            const applicantUser =
+                                await this.usersService.getUserById(
+                                    applicantId.toString(),
+                                );
+                            if (applicantUser) {
+                                applicantsInfo.push({
+                                    _id: applicantUser.id,
+                                    firstName: applicantUser.firstName,
+                                    lastName: applicantUser.lastName,
+                                    imageUrl: applicantUser.imageUrl,
+                                    phoneNumber: applicantUser.phoneNumber,
                                 status: applicant.status,
-                            });
+                                });
+                            }
                         }
+                        res.status(200).json({
+                            task: task,
+                            applicantsInfo: applicantsInfo,
+                        });
+                    } else {
+                        res.status(200).json({
+                            task: task,
+                            applicantsInfo: [],
+                        });
                     }
-                    res.status(200).json({
-                        task: task,
-                        applicantsInfo: applicantsInfo,
-                    });
+                } else if (task.status == 'InProgress') {
+                    if (task.hiredWorkers && task.hiredWorkers.length > 0) {
+                        const hiredWorkersInfo = [];
+                        for (const worker of task.hiredWorkers) {
+                            const workerId = worker.userId;
+                            const workerStatus = worker.status;
+                            const workerUser =
+                                await this.usersService.getUserById(
+                                    workerId.toString(),
+                                );
+                            if (workerUser) {
+                                hiredWorkersInfo.push({
+                                    _id: workerUser.id,
+                                    firstName: workerUser.firstName,
+                                    lastName: workerUser.lastName,
+                                    imageUrl: workerUser.imageUrl,
+                                    phoneNumber: workerUser.phoneNumber,
+                                    status: workerStatus,
+                                });
+                            }
+                        }
+                        res.status(200).json({
+                            task: task,
+                            hiredWorkersInfo: hiredWorkersInfo,
+                        });
+                    } else {
+                        res.status(200).json({
+                            task: task,
+                            hiredWorkersInfo: [],
+                        });
+                    }
                 } else {
                     res.status(200).json({
                         task: task,
-                        applicantsInfo: [],
                     });
                 }
             }
@@ -214,24 +280,23 @@ class TasksController {
         }
     };
 
-    getTaskExperience = async (req: Request, res: Response) => {
+    getTasksOf = async (req: Request, res: Response) => {
         try {
-            const userId = req.params.customerId;
+            const userId = req.params.userId;
             if (userId != req.user._id) {
                 res.status(403).json({
                     error: 'You are not authorized to view information',
                 });
             }
-            // const status = 'Completed';
             const status = req.query.status as string;
-            // console.log(status);
-            const task = await this.tasksService.getTaskExperience(
-                userId,
-                status,
-            );
-            res.status(200).json({ task: task });
+            const task = await this.tasksService.getTasksOf(userId, status);
+            res.status(200).json(task);
         } catch (error) {
-            res.status(500).json({ error: 'Internal Server Error' });
+            if (error instanceof CannotGetTaskOfError) {
+                res.status(400).json({ error: error.message });
+            } else {
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
         }
     };
 
