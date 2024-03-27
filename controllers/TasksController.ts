@@ -192,8 +192,10 @@ class TasksController {
                     if (hiredWorker) {
                         viewStatus = hiredWorker.status;
                     } else {
-                        throw new Error(
-                            'You are not allowed to view this task',
+                        const applicant = task.applicants.find(
+                            applicant =>
+                                applicant.userId.toString() ===
+                                userId.toString(),
                         );
                         if (applicant) {
                             viewStatus = applicant.status;
