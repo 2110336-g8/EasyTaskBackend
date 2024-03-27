@@ -773,7 +773,7 @@ class TasksController {
         }
     };
 
-    acceptWork = async (req: Request, res: Response) => {
+    acceptTask = async (req: Request, res: Response) => {
         try {
             const taskId = req.params.id;
             const workerId = req.body.employee;
