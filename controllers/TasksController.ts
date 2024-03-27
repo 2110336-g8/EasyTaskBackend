@@ -192,7 +192,16 @@ class TasksController {
                     if (hiredWorker) {
                         viewStatus = hiredWorker.status;
                     } else {
-                        viewStatus = 'InProgress';
+                        const applicant = task.applicants.find(
+                            applicant =>
+                                applicant.userId.toString() ===
+                                userId.toString(),
+                        );
+                        if (applicant) {
+                            viewStatus = applicant.status;
+                        } else {
+                            viewStatus = 'Inprogress';
+                        }
                     }
                 } else if (task.status == 'Dismissed') {
                     viewStatus = 'Dismissed';
