@@ -24,6 +24,7 @@ import {
 import categoryData from '../assets/categories/categorieslist.json';
 import mongoose, { FilterQuery, Types } from 'mongoose';
 import { ITaskOf } from '../models/TaskOfModel';
+import { NotiService, INotiService } from './NotiService';
 
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
@@ -97,6 +98,7 @@ export class TasksService implements ITasksService {
     private tasksRepository: ITasksRepository;
     private usersRepository: IUsersRepository;
     private imagesRepository: IImagesRepository;
+    private notiService: INotiService;
 
     constructor(
         @Inject(() => TasksRepository)
@@ -105,10 +107,13 @@ export class TasksService implements ITasksService {
         usersRepository: IUsersRepository,
         @Inject(() => ImagesRepository)
         imagesRepository: IImagesRepository,
+        @Inject(() => NotiService)
+        notiService: INotiService,
     ) {
         this.tasksRepository = tasksRepository;
         this.usersRepository = usersRepository;
         this.imagesRepository = imagesRepository;
+        this.notiService = notiService;
     }
 
     createTask = async (taskData: ITask): Promise<ITaskDocument> => {
@@ -345,11 +350,7 @@ export class TasksService implements ITasksService {
         const formattedTasks = await Promise.all(
             tasks
                 .filter(
-                    task =>
-                        !(
-                            status === 'Accepted' &&
-                            task.status === 'InProgress'
-                        ),
+                    task => !(status === 'Accepted' && task.status != 'Open'),
                 )
                 .map(async task => {
                     // Update image URL for the task
@@ -841,6 +842,9 @@ export class TasksService implements ITasksService {
                     undefined,
                     ['Pending', 'Offering'],
                     'NotProceed',
+                );
+                this.notiService.notiFullAcceptedApplicant(
+                    task.customerId.toString(),
                 );
             }
             await session.commitTransaction();
