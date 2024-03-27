@@ -59,17 +59,3 @@ cron.schedule('59 16 * * *', async () => {
         console.error('Error occurred while checking tasks:', error);
     }
 });
-
-cron.schedule('40 * * * *', async () => {
-    console.log('Log: remove old endDate task');
-    const expire = new Date();
-    expire.setDate(expire.getDate() - 7);
-    try {
-        const success = await tasksService.dismissPassedEndDateTasks(expire);
-        if (success) {
-            console.log('already dismissed tasks');
-        }
-    } catch (error) {
-        console.error('Error occurred while dismissing tasks:', error);
-    }
-});
