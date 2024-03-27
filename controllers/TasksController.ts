@@ -6,12 +6,16 @@ import { UsersService, IUsersService } from '../services/UsersService';
 import sharp from 'sharp';
 import { groupBy } from 'lodash';
 import {
-    CannotApplyTaskError,
-    CannotSelectCandidateError,
-    CannotUpdateApplicationStatusError,
-    InvalidUpdateApplicationStatusError,
-    CannotStartTaskError,
     CannotGetTaskOfError,
+    CannotApplyTaskError,
+    CannotUpdateStateError,
+    CannotSelectCandidateError,
+    CannotResponseOfferError,
+    CannotStartTaskError,
+    CannotDismissTaskError,
+    CannotSubmitTaskError,
+    CannotAcceptTaskError,
+    CannotRequestRevisionError,
 } from '../errors/TaskError';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
@@ -224,6 +228,7 @@ class TasksController {
                                     lastName: applicantUser.lastName,
                                     imageUrl: applicantUser.imageUrl,
                                     phoneNumber: applicantUser.phoneNumber,
+                                    status: applicant.status,
                                 });
                             }
                         }
@@ -290,7 +295,7 @@ class TasksController {
             }
             const status = req.query.status as string;
             const task = await this.tasksService.getTasksOf(userId, status);
-            res.status(200).json(task);
+            res.status(200).json({ enrolled_tasks: task });
         } catch (error) {
             if (error instanceof CannotGetTaskOfError) {
                 res.status(400).json({ error: error.message });
@@ -457,13 +462,21 @@ class TasksController {
                 });
                 return;
             }
-            if (task.status != 'Open') {
+            if (task.endDate < new Date()) {
                 res.status(403).json({
                     success: false,
-                    error: 'Task is not open',
+                    error: 'Task is closed. The application period has ended.',
                 });
                 return;
             }
+            if (task.status != 'Open') {
+                res.status(403).json({
+                    success: false,
+                    error: 'Task is not open for applications. The owner has already started the task.',
+                });
+                return;
+            }
+
             const result = await this.tasksService.applyTask(
                 taskId,
                 req.user._id.toString(),
@@ -534,10 +547,7 @@ class TasksController {
             );
             res.status(200).json({ success: true, tasks: result });
         } catch (error) {
-            if (
-                error instanceof InvalidUpdateApplicationStatusError ||
-                error instanceof CannotUpdateApplicationStatusError
-            ) {
+            if (error instanceof CannotUpdateStateError) {
                 res.status(500).json({
                     sucess: false,
                     error: error.message,
@@ -565,15 +575,22 @@ class TasksController {
                 });
                 return;
             }
-            await this.tasksService.responseOffer(taskId, userId, true);
-            res.status(200).json({ success: true });
+            await this.tasksService.responseOffer(
+                taskId,
+                userId.toString(),
+                true,
+            );
+            res.status(200).json({
+                success: true,
+                message: 'You have successfully accepted the offer.',
+            });
         } catch (error) {
-            if (error instanceof InvalidUpdateApplicationStatusError) {
+            if (error instanceof CannotResponseOfferError) {
                 res.status(400).json({
                     sucess: false,
                     error: error.message,
                 });
-            } else if (error instanceof CannotUpdateApplicationStatusError) {
+            } else if (error instanceof CannotUpdateStateError) {
                 res.status(500).json({
                     sucess: false,
                     error: error.message,
@@ -599,15 +616,22 @@ class TasksController {
                 });
                 return;
             }
-            await this.tasksService.responseOffer(taskId, userId, false);
-            res.status(200).json({ success: true });
+            await this.tasksService.responseOffer(
+                taskId,
+                userId.toString(),
+                false,
+            );
+            res.status(200).json({
+                success: true,
+                message: 'You have successfully rejected the offer.',
+            });
         } catch (error) {
-            if (error instanceof InvalidUpdateApplicationStatusError) {
+            if (error instanceof CannotResponseOfferError) {
                 res.status(400).json({
                     sucess: false,
                     error: error.message,
                 });
-            } else if (error instanceof CannotUpdateApplicationStatusError) {
+            } else if (error instanceof CannotUpdateStateError) {
                 res.status(500).json({
                     sucess: false,
                     error: error.message,
@@ -647,6 +671,11 @@ class TasksController {
                     success: false,
                     error: error.message,
                 });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
             } else {
                 res.status(500).json({
                     sucess: false,
@@ -656,7 +685,6 @@ class TasksController {
         }
     };
 
-    // To do
     dismissTask = async (req: Request, res: Response) => {
         try {
             const taskId = req.params.id;
@@ -682,47 +710,157 @@ class TasksController {
                 const result =
                     await this.tasksService.dismissInProgressTask(taskId);
                 res.status(200).json({ success: true, result });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    error: 'This task have already been dismissed or completed',
+                });
             }
-            res.status(400).json({
-                success: false,
-                error: 'This task cannot be dismissed',
-            });
         } catch (error) {
-            res.status(500).json({
-                sucess: false,
-                error: 'Internal Server Error',
-            });
+            if (error instanceof CannotDismissTaskError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
         }
     };
 
     submitTask = async (req: Request, res: Response) => {
         try {
-            res;
-        } catch (error) {
-            res.status(500).json({
-                sucess: false,
-                error: 'Internal Server Error',
+            const taskId = req.params.id;
+            const userId = req.user._id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            await this.tasksService.submitTask(taskId, userId.toString());
+            res.status(200).json({
+                success: true,
+                message: 'You have successfully submitted work.',
             });
-        }
-    };
-
-    requestRevision = async (req: Request, res: Response) => {
-        try {
         } catch (error) {
-            res.status(500).json({
-                sucess: false,
-                error: 'Internal Server Error',
-            });
+            if (error instanceof CannotSubmitTaskError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
         }
     };
 
     acceptWork = async (req: Request, res: Response) => {
         try {
-        } catch (error) {
-            res.status(500).json({
-                sucess: false,
-                error: 'Internal Server Error',
+            const taskId = req.params.id;
+            const workerId = req.body.employee;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'You are not allowed to accept work of this task',
+                });
+                return;
+            }
+            const result = await this.tasksService.acceptTask(taskId, workerId);
+            res.status(200).json({
+                success: true,
+                task: result,
             });
+        } catch (error) {
+            if (error instanceof CannotAcceptTaskError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
+        }
+    };
+
+    requestRevision = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const workerId = req.body.employee;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'You are not allowed to request revision of this task',
+                });
+                return;
+            }
+            const result = await this.tasksService.requestRevision(
+                taskId,
+                workerId,
+            );
+            res.status(200).json({
+                success: true,
+                task: result,
+            });
+        } catch (error) {
+            if (error instanceof CannotRequestRevisionError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
         }
     };
 }
