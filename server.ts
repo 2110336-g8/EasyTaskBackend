@@ -25,34 +25,18 @@ connectDB();
 const app = express();
 const environment = process.env.ENVIRONMENT;
 const isDevelopment = environment === 'development';
-const backPort: number = isDevelopment
-    ? process.env.BACK_PORT_DEV === undefined
-        ? 5001
-        : parseInt(process.env.BACK_PORT_DEV, 10)
-    : process.env.BACK_PORT === undefined
-      ? 5000
-      : parseInt(process.env.BACK_PORT, 10);
-const backHostname: string = isDevelopment
-    ? process.env.BACK_HOSTNAME_DEV === undefined
-        ? 'localhost'
-        : process.env.BACK_HOSTNAME_DEV
-    : process.env.BACK_HOSTNAME === undefined
-      ? 'localhost'
-      : process.env.BACK_HOSTNAME;
-const frontPort: number = isDevelopment
-    ? process.env.FRONT_PORT_DEV === undefined
-        ? 8081
-        : parseInt(process.env.FRONT_PORT_DEV, 10)
-    : process.env.FRONT_PORT === undefined
-      ? 8000
-      : parseInt(process.env.FRONT_PORT, 10);
-const frontHostname: string = isDevelopment
-    ? process.env.FRONT_HOSTNAME_DEV === undefined
-        ? 'localhost'
-        : process.env.FRONT_HOSTNAME_DEV
-    : process.env.FRONT_HOSTNAME === undefined
-      ? 'localhost'
-      : process.env.FRONT_HOSTNAME;
+const backHostname: string = process.env.BACK_HOSTNAME
+    ? process.env.BACK_HOSTNAME
+    : 'localhost';
+const backPort: number = process.env.BACK_PORT
+    ? parseInt(process.env.BACK_PORT)
+    : 5001;
+const frontHostname: string = process.env.FRONT_HOSTNAME
+    ? process.env.FRONT_HOSTNAME
+    : 'localhost';
+const frontPort: number = process.env.FRONT_PORT
+    ? parseInt(process.env.FRONT_PORT)
+    : 8081;
 
 // To add later!!!
 // const allowedOrigins: string[] = ['*'];
