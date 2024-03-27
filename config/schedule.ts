@@ -12,23 +12,23 @@ cron.schedule('0 * * * *', () => {
     otpService.deleteTrashOtp();
 });
 
-// every day at 23:59
-cron.schedule('59 23 * * *', async () => {
+// every day at 23:59 (Thailand = GMT+7)
+cron.schedule('59 16 * * *', async () => {
     try {
         console.log(
             'Log: Checking for tasks with end date equal to today or six days ago',
         );
 
         const today = new Date();
-        today.setHours(23, 59, 0, 0);
+        today.setUTCHours(16, 59, 0, 0);
 
         const sixDaysAgo = new Date();
         sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
-        sixDaysAgo.setHours(23, 59, 0, 0);
+        sixDaysAgo.setUTCHours(16, 59, 0, 0);
 
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        sevenDaysAgo.setHours(23, 59, 0, 0);
+        sevenDaysAgo.setUTCHours(16, 59, 0, 0);
 
         // Tasks that end today
         const endApplyTasks = await tasksService.getTasksForNotiEndApply(today);
@@ -57,5 +57,19 @@ cron.schedule('59 23 * * *', async () => {
         }
     } catch (error) {
         console.error('Error occurred while checking tasks:', error);
+    }
+});
+
+cron.schedule('40 * * * *', async () => {
+    console.log('Log: remove old endDate task');
+    const expire = new Date();
+    expire.setDate(expire.getDate() - 7);
+    try {
+        const success = await tasksService.dismissPassedEndDateTasks(expire);
+        if (success) {
+            console.log('already dismissed tasks');
+        }
+    } catch (error) {
+        console.error('Error occurred while dismissing tasks:', error);
     }
 });

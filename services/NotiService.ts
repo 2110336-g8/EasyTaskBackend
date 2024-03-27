@@ -215,9 +215,9 @@ export class NotiService implements INotiService {
         //like noti to start
         const mail = {
             receiverEmail: customerEmail,
-            subject: '',
-            textPart: '',
-            htmlPart: '',
+            subject: 'full applicants',
+            textPart: 'you can now start the task',
+            htmlPart: '<p>please start task<p>',
             createAt: new Date(),
             sendAt: new Date(),
         } as IMail;
