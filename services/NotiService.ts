@@ -8,6 +8,7 @@ import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 export interface INotiService {
     notiEndDateTask: (task: ITaskDocument) => Promise<boolean>;
     notiFullAcceptedApplicant: (customerId: string) => Promise<boolean>;
+    notiSixDayAfterEndApply: (task: ITaskDocument) => Promise<boolean>;
 }
 
 @Service()
