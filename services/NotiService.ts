@@ -204,8 +204,8 @@ export class NotiService implements INotiService {
             
             <p>Thank you.</p>
 
-            <p>Best regards,</p>
-            <p>Easy Task Team</p>
+            <p>Best regards,
+            Easy Task Team</p>
             
             <a href=https://dev.easytask.vt.in.th/ads> Go to website now </a>
             `,
@@ -238,8 +238,8 @@ export class NotiService implements INotiService {
             
             <p>Thank you for using our website.</p>
 
-            <p>Best regards,</p>
-            <p>Easy Task Team</p>
+            <p>Best regards,
+            Easy Task Team</p>
             
             <a href=https://dev.easytask.vt.in.th/ads> Go to website now </a>
             `,
@@ -274,8 +274,8 @@ export class NotiService implements INotiService {
             
             <p>Thank you for your prompt attention to this matter.</p>
 
-            <p>Best regards,</p>
-            <p>Easy Task Team</p>
+            <p>Best regards,
+            Easy Task Team</p>
             
             <a href=https://dev.easytask.vt.in.th/ads> Go to website now </a>
             `,
@@ -310,8 +310,8 @@ export class NotiService implements INotiService {
             
             <p>Thank you for using our website.</p>
 
-            <p>Best regards,</p>
-            <p>Easy Task Team</p>
+            <p>Best regards,
+            Easy Task Team</p>
             
             <a href=https://dev.easytask.vt.in.th/ads> Go to website now </a> 
             `,
@@ -344,8 +344,8 @@ export class NotiService implements INotiService {
             <p> After the client has been carefully considerate all applicants, we regret to inform you that we will not be proceeding with your application for the <b>${taskTitle}</b> We appreciate your interest and wish you success in your job search.
             </p>
 
-            <p>Best regards,</p>
-            <p>Easy Task Team</p>
+            <p>Best regards,
+            Easy Task Team</p>
             
             <a href=https://dev.easytask.vt.in.th/ads> Go to website now </a> 
             `,
@@ -380,8 +380,8 @@ export class NotiService implements INotiService {
             <p> In the next few days, you can expect to receive more details about your role in the messages section of our website.Please note that there may be a slight delay of up to one week after the application period ends before we finalize all arrangements.
             </p>
 
-            <p>Best regards,</p>
-            <p>Easy Task Team</p>
+            <p>Best regards,
+            Easy Task Team</p>
             
             <a href=https://dev.easytask.vt.in.th/ads> Go to website now </a> `,
             createAt: new Date(),
@@ -415,8 +415,8 @@ export class NotiService implements INotiService {
             <p> In the next few days, you can expect to receive more details about your role in the messages section of our website.Please note that there may be a slight delay of up to one week after the application period ends before we finalize all arrangements.
             </p>
 
-            <p>Best regards,</p>
-            <p>Easy Task Team</p>
+            <p>Best regards,
+            Easy Task Team</p>
             
             <a href=https://dev.easytask.vt.in.th/ads> Go to website now </a> `,
             createAt: new Date(),
