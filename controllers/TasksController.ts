@@ -4,13 +4,15 @@ import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
 import { UsersService, IUsersService } from '../services/UsersService';
 import sharp from 'sharp';
+import { groupBy } from 'lodash';
 import {
-    CannotApplyTaskError,
-    CannotSelectCandidateError,
-    CannotUpdateApplicationStatusError,
-    InvalidUpdateApplicationStatusError,
-    CannotStartTaskError,
     CannotGetTaskOfError,
+    CannotApplyTaskError,
+    CannotUpdateStateError,
+    CannotSelectCandidateError,
+    CannotResponseOfferError,
+    CannotStartTaskError,
+    CannotDismissTaskError,
 } from '../errors/TaskError';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
@@ -223,6 +225,7 @@ class TasksController {
                                     lastName: applicantUser.lastName,
                                     imageUrl: applicantUser.imageUrl,
                                     phoneNumber: applicantUser.phoneNumber,
+                                status: applicant.status,
                                 });
                             }
                         }
@@ -289,7 +292,7 @@ class TasksController {
             }
             const status = req.query.status as string;
             const task = await this.tasksService.getTasksOf(userId, status);
-            res.status(200).json(task);
+            res.status(200).json({ enrolled_tasks: task });
         } catch (error) {
             if (error instanceof CannotGetTaskOfError) {
                 res.status(400).json({ error: error.message });
@@ -308,17 +311,20 @@ class TasksController {
                 'Open',
                 'InProgress',
                 'Completed',
-                'Closed',
+                'Dismissed',
             ];
             if (status && !allowedStatusValues.includes(status)) {
                 res.status(400).json({ error: 'Invalid status parameter' });
                 return;
             }
-
             const tasks = await this.tasksService.getAdvertisement(
                 customerId,
                 status || '',
             );
+            if (status == undefined || !status) {
+                const groupedTasks = groupBy(tasks, 'status');
+                res.status(200).json({ tasks: groupedTasks });
+            }
             res.status(200).json({ tasks });
         } catch (error) {
             console.error(error);
@@ -530,10 +536,7 @@ class TasksController {
             );
             res.status(200).json({ success: true, tasks: result });
         } catch (error) {
-            if (
-                error instanceof InvalidUpdateApplicationStatusError ||
-                error instanceof CannotUpdateApplicationStatusError
-            ) {
+            if (error instanceof CannotUpdateStateError) {
                 res.status(500).json({
                     sucess: false,
                     error: error.message,
@@ -562,14 +565,17 @@ class TasksController {
                 return;
             }
             await this.tasksService.responseOffer(taskId, userId, true);
-            res.status(200).json({ success: true });
+            res.status(200).json({
+                success: true,
+                message: 'You have successfully accepted the offer.',
+            });
         } catch (error) {
-            if (error instanceof InvalidUpdateApplicationStatusError) {
+            if (error instanceof CannotResponseOfferError) {
                 res.status(400).json({
                     sucess: false,
                     error: error.message,
                 });
-            } else if (error instanceof CannotUpdateApplicationStatusError) {
+            } else if (error instanceof CannotUpdateStateError) {
                 res.status(500).json({
                     sucess: false,
                     error: error.message,
@@ -596,14 +602,17 @@ class TasksController {
                 return;
             }
             await this.tasksService.responseOffer(taskId, userId, false);
-            res.status(200).json({ success: true });
+            res.status(200).json({
+                success: true,
+                message: 'You have successfully rejected the offer.',
+            });
         } catch (error) {
-            if (error instanceof InvalidUpdateApplicationStatusError) {
+            if (error instanceof CannotResponseOfferError) {
                 res.status(400).json({
                     sucess: false,
                     error: error.message,
                 });
-            } else if (error instanceof CannotUpdateApplicationStatusError) {
+            } else if (error instanceof CannotUpdateStateError) {
                 res.status(500).json({
                     sucess: false,
                     error: error.message,
@@ -643,6 +652,11 @@ class TasksController {
                     success: false,
                     error: error.message,
                 });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
             } else {
                 res.status(500).json({
                     sucess: false,
@@ -652,7 +666,6 @@ class TasksController {
         }
     };
 
-    // To do
     dismissTask = async (req: Request, res: Response) => {
         try {
             const taskId = req.params.id;
@@ -678,16 +691,29 @@ class TasksController {
                 const result =
                     await this.tasksService.dismissInProgressTask(taskId);
                 res.status(200).json({ success: true, result });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    error: 'This task have already been dismissed or completed',
+                });
             }
-            res.status(400).json({
-                success: false,
-                error: 'This task cannot be dismissed',
-            });
         } catch (error) {
-            res.status(500).json({
-                sucess: false,
-                error: 'Internal Server Error',
-            });
+            if (error instanceof CannotDismissTaskError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
         }
     };
 
