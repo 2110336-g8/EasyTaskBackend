@@ -26,6 +26,10 @@ cron.schedule('59 23 * * *', async () => {
         sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
         sixDaysAgo.setHours(23, 59, 0, 0);
 
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        sevenDaysAgo.setHours(23, 59, 0, 0);
+
         // Tasks that end today
         const endApplyTasks = await tasksService.getTasksForNotiEndApply(today);
         if (endApplyTasks && endApplyTasks.length > 0) {
@@ -40,6 +44,15 @@ cron.schedule('59 23 * * *', async () => {
         if (EndedSixDaysAgoTasks && EndedSixDaysAgoTasks.length > 0) {
             for (const task of EndedSixDaysAgoTasks) {
                 await notiService.notiSixDayAfterEndApply(task);
+            }
+        }
+
+        //dismiss task that customer don't start within 1 week after endDate
+        const EndedSevenDaysAgoTasks =
+            await tasksService.getTasksForNotiEndApply(sevenDaysAgo);
+        if (EndedSevenDaysAgoTasks && EndedSevenDaysAgoTasks.length > 0) {
+            for (const task of EndedSevenDaysAgoTasks) {
+                await tasksService.dismissOpenTask(task.id);
             }
         }
     } catch (error) {
