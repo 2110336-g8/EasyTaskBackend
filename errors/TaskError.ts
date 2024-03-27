@@ -1,3 +1,10 @@
+export class CannotGetTaskOfError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'Getting TaskOf Error';
+    }
+}
+
 export class CannotUpdateStateError extends Error {
     constructor(message: string) {
         super(message);
@@ -40,9 +47,23 @@ export class CannotDismissTaskError extends Error {
     }
 }
 
-export class CannotGetTaskOfError extends Error {
+export class CannotSubmitTaskError extends Error {
     constructor(message: string) {
         super(message);
-        this.name = 'Getting TaskOf Error';
+        this.name = 'Task Cancellation Error';
+    }
+}
+
+export class CannotAcceptTaskError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'Task Acception Error';
+    }
+}
+
+export class CannotRequestRevisionError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'Revision Request Error';
     }
 }
