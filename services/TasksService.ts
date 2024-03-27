@@ -89,6 +89,7 @@ export interface ITasksService {
         userId: string,
         status: string[],
     ): Promise<ITaskDocument[]>;
+    getTasksForNotiEndApply: (today: Date) => Promise<ITaskDocument[] | null>;
 }
 
 @Service()
@@ -1239,5 +1240,16 @@ export class TasksService implements ITasksService {
                 return await this.imagesRepository.updateTaskImageUrl(task);
             }),
         );
+    };
+
+    getTasksForNotiEndApply = async (
+        today: Date,
+    ): Promise<ITaskDocument[] | null> => {
+        const tasks = await this.tasksRepository.findTasks({
+            endDate: { $eq: today },
+            status: { $eq: 'Open' },
+        });
+        if (tasks) return tasks;
+        else return null;
     };
 }
