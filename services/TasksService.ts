@@ -10,6 +10,10 @@ import {
     CannotResponseOfferError,
     CannotStartTaskError,
     CannotDismissTaskError,
+    CannotSubmitTaskError,
+    CannotAcceptTaskError,
+    CannotRequestRevisionError,
+  
 } from '../errors/TaskError';
 import { Inject, Service } from 'typedi';
 import { ValidationError } from '../errors/RepoError';
@@ -21,6 +25,7 @@ import {
 import categoryData from '../assets/categories/categorieslist.json';
 import mongoose, { FilterQuery, Types } from 'mongoose';
 import { ITaskOf } from '../models/TaskOfModel';
+import { NotiService, INotiService } from './NotiService';
 
 export interface ITasksService {
     createTask: (taskData: ITask) => Promise<ITaskDocument>;
@@ -69,14 +74,24 @@ export interface ITasksService {
         taskId: string,
         userId: string,
         response: boolean,
-    ) => Promise<null>;
-    startTask: (taskId: string) => Promise<ITaskDocument>;
+    ) => Promise<void>;
+    startTask: (taskId: string) => Promise<ITaskDocument | null>;
     dismissOpenTask: (taskId: string) => Promise<ITaskDocument | null>;
     dismissInProgressTask: (taskId: string) => Promise<ITaskDocument | null>;
+    submitTask: (taskId: string, userId: string) => Promise<void>;
+    acceptTask: (
+        taskId: string,
+        userId: string,
+    ) => Promise<ITaskDocument | null>;
+    requestRevision: (
+        taskId: string,
+        userId: string,
+    ) => Promise<ITaskDocument | null>;
     getTasksByUserIdAndStatus(
         userId: string,
         status: string[],
     ): Promise<ITaskDocument[]>;
+    getTasksForNotiEndApply: (today: Date) => Promise<ITaskDocument[] | null>;
 }
 
 @Service()
@@ -84,6 +99,7 @@ export class TasksService implements ITasksService {
     private tasksRepository: ITasksRepository;
     private usersRepository: IUsersRepository;
     private imagesRepository: IImagesRepository;
+    private notiService: INotiService;
 
     constructor(
         @Inject(() => TasksRepository)
@@ -92,10 +108,13 @@ export class TasksService implements ITasksService {
         usersRepository: IUsersRepository,
         @Inject(() => ImagesRepository)
         imagesRepository: IImagesRepository,
+        @Inject(() => NotiService)
+        notiService: INotiService,
     ) {
         this.tasksRepository = tasksRepository;
         this.usersRepository = usersRepository;
         this.imagesRepository = imagesRepository;
+        this.notiService = notiService;
     }
 
     createTask = async (taskData: ITask): Promise<ITaskDocument> => {
@@ -332,11 +351,7 @@ export class TasksService implements ITasksService {
         const formattedTasks = await Promise.all(
             tasks
                 .filter(
-                    task =>
-                        !(
-                            status === 'Accepted' &&
-                            task.status === 'InProgress'
-                        ),
+                    task => !(status === 'Accepted' && task.status != 'Open'),
                 )
                 .map(async task => {
                     // Update image URL for the task
@@ -546,26 +561,28 @@ export class TasksService implements ITasksService {
                     'Validation error - document not found or constraint violated.',
                 );
             }
-            // Update task image URL
-            const updatedTaskWithImageUpdate =
-                await this.imagesRepository.updateTaskImageUrl(updatedTask);
-
-            // Format return task
-            const generalInfoTask = {
-                ...updatedTaskWithImageUpdate.toObject(),
-                imageKey: undefined,
-                applicants: undefined,
-                hiredWorkers: undefined,
-            };
-
             await session.commitTransaction();
             session.endSession();
-            return generalInfoTask as ITaskDocument;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
             throw error;
         }
+        // to return applied task
+        const result = await this.tasksRepository.findOne(taskId);
+        if (!result) return null;
+        const resultWithImageUpdate =
+            await this.imagesRepository.updateTaskImageUrl(result);
+
+        // Format return task
+        const generalInfoTask = {
+            ...resultWithImageUpdate.toObject(),
+            imageKey: undefined,
+            applicants: undefined,
+            hiredWorkers: undefined,
+        };
+
+        return generalInfoTask as ITaskDocument;
     };
 
     getCandidate = async (taskId: string): Promise<ICandidate | null> => {
@@ -754,30 +771,30 @@ export class TasksService implements ITasksService {
                 ['Pending'],
                 'Offering',
             );
-            // get Candidate result to return
-            const candidate = await this.getCandidate(taskId);
-            if (!candidate) {
-                console.error(
-                    'Cannot get candidate information after selection, dismiss selection',
-                );
-                throw new CannotSelectCandidateError(`Task not found`);
-            }
             await session.commitTransaction();
             session.endSession();
-            return candidate;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
             console.error('Error occurred while selecting candidates:', error);
             throw error;
         }
+        // get Candidate result to return
+        const candidate = await this.getCandidate(taskId);
+        if (!candidate) {
+            console.error(
+                'Cannot get candidate information after selection, but the selection is successful',
+            );
+            throw new CannotSelectCandidateError(`Task not found`);
+        }
+        return candidate;
     };
 
     responseOffer = async (
         taskId: string,
         userId: string,
         response: boolean,
-    ): Promise<null> => {
+    ): Promise<void> => {
         // if response = true, set status to 'Accepted', else set to 'Rejected'
         const status = response ? 'Accepted' : 'Rejected';
         const session = await this.tasksRepository.startSession();
@@ -827,10 +844,12 @@ export class TasksService implements ITasksService {
                     ['Pending', 'Offering'],
                     'NotProceed',
                 );
+                this.notiService.notiFullAcceptedApplicant(
+                    task.customerId.toString(),
+                );
             }
             await session.commitTransaction();
             session.endSession();
-            return null;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
@@ -958,12 +977,17 @@ export class TasksService implements ITasksService {
                 await this.imagesRepository.updateTaskImageUrl(updatedTask);
             await session.commitTransaction();
             session.endSession();
-            return updatedTaskWithImageUpdate;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
             throw error;
         }
+        // to return update task
+        const result = await this.tasksRepository.findOne(taskId);
+        if (!result) return null;
+        const resultWithImageUpdate =
+            await this.imagesRepository.updateTaskImageUrl(result);
+        return resultWithImageUpdate;
     };
 
     dismissOpenTask = async (taskId: string): Promise<ITaskDocument | null> => {
@@ -991,12 +1015,17 @@ export class TasksService implements ITasksService {
                 await this.imagesRepository.updateTaskImageUrl(updatedTask);
             await session.commitTransaction();
             session.endSession();
-            return updatedTaskWithImageUpdate;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
             throw error;
         }
+        // to return update task
+        const result = await this.tasksRepository.findOne(taskId);
+        if (!result) return null;
+        const resultWithImageUpdate =
+            await this.imagesRepository.updateTaskImageUrl(result);
+        return resultWithImageUpdate;
     };
 
     dismissInProgressTask = async (
@@ -1028,16 +1057,186 @@ export class TasksService implements ITasksService {
             if (!updatedTask) {
                 throw new CannotDismissTaskError('Task not found');
             }
-            const updatedTaskWithImageUpdate =
-                await this.imagesRepository.updateTaskImageUrl(updatedTask);
             await session.commitTransaction();
             session.endSession();
-            return updatedTaskWithImageUpdate;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
             throw error;
         }
+        // to return update task
+        const result = await this.tasksRepository.findOne(taskId);
+        if (!result) return null;
+        const resultWithImageUpdate =
+            await this.imagesRepository.updateTaskImageUrl(result);
+        return resultWithImageUpdate;
+    };
+
+    submitTask = async (taskId: string, userId: string): Promise<void> => {
+        const session = await this.tasksRepository.startSession();
+        session.startTransaction();
+        try {
+            // Step 1 : check if request is valid
+            const task = await this.tasksRepository.findOne(taskId);
+            if (!task) {
+                throw new CannotSubmitTaskError('Task not found');
+            }
+            // the task status (overall) must be 'InProgress'
+            if (task.status != 'InProgress') {
+                throw new CannotSubmitTaskError(
+                    'This task has not yet started, been dismissed, or completed.',
+                );
+            }
+            const validUser = task.hiredWorkers.filter(
+                worker => worker.userId.toString() === userId,
+            );
+            // the task state must be 'InProgress' or 'Revising'
+            if (
+                validUser.length != 1 ||
+                !['InProgress', 'Revising'].includes(validUser[0].status)
+            ) {
+                throw new CannotSubmitTaskError(
+                    'You are not working on this task',
+                );
+            }
+            // Step 2 : update (individual) task status of the user to 'Submitted' or 'Resubmitted'
+            // update task state
+            if (validUser[0].status === 'InProgress') {
+                await this.updateTaskState(
+                    taskId,
+                    [userId],
+                    ['InProgress'],
+                    'Submitted',
+                );
+            } else {
+                await this.updateTaskState(
+                    taskId,
+                    [userId],
+                    ['Revising'],
+                    'Resubmitted',
+                );
+            }
+            await session.commitTransaction();
+            session.endSession();
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+    };
+
+    acceptTask = async (
+        taskId: string,
+        userId: string,
+    ): Promise<ITaskDocument | null> => {
+        const session = await this.tasksRepository.startSession();
+        session.startTransaction();
+        try {
+            // Step 1 : check if request is valid
+            const task = await this.tasksRepository.findOne(taskId);
+            if (!task) {
+                throw new CannotAcceptTaskError('Task not found');
+            }
+            // the task status (overall) must be 'InProgress'
+            if (task.status != 'InProgress') {
+                throw new CannotAcceptTaskError(
+                    'This task has not yet started, been dismissed, or completed.',
+                );
+            }
+            const validUser = task.hiredWorkers.filter(
+                worker => worker.userId.toString() === userId,
+            );
+            // the task state must be 'Submitted' or 'Resubmitted'
+            if (
+                validUser.length != 1 ||
+                !['Submitted', 'Resubmitted'].includes(validUser[0].status)
+            ) {
+                throw new CannotAcceptTaskError(
+                    'Employee is not assigned to this task or has not submitted any work.',
+                );
+            }
+            // Step 2 : update (individual) task status of the user to 'Completed'
+            // update task state
+            await this.updateTaskState(
+                taskId,
+                [userId],
+                ['Submitted', 'Resubmitted'],
+                'Completed',
+            );
+            // Step 3 : Check if every worker (employee) has completed the task.
+            // If every worker has completed the task, change the task status (overall) to 'Completed'.
+            const completedWorker = task.hiredWorkers.filter(
+                worker => worker.status === 'Completed',
+            );
+            if (completedWorker.length + 1 === task.hiredWorkers.length) {
+                const updatedTask = await this.tasksRepository.updateStatus(
+                    taskId,
+                    'Completed',
+                );
+                if (!updatedTask) {
+                    throw new CannotAcceptTaskError('Task not found');
+                }
+            }
+            await session.commitTransaction();
+            session.endSession();
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+        // to return update task
+        const result = await this.tasksRepository.findOne(taskId);
+        if (!result) return null;
+        const resultWithImageUpdate =
+            await this.imagesRepository.updateTaskImageUrl(result);
+        return resultWithImageUpdate;
+    };
+
+    requestRevision = async (
+        taskId: string,
+        userId: string,
+    ): Promise<ITaskDocument | null> => {
+        const session = await this.tasksRepository.startSession();
+        session.startTransaction();
+        try {
+            // Step 1 : check if request is valid
+            const task = await this.tasksRepository.findOne(taskId);
+            if (!task) {
+                throw new CannotRequestRevisionError('Task not found');
+            }
+            const validUser = task.hiredWorkers.filter(
+                worker => worker.userId.toString() === userId,
+            );
+            // the task state must be 'Submitted'
+            if (
+                validUser.length != 1 ||
+                !['Submitted'].includes(validUser[0].status)
+            ) {
+                throw new CannotRequestRevisionError(
+                    'Employee is not assigned to this task or has not submitted any work.',
+                );
+            }
+            // Step 2 : update (individual) task status of the user to 'Revising'
+            // update task state
+            await this.updateTaskState(
+                taskId,
+                [userId],
+                ['Submitted'],
+                'Revising',
+            );
+            await session.commitTransaction();
+            session.endSession();
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+        // to return update task
+        const result = await this.tasksRepository.findOne(taskId);
+        if (!result) return null;
+        const resultWithImageUpdate =
+            await this.imagesRepository.updateTaskImageUrl(result);
+        return resultWithImageUpdate;
     };
 
     getTasksByUserIdAndStatus = async (
@@ -1053,5 +1252,16 @@ export class TasksService implements ITasksService {
                 return await this.imagesRepository.updateTaskImageUrl(task);
             }),
         );
+    };
+
+    getTasksForNotiEndApply = async (
+        today: Date,
+    ): Promise<ITaskDocument[] | null> => {
+        const tasks = await this.tasksRepository.findTasks({
+            endDate: { $eq: today },
+            status: { $eq: 'Open' },
+        });
+        if (tasks) return tasks;
+        else return null;
     };
 }

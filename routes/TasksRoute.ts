@@ -21,7 +21,7 @@ router.route('/adsOf/:customerId').get(tasksController.getAdvertisements);
 
 // For employee
 router.route('/:id/apply').post(tasksController.applyTask);
-router.route('/:id/accpet-offer').post(tasksController.acceptOffer);
+router.route('/:id/accept-offer').post(tasksController.acceptOffer);
 router.route('/:id/reject-offer').post(tasksController.rejectOffer);
 router.route('/:id/submit').post(tasksController.submitTask);
 
@@ -30,7 +30,7 @@ router.route('/:id/candidates').get(tasksController.getCandidate);
 router.route('/:id/candidates').post(tasksController.selectCandidate);
 router.route('/:id/start').post(tasksController.startTask);
 router.route('/:id/dismiss').post(tasksController.dismissTask);
-router.route('/:id/accept-work').post(tasksController.acceptWork);
+router.route('/:id/accept-task').post(tasksController.acceptTask);
 router.route('/:id/revision').post(tasksController.requestRevision);
 
 router

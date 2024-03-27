@@ -13,6 +13,10 @@ import {
     CannotResponseOfferError,
     CannotStartTaskError,
     CannotDismissTaskError,
+    CannotSubmitTaskError,
+    CannotAcceptTaskError,
+    CannotRequestRevisionError,
+
 } from '../errors/TaskError';
 import dotenv from 'dotenv';
 dotenv.config({ path: './config/config.env' });
@@ -183,8 +187,8 @@ class TasksController {
                 } else if (task.status == 'InProgress') {
                     //check if userId is one of hiredWorker's userId then set viewStatus = hiredworker's status
                     const hiredWorker = task.hiredWorkers.find(
-                        worker =>
-                            worker.userId.toString() === userId.toString(),
+                        hiredWorker =>
+                            hiredWorker.userId.toString() === userId.toString(),
                     );
                     if (hiredWorker) {
                         viewStatus = hiredWorker.status;
@@ -225,7 +229,7 @@ class TasksController {
                                     lastName: applicantUser.lastName,
                                     imageUrl: applicantUser.imageUrl,
                                     phoneNumber: applicantUser.phoneNumber,
-                                status: applicant.status,
+                                    status: applicant.status,
                                 });
                             }
                         }
@@ -459,13 +463,21 @@ class TasksController {
                 });
                 return;
             }
-            if (task.status != 'Open') {
+            if (task.endDate < new Date()) {
                 res.status(403).json({
                     success: false,
-                    error: 'Task is not open',
+                    error: 'Task is closed. The application period has ended.',
                 });
                 return;
             }
+            if (task.status != 'Open') {
+                res.status(403).json({
+                    success: false,
+                    error: 'Task is not open for applications. The owner has already started the task.',
+                });
+                return;
+            }
+
             const result = await this.tasksService.applyTask(
                 taskId,
                 req.user._id.toString(),
@@ -564,7 +576,11 @@ class TasksController {
                 });
                 return;
             }
-            await this.tasksService.responseOffer(taskId, userId, true);
+            await this.tasksService.responseOffer(
+                taskId,
+                userId.toString(),
+                true,
+            );
             res.status(200).json({
                 success: true,
                 message: 'You have successfully accepted the offer.',
@@ -601,7 +617,11 @@ class TasksController {
                 });
                 return;
             }
-            await this.tasksService.responseOffer(taskId, userId, false);
+            await this.tasksService.responseOffer(
+                taskId,
+                userId.toString(),
+                false,
+            );
             res.status(200).json({
                 success: true,
                 message: 'You have successfully rejected the offer.',
@@ -719,32 +739,129 @@ class TasksController {
 
     submitTask = async (req: Request, res: Response) => {
         try {
-            res;
-        } catch (error) {
-            res.status(500).json({
-                sucess: false,
-                error: 'Internal Server Error',
+            const taskId = req.params.id;
+            const userId = req.user._id;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            await this.tasksService.submitTask(taskId, userId.toString());
+            res.status(200).json({
+                success: true,
+                message: 'You have successfully submitted work.',
             });
+        } catch (error) {
+            if (error instanceof CannotSubmitTaskError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
+        }
+    };
+
+    acceptTask = async (req: Request, res: Response) => {
+        try {
+            const taskId = req.params.id;
+            const workerId = req.body.employee;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'You are not allowed to accept work of this task',
+                });
+                return;
+            }
+            const result = await this.tasksService.acceptTask(taskId, workerId);
+            res.status(200).json({
+                success: true,
+                task: result,
+            });
+        } catch (error) {
+            if (error instanceof CannotAcceptTaskError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
         }
     };
 
     requestRevision = async (req: Request, res: Response) => {
         try {
-        } catch (error) {
-            res.status(500).json({
-                sucess: false,
-                error: 'Internal Server Error',
+            const taskId = req.params.id;
+            const workerId = req.body.employee;
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Task Not Found',
+                });
+                return;
+            }
+            if (task.customerId.toString() != req.user._id) {
+                res.status(403).json({
+                    success: false,
+                    error: 'You are not allowed to request revision of this task',
+                });
+                return;
+            }
+            const result = await this.tasksService.requestRevision(
+                taskId,
+                workerId,
+            );
+            res.status(200).json({
+                success: true,
+                task: result,
             });
-        }
-    };
-
-    acceptWork = async (req: Request, res: Response) => {
-        try {
         } catch (error) {
-            res.status(500).json({
-                sucess: false,
-                error: 'Internal Server Error',
-            });
+            if (error instanceof CannotRequestRevisionError) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message,
+                });
+            } else if (error instanceof CannotUpdateStateError) {
+                res.status(500).json({
+                    sucess: false,
+                    error: error.message,
+                });
+            } else {
+                res.status(500).json({
+                    sucess: false,
+                    error: 'Internal Server Error',
+                });
+            }
         }
     };
 }
