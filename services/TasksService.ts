@@ -93,6 +93,7 @@ export interface ITasksService {
     ): Promise<ITaskDocument[]>;
 
     getTasksForNotiEndApply: (today: Date) => Promise<ITaskDocument[] | null>;
+    dismissPassedEndDateTasks: (expire: Date) => Promise<boolean>;
 }
 
 @Service()
@@ -1296,5 +1297,23 @@ export class TasksService implements ITasksService {
         });
         if (tasks) return tasks;
         else return null;
+    };
+
+    dismissPassedEndDateTasks = async (expire: Date): Promise<boolean> => {
+        try {
+            const tasks = await this.tasksRepository.findTasks({
+                endDate: { $lt: expire },
+                status: { $eq: 'Open' },
+            });
+            if (tasks) {
+                for (const task of tasks) {
+                    await this.dismissOpenTask(task.id);
+                }
+            }
+            return true;
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
     };
 }

@@ -87,7 +87,10 @@ export class MessagesService implements IMessagesService {
     async isJoinableIdRoom(taskId: string, userId: string): Promise<void> {
         try {
             const task = await this.tasksService.getTaskById(taskId);
-            if (!task || !['InProgress' || 'Closed'].includes(task.status)) {
+            if (
+                !task ||
+                !['InProgress', 'Dissmissed', 'Completed'].includes(task.status)
+            ) {
                 throw new CannotJoinRoomError('Invalid task id');
             }
             const isUserHired = task.hiredWorkers.some(
@@ -152,11 +155,19 @@ export class MessagesService implements IMessagesService {
                     'Invalid task status, must be in progress',
                 );
             }
-            const isUserHired = task.hiredWorkers.some(
-                worker =>
+            const isUserHired = task.hiredWorkers.some(worker => {
+                console.log(worker);
+                console.log(senderId);
+                return (
                     worker.userId.toString() === senderId.toString() &&
-                    worker.status === 'InProgress',
-            );
+                    [
+                        'InProgress',
+                        'Submitted',
+                        'Revising',
+                        'Resubmitted',
+                    ].includes(worker.status)
+                );
+            });
             if (
                 !isUserHired &&
                 task.customerId.toString() !== senderId.toString()
