@@ -7,7 +7,6 @@ import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 import { IUserDocument } from '../models/UserModel';
 import { MailRepository, IMailRepository } from '../repositories/MailsRepo';
 
-
 // const fs = require('fs');
 // const logoSvg = fs.readFileSync('logo.svg', { encoding: 'utf-8' });
 // const logoBase64 = Buffer.from(logoSvg).toString('base64');
@@ -291,7 +290,6 @@ export class NotiService implements INotiService {
         taskTitle: string,
     ): Promise<void> {
         //like noti to start
-        console.log(logo);
         const mail = {
             receiverEmail: customer.email as string,
             subject: `Confirmation: Team Size Reached for ${taskTitle} on Easy Task`,

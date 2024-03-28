@@ -57,12 +57,15 @@ class TasksController {
     getTasksPage = async (req: Request, res: Response) => {
         try {
             const data = req.body;
+            const userId = req.user._id;
 
             const taskPage = Number(data.page) || 1;
             const taskPerPage = Number(data.limit) || 8;
 
             // search tasks'title and tasks' location
             let filter: any = {};
+            filter.status = { $eq: 'Open' };
+            filter.customerId = { $ne: userId };
 
             // filter
             if (data.filter != null) {
