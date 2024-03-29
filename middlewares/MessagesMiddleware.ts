@@ -17,7 +17,7 @@ export default class MessagesMiddleware {
         try {
             const taskId = req.params.id;
             const userId = req.user._id;
-            await this.messagesService.isJoinableIdRoom(taskId, userId);
+            await this.messagesService.isJoinableRoom(taskId, userId);
             next();
         } catch (error) {
             console.log(error);
