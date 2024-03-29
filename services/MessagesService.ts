@@ -25,6 +25,14 @@ export interface IMessagesService {
         senderId: string,
         text: string,
     ) => Promise<IMessage>;
+    sendSystemMessage: (
+        io: Server,
+        taskId: string,
+        text: {
+            title?: string;
+            content?: string;
+        },
+    ) => Promise<IMessage>;
     getUnreadCount: (userId: string) => Promise<Map<string, number>>;
     getMessageHistory: (
         taskId: string,
@@ -158,6 +166,37 @@ export class MessagesService implements IMessagesService {
                 senderType: 'user',
                 senderId: new Types.ObjectId(senderId),
                 text: { content: text },
+            } as IMessage);
+            this.increaseUnreadCount(taskId);
+            io.of('/messages').to(taskId).emit('chat_message', newMessage);
+            return newMessage;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async sendSystemMessage(
+        io: Server,
+        taskId: string,
+        text: {
+            title?: string;
+            content?: string;
+        },
+    ): Promise<IMessage> {
+        try {
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                throw new CannotCreateMessageError('Invalid task id');
+            }
+            if (task.status !== 'InProgress') {
+                throw new CannotCreateMessageError(
+                    'Invalid task status, must be in progress',
+                );
+            }
+            const newMessage = await this.messagesRepository.create({
+                taskId: new Types.ObjectId(taskId),
+                senderType: 'sys',
+                text: { title: text.title, content: text.content },
             } as IMessage);
             this.increaseUnreadCount(taskId);
             io.of('/messages').to(taskId).emit('chat_message', newMessage);

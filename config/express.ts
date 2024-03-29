@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application, NextFunction, Request, Response } from 'express';
 import http from 'http';
 import Container, { Service } from 'typedi';
 import AuthMiddleware from '../middlewares/AuthMiddleware';
@@ -9,6 +9,8 @@ import authRouter from '../routes/AuthRoute';
 import taskRouter from '../routes/TasksRoute';
 import bankRouter from '../routes/BankRoute';
 import messagesRouter from '../routes/MessagesRoute';
+import socketRouter from '../routes/SocketRoute';
+import { Server } from 'socket.io';
 
 @Service()
 export default class ExpressApp {
@@ -54,6 +56,14 @@ export default class ExpressApp {
         app.use(express.urlencoded({ extended: true }));
         app.use(cors(this.corsOptions));
 
+        const io = new Server(this.getHttpServer(), {
+            cors: this.getCorsOptions(),
+        });
+        socketRouter(io);
+        app.use((req: Request, res: Response, next: NextFunction) => {
+            res.io = io;
+            next();
+        });
         app.use('/v1/auth', authRouter);
         app.use('/v1/banks', bankRouter);
         app.use('/v1/users', authMiddleware.validateToken, userRouter);
