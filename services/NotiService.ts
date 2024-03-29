@@ -7,7 +7,6 @@ import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 import { IUserDocument } from '../models/UserModel';
 import { MailRepository, IMailRepository } from '../repositories/MailsRepo';
 
-
 // const fs = require('fs');
 // const logoSvg = fs.readFileSync('logo.svg', { encoding: 'utf-8' });
 // const logoBase64 = Buffer.from(logoSvg).toString('base64');
@@ -75,10 +74,9 @@ export class NotiService implements INotiService {
             // Notify pending applicants
             for (const app of pendingApplicants) {
                 if (app.userId) {
-                    const applicant =
-                        await this.usersRepository.findById(
-                            app.userId.toString(),
-                        );
+                    const applicant = await this.usersRepository.findById(
+                        app.userId.toString(),
+                    );
                     if (!applicant) {
                         throw new Error('Pending applicant not found');
                     }
@@ -95,10 +93,9 @@ export class NotiService implements INotiService {
             // Notify offering applicants
             for (const app of offeringApplicants) {
                 if (app.userId) {
-                    const applicant =
-                        await this.usersRepository.findById(
-                            app.userId.toString(),
-                        );
+                    const applicant = await this.usersRepository.findById(
+                        app.userId.toString(),
+                    );
                     if (!applicant) {
                         throw new Error('Offering applicant not found');
                     }
@@ -115,10 +112,9 @@ export class NotiService implements INotiService {
             // Notify accepted applicants
             for (const app of acceptedApplicants) {
                 if (app.userId) {
-                    const applicant =
-                        await this.usersRepository.findById(
-                            app.userId.toString(),
-                        );
+                    const applicant = await this.usersRepository.findById(
+                        app.userId.toString(),
+                    );
                     if (!applicant) {
                         throw new Error('Accepted applicant not found');
                     }
@@ -183,8 +179,8 @@ export class NotiService implements INotiService {
 
     // Noti customer --------------------------
     private async notiCustomerToStart(
-        customer: IUserDocument, 
-        taskTitle: string
+        customer: IUserDocument,
+        taskTitle: string,
     ): Promise<void> {
         //noti to start within 1 week
         const mail = {
@@ -219,9 +215,9 @@ export class NotiService implements INotiService {
         this.mailService.sendGeneralMail(mail);
     }
 
-    private async notiCustomerDismissedTask( 
-        customer: IUserDocument, 
-        taskTitle: string
+    private async notiCustomerDismissedTask(
+        customer: IUserDocument,
+        taskTitle: string,
     ): Promise<void> {
         const mail = {
             receiverEmail: customer.email as string,
@@ -255,7 +251,7 @@ export class NotiService implements INotiService {
 
     private async notiCustomerToStartLastChance(
         customer: IUserDocument,
-        taskTitle: string
+        taskTitle: string,
     ): Promise<void> {
         //noti to start within 1 week
         const mail = {
@@ -291,7 +287,7 @@ export class NotiService implements INotiService {
 
     private async notiCustomerFullAcceptedApplicant(
         customer: IUserDocument,
-        taskTitle: string
+        taskTitle: string,
     ): Promise<void> {
         //like noti to start
         const mail = {
@@ -329,7 +325,7 @@ export class NotiService implements INotiService {
 
     private async notifyRejectedApplicant(
         applicant: IUserDocument,
-        taskTitle: string
+        taskTitle: string,
     ): Promise<void> {
         const mail = {
             receiverEmail: applicant.email as string,
@@ -361,7 +357,7 @@ export class NotiService implements INotiService {
 
     private async notifyDismissedApplicant(
         applicant: IUserDocument,
-        taskTitle: string
+        taskTitle: string,
     ): Promise<void> {
         const mail = {
             receiverEmail: applicant.email as string,
@@ -396,7 +392,7 @@ export class NotiService implements INotiService {
 
     private async notifyAcceptedApplicant(
         applicant: IUserDocument,
-        taskTitle: string
+        taskTitle: string,
     ): Promise<void> {
         const mail = {
             receiverEmail: applicant.email as string,

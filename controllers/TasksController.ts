@@ -18,6 +18,7 @@ import {
     CannotRequestRevisionError,
 } from '../errors/TaskError';
 import dotenv from 'dotenv';
+import { IMessagesService, MessagesService } from '../services/MessagesService';
 dotenv.config({ path: './config/config.env' });
 
 @Service()
@@ -28,6 +29,8 @@ class TasksController {
     constructor(
         @Inject(() => TasksService) tasksService: ITasksService,
         @Inject(() => UsersService) usersService: IUsersService,
+        @Inject(() => MessagesService)
+        private messagesService: IMessagesService,
     ) {
         this.tasksService = tasksService;
         this.usersService = usersService;
@@ -57,12 +60,15 @@ class TasksController {
     getTasksPage = async (req: Request, res: Response) => {
         try {
             const data = req.body;
+            const userId = req.user._id;
 
             const taskPage = Number(data.page) || 1;
             const taskPerPage = Number(data.limit) || 8;
 
             // search tasks'title and tasks' location
             let filter: any = {};
+            filter.status = { $eq: 'Open' };
+            filter.customerId = { $ne: userId };
 
             // filter
             if (data.filter != null) {
@@ -854,11 +860,16 @@ class TasksController {
                 taskId,
                 workerId,
             );
+            await this.messagesService.sendSystemMessage(res.io, taskId, {
+                title: 'Please Revise a work',
+                content: '',
+            });
             res.status(200).json({
                 success: true,
                 task: result,
             });
         } catch (error) {
+            console.log(error);
             if (error instanceof CannotRequestRevisionError) {
                 res.status(400).json({
                     success: false,
