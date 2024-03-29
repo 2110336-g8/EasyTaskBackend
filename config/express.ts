@@ -71,7 +71,12 @@ export default class ExpressApp {
         app.use('/v1/messages', authMiddleware.validateToken, messagesRouter);
         app.use('*', (req: Request, res: Response) => {
             res.status(404).json({
-                error: `Path Not Found for ${req.originalUrl}`,
+                error: `Path Not Found for ${req.url}`,
+            });
+        });
+        app.use('/ping', (req: Request, res: Response) => {
+            res.status(200).json({
+                message: 'HTTP ping successful!',
             });
         });
     }
