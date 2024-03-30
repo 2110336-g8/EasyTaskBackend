@@ -64,6 +64,11 @@ export default class ExpressApp {
             res.io = io;
             next();
         });
+        app.use('/ping', (req: Request, res: Response) => {
+            res.status(200).json({
+                message: 'HTTP ping successful!',
+            });
+        });
         app.use('/v1/auth', authRouter);
         app.use('/v1/banks', bankRouter);
         app.use('/v1/users', authMiddleware.validateToken, userRouter);
