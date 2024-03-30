@@ -56,8 +56,8 @@ export default class ExpressApp {
         app.use(express.urlencoded({ extended: true }));
         app.use(cors(this.corsOptions));
 
-        const io = new Server(this.getHttpServer(), {
-            cors: this.getCorsOptions(),
+        const io = new Server(this.httpServer, {
+            cors: this.corsOptions,
         });
         socketRouter(io);
         app.use((req: Request, res: Response, next: NextFunction) => {
@@ -100,13 +100,5 @@ export default class ExpressApp {
             console.log(`Error: ${error}`);
             server.close(() => process.exit(1));
         });
-    }
-
-    getHttpServer() {
-        return this.httpServer;
-    }
-
-    getCorsOptions() {
-        return this.corsOptions;
     }
 }
