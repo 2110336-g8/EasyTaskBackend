@@ -1,6 +1,11 @@
 import 'reflect-metadata';
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import http from 'http'; // Import http module for creating HTTP server
+import Container from 'typedi';
+import { Server as SocketIOServer } from 'socket.io';
 import userRouter from './routes/UsersRoute';
 import connectDB from './config/db';
 import authRouter from './routes/AuthRoute';
@@ -8,15 +13,8 @@ import taskRouter from './routes/TasksRoute';
 import bankRouter from './routes/BankRoute';
 import messagesRouter from './routes/MessagesRoute';
 import socketRouter from './routes/SocketRoute';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import http from 'http'; // Import http module for creating HTTP server
-import { Server as SocketIOServer } from 'socket.io';
-import Container from 'typedi';
 import AuthMiddleware from './middlewares/AuthMiddleware';
-// import swaggerUi from "swagger-ui-express";
-// import { RegisterRoutes } from './dist/routes';
-// import swaggerDocument from './dist/swagger.json';
+import swaggerDocs from './swagger.ts'
 
 // Load ENVs
 dotenv.config({ path: `${__dirname}/config/config.env` });
@@ -85,10 +83,6 @@ app.use('*', (req: Request, res: Response) => {
     });
 });
 
-//app.use(bodyParser.json())
-//app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
-app.use('/api-docs', express.static('swagger'));
-
 // Create an HTTP server instance
 const httpServer = http.createServer(app);
 
@@ -103,7 +97,7 @@ require('./config/schedule');
 const server = httpServer.listen(backPort, function () {
     console.log(`Server is running on ${backHostname}:${backPort}`);
 });
-
+swaggerDocs(app, backPort)
 process.on('unhandledRejection', function (error, promise) {
     console.log(`Error: ${error}`);
     server.close(() => process.exit(1));
