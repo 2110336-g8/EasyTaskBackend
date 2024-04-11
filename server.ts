@@ -13,6 +13,7 @@ import taskRouter from './routes/TasksRoute';
 import bankRouter from './routes/BankRoute';
 import messagesRouter from './routes/MessagesRoute';
 import socketRouter from './routes/SocketRoute';
+import paymentsRouter from './routes/PaymentRoute';
 import AuthMiddleware from './middlewares/AuthMiddleware';
 import swaggerDocs from './swagger';
 
@@ -79,6 +80,8 @@ app.use('/v1/banks', bankRouter);
 app.use('/v1/users', authMiddleware.validateToken, userRouter);
 app.use('/v1/tasks', authMiddleware.validateToken, taskRouter);
 app.use('/v1/messages', authMiddleware.validateToken, messagesRouter);
+app.use('/v1/payments', authMiddleware.validateToken, paymentsRouter);
+
 
 // Other paths are invalid, res 404
 app.use('*', (req: Request, res: Response) => {
