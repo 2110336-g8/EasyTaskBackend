@@ -14,13 +14,17 @@ import bankRouter from './routes/BankRoute';
 import messagesRouter from './routes/MessagesRoute';
 import socketRouter from './routes/SocketRoute';
 import AuthMiddleware from './middlewares/AuthMiddleware';
-import swaggerDocs from './swagger.ts'
+import swaggerDocs from './swagger.ts';
 
 // Load ENVs
 dotenv.config({ path: `${__dirname}/config/config.env` });
 
 // Connect DB
-connectDB();
+connectDB().then(successful => {
+    if (process.env.ENVIRONMENT == 'production' && !successful) {
+        process.exit(0);
+    }
+});
 
 // Parameters
 const app = express();
@@ -97,7 +101,7 @@ require('./config/schedule');
 const server = httpServer.listen(backPort, function () {
     console.log(`Server is running on ${backHostname}:${backPort}`);
 });
-swaggerDocs(app, backPort)
+swaggerDocs(app, backPort);
 process.on('unhandledRejection', function (error, promise) {
     console.log(`Error: ${error}`);
     server.close(() => process.exit(1));
