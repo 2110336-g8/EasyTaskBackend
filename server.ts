@@ -14,7 +14,7 @@ import bankRouter from './routes/BankRoute';
 import messagesRouter from './routes/MessagesRoute';
 import socketRouter from './routes/SocketRoute';
 import AuthMiddleware from './middlewares/AuthMiddleware';
-import swaggerDocs from 'swagger';
+import swaggerDocs from './swagger';
 
 // Load ENVs
 dotenv.config({ path: `${__dirname}/config/config.env` });
