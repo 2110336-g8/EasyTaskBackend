@@ -7,7 +7,7 @@ const paymentsController: PaymentsController = Container.get(PaymentsController)
 const router = express.Router();
 
 
-router.route('/topUp').post(paymentsController.topUpWallet);
+router.route('/topup').post(paymentsController.topUpWallet);
 
 
 export default router;
