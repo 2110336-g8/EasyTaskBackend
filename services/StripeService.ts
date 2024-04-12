@@ -1,12 +1,14 @@
 import { Inject, Service } from 'typedi';
 import { IUsersRepository, UsersRepository } from '../repositories/UsersRepo';
 import dotenv from 'dotenv';
+import { TopupSessionStatus } from '../models/TopUpModel';
 dotenv.config({ path: './config/config.env' });
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export interface IStripeService {
     createTopupSession: (userId: string, amount: number) => Promise<string>;
+    checkTopupSessionStatus:(sessionId: string) => Promise<TopupSessionStatus>
 }
 
 @Service()
@@ -20,7 +22,10 @@ export class StripeService implements IStripeService {
         this.usersRepository = usersRepository;
     }
 
-    createTopupSession = async (userId: string, amount: number): Promise<string> => {
+    createTopupSession = async (
+        userId: string,
+        amount: number,
+    ): Promise<string> => {
         try {
             const session = await stripe.checkout.sessions.create({
                 client_reference_id: userId,
@@ -42,6 +47,18 @@ export class StripeService implements IStripeService {
             });
             console.log(session);
             return session.client_secret;
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    checkTopupSessionStatus = async (sessionId: string): Promise<TopupSessionStatus> => {
+        try {
+            const session = await stripe.checkout.sessions.retrieve(sessionId);
+            return {
+                status: session.status,
+                customer_email: session.customer_details.email,
+            };
         } catch (error) {
             throw error;
         }

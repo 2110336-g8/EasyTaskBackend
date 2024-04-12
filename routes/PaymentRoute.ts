@@ -8,6 +8,7 @@ const router = express.Router();
 
 
 router.route('/topup').post(paymentsController.topUpWallet);
+router.route('/topup-status').post(paymentsController.checkTopupSessionStatus);
 
 
 export default router;
