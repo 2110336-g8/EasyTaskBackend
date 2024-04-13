@@ -14,6 +14,7 @@ import bankRouter from './routes/BankRoute';
 import messagesRouter from './routes/MessagesRoute';
 import socketRouter from './routes/SocketRoute';
 import paymentsRouter from './routes/PaymentRoute';
+import webhooksRouter from './routes/WebhooksRoute';
 import AuthMiddleware from './middlewares/AuthMiddleware';
 import swaggerDocs from './swagger';
 
@@ -77,6 +78,7 @@ app.use(cors(corsOption));
 
 app.use('/v1/auth', authRouter);
 app.use('/v1/banks', bankRouter);
+app.use('/v1/webhooks', webhooksRouter);
 app.use('/v1/users', authMiddleware.validateToken, userRouter);
 app.use('/v1/tasks', authMiddleware.validateToken, taskRouter);
 app.use('/v1/messages', authMiddleware.validateToken, messagesRouter);

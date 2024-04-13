@@ -8,7 +8,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export interface IStripeService {
     createTopupSession: (userId: string, amount: number) => Promise<string>;
-    checkTopupSessionStatus:(sessionId: string) => Promise<TopupSessionStatus>
+    checkTopupSessionStatus: (sessionId: string) => Promise<TopupSessionStatus>;
 }
 
 @Service()
@@ -52,7 +52,9 @@ export class StripeService implements IStripeService {
         }
     };
 
-    checkTopupSessionStatus = async (sessionId: string): Promise<TopupSessionStatus> => {
+    checkTopupSessionStatus = async (
+        sessionId: string,
+    ): Promise<TopupSessionStatus> => {
         try {
             const session = await stripe.checkout.sessions.retrieve(sessionId);
             return {
