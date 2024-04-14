@@ -16,6 +16,14 @@ export interface IWalletsService {
         amount: number,
         sessionId: string,
     ) => Promise<IWalletDocument | null>;
+    getWalletHistory: (
+        userId: string,
+        page: number,
+        limit: number,
+    ) => Promise<{
+        walletHistory: IWalletDocument['paymentHistory'];
+        count: number;
+    }>;
 }
 
 @Service()
@@ -70,6 +78,27 @@ export class WalletsService implements IWalletsService {
             );
             if (wallet) return wallet;
             return null;
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    getWalletHistory = async (
+        userId: string,
+        page: number,
+        limit: number,
+    ): Promise<{
+        walletHistory: IWalletDocument['paymentHistory'];
+        count: number;
+    }> => {
+        try {
+            const walletHistory = await this.walletsRepository.getWalletHistory(
+                userId,
+                page,
+                limit,
+            );
+            if (walletHistory) return walletHistory;
+            return { walletHistory: [], count: 0 };
         } catch (error) {
             throw error;
         }
