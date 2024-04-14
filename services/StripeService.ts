@@ -7,7 +7,11 @@ dotenv.config({ path: './config/config.env' });
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export interface IStripeService {
-    createTopupSession: (userId: string, amount: number) => Promise<string>;
+    createTopupSession: (
+        userId: string,
+        userEmail: string,
+        amount: number,
+    ) => Promise<string>;
     checkTopupSessionStatus: (sessionId: string) => Promise<TopupSessionStatus>;
 }
 
@@ -24,11 +28,13 @@ export class StripeService implements IStripeService {
 
     createTopupSession = async (
         userId: string,
+        userEmail: string,
         amount: number,
     ): Promise<string> => {
         try {
             const session = await stripe.checkout.sessions.create({
                 client_reference_id: userId,
+                customer_email: userEmail,
                 line_items: [
                     {
                         price_data: {

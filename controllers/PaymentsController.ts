@@ -74,9 +74,11 @@ class PaymentsController {
         try {
             const data = req.body;
             const userId = req.user._id;
+            const userEmail = req.user.email;
             const clientSecret: string =
                 await this.stripeService.createTopupSession(
                     String(userId),
+                    String(userEmail),
                     Number(data.amount),
                 );
 
