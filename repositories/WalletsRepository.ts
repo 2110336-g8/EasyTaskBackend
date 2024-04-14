@@ -103,6 +103,7 @@ export class WalletsRepository
                     paymentHistory: 0,
                 },
             },
+            { $sort: { timeStamp: -1 } },
             {
                 $facet: {
                     walletHistory: [
