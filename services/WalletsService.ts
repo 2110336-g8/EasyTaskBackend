@@ -11,6 +11,11 @@ dotenv.config({ path: './config/config.env' });
 export interface IWalletsService {
     createWallet: (walletData: IWalletDocument) => Promise<IWalletDocument>;
     getWalletByUserId: (userId: string) => Promise<IWalletDocument | null>;
+    addTopupHistory: (
+        userId: string,
+        amount: number,
+        sessionId: string,
+    ) => Promise<IWalletDocument | null>;
 }
 
 @Service()
@@ -24,10 +29,12 @@ export class WalletsService implements IWalletsService {
         this.walletsRepository = walletsRepository;
     }
 
-    createWallet = async (walletData: IWalletDocument): Promise<IWalletDocument> => {
-
+    createWallet = async (
+        walletData: IWalletDocument,
+    ): Promise<IWalletDocument> => {
         try {
-            const createdWallet = await this.walletsRepository.create(walletData);
+            const createdWallet =
+                await this.walletsRepository.create(walletData);
             return createdWallet;
         } catch (error) {
             if (error instanceof ValidationError)
@@ -43,6 +50,24 @@ export class WalletsService implements IWalletsService {
     ): Promise<IWalletDocument | null> => {
         try {
             const wallet = await this.walletsRepository.findOneByUserId(userId);
+            if (wallet) return wallet;
+            return null;
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    addTopupHistory = async (
+        userId: string,
+        amount: number,
+        sessionId: string,
+    ): Promise<IWalletDocument | null> => {
+        try {
+            const wallet = await this.walletsRepository.addTopupHistory(
+                userId,
+                amount,
+                sessionId,
+            );
             if (wallet) return wallet;
             return null;
         } catch (error) {

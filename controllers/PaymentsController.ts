@@ -30,7 +30,6 @@ class PaymentsController {
 
     stripeWebhook = async (req: Request, res: Response) => {
         const sig = req.headers['stripe-signature'];
-        // console.log("here",sig)
         let event;
 
         try {
@@ -46,15 +45,24 @@ class PaymentsController {
 
         switch (event.type) {
             case 'checkout.session.completed':
-                const checkoutSessionCompleted = event.data.object;
-                console.log('checkout.session.completed');
+                try {
+                    const checkoutSessionCompleted = event.data.object;
+                    const userId = checkoutSessionCompleted.client_reference_id;
+                    const amount = checkoutSessionCompleted.amount_total / 100;
+                    const sessionId = checkoutSessionCompleted.id;
+                    const updatedWallet =
+                        await this.walletsService.addTopupHistory(
+                            String(userId),
+                            Number(amount),
+                            String(sessionId),
+                        );
+                    if (!updatedWallet)
+                        res.status(500).send(`Updated Wallet Error`);
+                } catch (err) {
+                    res.status(500).send(`Updated Wallet Error: ${err}`);
+                }
+
                 break;
-            case 'checkout.session.expired':
-                console.log('checkout.session.expired');
-                const checkoutSessionExpired = event.data.object;
-                // Then define and call a function to handle the event checkout.session.expired
-                break;
-            // ... handle other event types
             default:
                 console.log(`Unhandled event type ${event.type}`);
         }
@@ -68,8 +76,8 @@ class PaymentsController {
             const userId = req.user._id;
             const clientSecret: string =
                 await this.stripeService.createTopupSession(
-                    userId,
-                    data.amount,
+                    String(userId),
+                    Number(data.amount),
                 );
 
             res.status(200).json({ success: true, clientSecret });
@@ -92,7 +100,9 @@ class PaymentsController {
         try {
             const sessionId = req.body.sessionId;
             const topupSessionStatus: TopupSessionStatus =
-                await this.stripeService.checkTopupSessionStatus(sessionId);
+                await this.stripeService.checkTopupSessionStatus(
+                    String(sessionId),
+                );
 
             res.status(200).json({ success: true, ...topupSessionStatus });
         } catch (error) {
@@ -113,14 +123,14 @@ class PaymentsController {
     getWalletAmount = async (req: Request, res: Response) => {
         try {
             const userId = req.user._id;
-            const user = await this.usersService.getUserById(userId);
+            const user = await this.usersService.getUserById(String(userId));
             if (!user) {
                 res.status(404).json({ error: 'User not found' });
                 return;
             }
 
             const wallet: IWalletDocument | null =
-                await this.walletsService.getWalletByUserId(userId);
+                await this.walletsService.getWalletByUserId(String(userId));
 
             if (!wallet) {
                 res.status(404).json({ error: 'Wallet not found' });

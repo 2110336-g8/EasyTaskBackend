@@ -8,6 +8,7 @@ export interface IWallet {
         type: 'TopUp' | 'StartTaskPayment' | 'Income' | 'Refund';
         taskId?: Types.ObjectId | null;
         timeStamp: Date;
+        ref?: String;
     }>;
 }
 
@@ -30,6 +31,7 @@ const WalletSchema = new mongoose.Schema<IWalletDocument>({
             },
             taskId: { type: Types.ObjectId },
             timeStamp: { type: Date, default: Date.now },
+            ref: { type: String },
         },
     ],
 });
