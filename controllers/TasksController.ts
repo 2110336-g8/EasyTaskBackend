@@ -697,6 +697,8 @@ class TasksController {
                 });
                 return;
             }
+            const transfer = await this.transferService.startTaskTransfer(task);
+
             const result = await this.tasksService.startTask(taskId);
             if (!result) {
                 res.status(404).json({
@@ -705,9 +707,6 @@ class TasksController {
                 });
                 return;
             }
-            const transfer =
-                await this.transferService.startTaskTransfer(result);
-
             await res
                 .status(200)
                 .json({ success: true, task: result, transfer: transfer });
@@ -760,12 +759,12 @@ class TasksController {
                 const result = await this.tasksService.dismissOpenTask(taskId);
                 res.status(200).json({ success: true, result });
             } else if (task.status === 'InProgress') {
-                const result =
-                    await this.tasksService.dismissInProgressTask(taskId);
                 const transfer =
                     await this.transferService.dismissInprogressTaskTransfer(
                         task,
                     );
+                const result =
+                    await this.tasksService.dismissInProgressTask(taskId);
                 res.status(200).json({
                     success: true,
                     task: result,
@@ -853,6 +852,11 @@ class TasksController {
                 });
                 return;
             }
+            const transfer = await this.transferService.acceptTaskPayment(
+                taskId,
+                workerId,
+                task.wages,
+            );
             const result = await this.tasksService.acceptTask(taskId, workerId);
             const transfer = await this.transferService.acceptTaskPayment(
                 taskId,
