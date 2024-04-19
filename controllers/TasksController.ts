@@ -3,6 +3,11 @@ import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
 import { UsersService, IUsersService } from '../services/UsersService';
+import {
+    TransfersService,
+    ITransfersService,
+} from '../services/TransfersService';
+import { WalletsService, IWalletsService } from '../services/WalletsService';
 import sharp from 'sharp';
 import { groupBy } from 'lodash';
 import {
@@ -17,6 +22,12 @@ import {
     CannotAcceptTaskError,
     CannotRequestRevisionError,
 } from '../errors/TaskError';
+import {
+    NotEnoughMoneyError,
+    CustomerWalletNotFoundError,
+} from '../errors/WalletError';
+import { CannotTransferError } from '../errors/TransferError';
+
 import dotenv from 'dotenv';
 import { IMessagesService, MessagesService } from '../services/MessagesService';
 dotenv.config({ path: './config/config.env' });
@@ -25,15 +36,18 @@ dotenv.config({ path: './config/config.env' });
 class TasksController {
     private tasksService: ITasksService;
     private usersService: IUsersService;
+    private transferService: ITransfersService;
 
     constructor(
         @Inject(() => TasksService) tasksService: ITasksService,
         @Inject(() => UsersService) usersService: IUsersService,
+        @Inject(() => TransfersService) transfersService: ITransfersService,
         @Inject(() => MessagesService)
         private messagesService: IMessagesService,
     ) {
         this.tasksService = tasksService;
         this.usersService = usersService;
+        this.transferService = transfersService;
     }
 
     createTask = async (req: Request, res: Response): Promise<void> => {
@@ -684,24 +698,43 @@ class TasksController {
                 return;
             }
             const result = await this.tasksService.startTask(taskId);
-            res.status(200).json({ success: true, task: result });
-        } catch (error) {
-            if (error instanceof CannotStartTaskError) {
-                res.status(400).json({
+            if (!result) {
+                res.status(404).json({
                     success: false,
-                    error: error.message,
+                    error: 'No result from startTask',
                 });
-            } else if (error instanceof CannotUpdateStateError) {
-                res.status(500).json({
-                    sucess: false,
-                    error: error.message,
-                });
-            } else {
-                res.status(500).json({
-                    sucess: false,
-                    error: 'Internal Server Error',
-                });
+                return;
             }
+            const transfer =
+                await this.transferService.startTaskTransfer(result);
+
+            await res
+                .status(200)
+                .json({ success: true, task: result, transfer: transfer });
+        } catch (error) {
+            console.error('Error in startTask:', error);
+            let statusCode = 500;
+            let errorMessage = 'Internal Server Error';
+
+            if (error instanceof CannotStartTaskError) {
+                statusCode = 400;
+                errorMessage = error.message;
+            } else if (error instanceof CannotUpdateStateError) {
+                statusCode = 500;
+                errorMessage = error.message;
+            } else if (
+                error instanceof ValidationError ||
+                error instanceof NotEnoughMoneyError ||
+                error instanceof CustomerWalletNotFoundError ||
+                error instanceof CannotTransferError
+            ) {
+                statusCode = 500;
+                errorMessage = error.message;
+            }
+
+            return res
+                .status(statusCode)
+                .json({ success: false, error: errorMessage });
         }
     };
 
@@ -729,7 +762,15 @@ class TasksController {
             } else if (task.status === 'InProgress') {
                 const result =
                     await this.tasksService.dismissInProgressTask(taskId);
-                res.status(200).json({ success: true, result });
+                const transfer =
+                    await this.transferService.dismissInprogressTaskTransfer(
+                        task,
+                    );
+                res.status(200).json({
+                    success: true,
+                    task: result,
+                    transfer: transfer,
+                });
             } else {
                 res.status(400).json({
                     success: false,
@@ -813,9 +854,15 @@ class TasksController {
                 return;
             }
             const result = await this.tasksService.acceptTask(taskId, workerId);
+            const transfer = await this.transferService.acceptTaskPayment(
+                taskId,
+                workerId,
+                task.wages,
+            );
             res.status(200).json({
                 success: true,
                 task: result,
+                transfer: transfer,
             });
         } catch (error) {
             if (error instanceof CannotAcceptTaskError) {
