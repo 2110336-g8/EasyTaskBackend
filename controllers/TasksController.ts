@@ -858,11 +858,6 @@ class TasksController {
                 task.wages,
             );
             const result = await this.tasksService.acceptTask(taskId, workerId);
-            const transfer = await this.transferService.acceptTaskPayment(
-                taskId,
-                workerId,
-                task.wages,
-            );
             res.status(200).json({
                 success: true,
                 task: result,
