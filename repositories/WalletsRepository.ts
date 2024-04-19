@@ -1,10 +1,12 @@
 import { Service } from 'typedi';
 import { BaseMongooseRepository, IRepository } from './BaseRepo';
 import { IWallet, IWalletDocument, WalletModel } from '../models/WalletModel';
-import { FilterQuery } from 'mongoose';
-import { gte } from 'lodash';
-const { Types } = require('mongoose');
-
+import {
+    NotEnoughMoneyError,
+    CustomerWalletNotFoundError,
+    UserWalletNotFoundError,
+} from '../errors/WalletError';
+import { ClientSession, Types } from 'mongoose';
 export interface IWalletsRepository extends IRepository<IWallet> {
     findOneByUserId: (userId: string) => Promise<IWalletDocument | null>;
     addTopupHistory: (
@@ -20,6 +22,19 @@ export interface IWalletsRepository extends IRepository<IWallet> {
         walletHistory: IWalletDocument['paymentHistory'];
         count: number;
     }>;
+    payStartTask: (
+        customerId: Types.ObjectId,
+        taskId: Types.ObjectId,
+        amount: number,
+        session: ClientSession,
+    ) => Promise<IWalletDocument | null>;
+    taskIncome: (
+        userId: Types.ObjectId,
+        taskId: Types.ObjectId,
+        amount: number,
+        type: string,
+        session: ClientSession,
+    ) => Promise<IWalletDocument | null>;
 }
 
 @Service()
@@ -123,6 +138,93 @@ export class WalletsRepository
             return { walletHistory: result[0].walletHistory, count };
         } catch (error) {
             console.error('Error get history:', error);
+            throw error;
+        }
+    };
+
+    // customer wallet-> task
+    payStartTask = async (
+        customerId: Types.ObjectId,
+        taskId: Types.ObjectId,
+        amount: number,
+        session: ClientSession,
+    ): Promise<IWalletDocument | null> => {
+        try {
+            const customerWallet = await this.findOneByUserId(
+                customerId.toString(),
+            );
+            if (!customerWallet) {
+                throw new CustomerWalletNotFoundError(
+                    'customer wallet not found',
+                );
+            }
+            const walletAmount = customerWallet.walletAmount;
+            if (walletAmount < amount) {
+                throw new NotEnoughMoneyError(
+                    'Customer does not have enough money in wallet',
+                );
+            }
+            const transactionOptions = { session };
+            //transfer wallet -> task
+            const updatedWallet = await this._model.findOneAndUpdate(
+                { userId: customerId },
+                {
+                    $inc: { walletAmount: -amount }, // Use $inc to decrement
+                    $push: {
+                        paymentHistory: {
+                            amount: amount,
+                            type: 'StartTaskPayment',
+                            taskId: taskId,
+                            timeStamp: new Date(),
+                        },
+                    },
+                },
+                { new: true, ...transactionOptions },
+            );
+
+            return updatedWallet;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+    };
+
+    //task -> customer wallet, task -> worker wallet
+    taskIncome = async (
+        userId: Types.ObjectId,
+        taskId: Types.ObjectId,
+        amount: number,
+        type: string,
+        session: ClientSession,
+    ): Promise<IWalletDocument | null> => {
+        try {
+            const userWallet = await this.findOneByUserId(userId.toString());
+            if (!userWallet) {
+                throw new UserWalletNotFoundError('user wallet not found');
+            }
+            const transactionOptions = { session };
+            //transfer wallet -> task
+            const updatedWallet = await this._model.findOneAndUpdate(
+                { userId: userId },
+                {
+                    $inc: { walletAmount: amount },
+                    $push: {
+                        paymentHistory: {
+                            amount: amount,
+                            type: type,
+                            taskId: taskId,
+                            timeStamp: new Date(),
+                        },
+                    },
+                },
+                { new: true, ...transactionOptions },
+            );
+
+            return updatedWallet;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
             throw error;
         }
     };

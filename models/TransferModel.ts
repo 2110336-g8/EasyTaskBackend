@@ -1,55 +1,53 @@
 import mongoose, { Document, Types, Schema } from 'mongoose';
 
-export interface IWallet {
-    userId: Types.ObjectId;
-    walletAmount: number;
+export interface ITransfer {
+    taskId: Types.ObjectId;
+    taskAmount: number;
     paymentHistory: Array<{
         amount: number;
         type:
-            | 'TopUp'
             | 'StartTaskPayment'
-            | 'WageIncome'
-            | 'CustomerRefund'
-            | 'SubmittedCompensation'
-            | 'NotSubmittedCompensation';
-        taskId?: Types.ObjectId | null;
+            | 'WorkerPayment'
+            | 'SubmittedWorkerCompensation'
+            | 'NotSubmittedWorkerCompensation'
+            | 'CustomerRefund';
+        userId?: Types.ObjectId | null;
         timeStamp: Date;
         ref?: String;
     }>;
 }
 
-export interface IWalletDocument extends IWallet, Document {}
+export interface ITransferDocument extends ITransfer, Document {}
 
-const WalletSchema = new mongoose.Schema<IWalletDocument>({
-    userId: {
+const TransferSchema = new mongoose.Schema<ITransferDocument>({
+    taskId: {
         type: Schema.Types.ObjectId,
         required: [true, 'Customer Id is required'],
         ref: 'User',
     },
-    walletAmount: { type: Number, default: 0 },
+    taskAmount: { type: Number, default: 0 },
     paymentHistory: [
         {
             amount: { type: Number, required: true },
             type: {
                 type: String,
                 enum: [
-                    'TopUp',
                     'StartTaskPayment',
-                    'WageIncome',
+                    'WorkerPayment',
+                    'SubmittedWorkerCompensation',
+                    'NotSubmittedWorkerCompensation',
                     'CustomerRefund',
-                    'SubmittedCompensation',
-                    'NotSubmittedCompensation',
                 ],
                 required: true,
             },
-            taskId: { type: Types.ObjectId },
+            userId: { type: Types.ObjectId },
             timeStamp: { type: Date, default: Date.now },
             ref: { type: String },
         },
     ],
 });
 
-export const WalletModel = mongoose.model<IWalletDocument>(
-    'Wallet',
-    WalletSchema,
+export const TransferModel = mongoose.model<ITransferDocument>(
+    'Transfer',
+    TransferSchema,
 );
