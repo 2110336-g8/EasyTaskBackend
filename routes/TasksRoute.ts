@@ -15,6 +15,45 @@ router.route('/categories').get(tasksController.getCategories);
 
 router.route('/tasksOf/:userId').get(tasksController.getTasksOf);
 
+/** GET Methods */
+/**
+ * @openapi
+ * '/v1/tasks/{id}':
+ * get:
+ * tags:
+ * - Task
+ * summary: get task by id
+ * description: get a task doc by task id
+ * operationId: getTaskById
+ * parameters:
+ * - name: id
+ *      in: path
+ *      description: pass a task id for looking up task
+ *      required: true
+ *      style: simple
+ *      explode: false
+ *      schema:
+ *          type: string
+ *          format: uuid
+ * - name: userId
+ *      in: query
+ *      description: a user id for authorization
+ *      required: true
+ *      style: form
+ *      explode: true
+ *      schema:
+ *          type: string
+ *          format: uuid
+ * responses:
+ * "200":
+ *      description: task is found and allowed to view this task
+ *      content:
+ *      application/json:
+ *          schema:
+ *          $ref: '#/components/schemas/inline_response_200'
+ * "404":
+ *      description: task or user not found
+ */
 router.route('/:id').get(tasksController.getTaskbyId);
 
 router.route('/adsOf/:customerId').get(tasksController.getAdvertisements);

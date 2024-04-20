@@ -1,6 +1,11 @@
 import 'reflect-metadata';
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import http from 'http'; // Import http module for creating HTTP server
+import Container from 'typedi';
+import { Server as SocketIOServer } from 'socket.io';
 import userRouter from './routes/UsersRoute';
 import connectDB from './config/db';
 import authRouter from './routes/AuthRoute';
@@ -8,18 +13,21 @@ import taskRouter from './routes/TasksRoute';
 import bankRouter from './routes/BankRoute';
 import messagesRouter from './routes/MessagesRoute';
 import socketRouter from './routes/SocketRoute';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import http from 'http'; // Import http module for creating HTTP server
-import { Server as SocketIOServer } from 'socket.io';
-import Container from 'typedi';
+import paymentsRouter from './routes/PaymentRoute';
+import transferRouter from './routes/TransferRoute';
 import AuthMiddleware from './middlewares/AuthMiddleware';
+import swaggerDocs from './swagger';
+import PaymentsController from './controllers/PaymentsController';
 
 // Load ENVs
 dotenv.config({ path: `${__dirname}/config/config.env` });
 
 // Connect DB
-connectDB();
+connectDB().then(successful => {
+    if (process.env.ENVIRONMENT == 'production' && !successful) {
+        process.exit(0);
+    }
+});
 
 // Parameters
 const app = express();
@@ -62,6 +70,14 @@ const corsOption = {
 };
 
 const authMiddleware = Container.get(AuthMiddleware);
+const paymentsController: PaymentsController =
+    Container.get(PaymentsController);
+
+app.post(
+    '/v1/webhooks/stripe',
+    bodyParser.raw({ type: '*/*' }),
+    paymentsController.stripeWebhook,
+);
 
 app.use(express.json());
 app.use(bodyParser.raw({ type: ['image/jpeg', 'image/png'], limit: '5mb' }));
@@ -74,6 +90,8 @@ app.use('/v1/banks', bankRouter);
 app.use('/v1/users', authMiddleware.validateToken, userRouter);
 app.use('/v1/tasks', authMiddleware.validateToken, taskRouter);
 app.use('/v1/messages', authMiddleware.validateToken, messagesRouter);
+app.use('/v1/payments', authMiddleware.validateToken, paymentsRouter);
+app.use('/v1/transfers', authMiddleware.validateToken, transferRouter);
 
 // Other paths are invalid, res 404
 app.use('*', (req: Request, res: Response) => {
@@ -96,7 +114,7 @@ require('./config/schedule');
 const server = httpServer.listen(backPort, function () {
     console.log(`Server is running on ${backHostname}:${backPort}`);
 });
-
+swaggerDocs(app, backPort);
 process.on('unhandledRejection', function (error, promise) {
     console.log(`Error: ${error}`);
     server.close(() => process.exit(1));

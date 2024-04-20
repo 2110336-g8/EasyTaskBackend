@@ -863,9 +863,7 @@ export class TasksService implements ITasksService {
                     ['Pending', 'Offering'],
                     'NotProceed',
                 );
-                this.notiService.notiFullAcceptedApplicant(
-                    task.customerId.toString(),
-                );
+                this.notiService.notiFullAcceptedApplicant(task);
             }
             await session.commitTransaction();
             session.endSession();
