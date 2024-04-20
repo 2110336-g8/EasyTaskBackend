@@ -3,9 +3,14 @@ import Container from 'typedi';
 import { OtpService } from '../services/OtpService';
 import { TasksService } from '../services/TasksService';
 import { NotiService } from '../services/NotiService';
+import { WalletsService } from '../services/WalletsService';
+import { UsersService } from '../services/UsersService';
+import { IWalletDocument, WalletModel } from '../models/WalletModel';
 const otpService = Container.get(OtpService);
 const tasksService = Container.get(TasksService);
 const notiService = Container.get(NotiService);
+const walletService = Container.get(WalletsService);
+const userService = Container.get(UsersService);
 
 cron.schedule('0 * * * *', () => {
     console.log('Log: Remove trash OTP');
@@ -58,4 +63,13 @@ cron.schedule('59 16 * * *', async () => {
     } catch (error) {
         console.error('Error occurred while checking tasks:', error);
     }
+});
+
+cron.schedule('5 * * * *', async () => {
+    console.log('Log: add wallet to old user');
+    const userIds = await userService.getAllUserIds();
+    for (const id of userIds) {
+        await walletService.createMissingWallet(id);
+    }
+    console.log('update successfully');
 });
