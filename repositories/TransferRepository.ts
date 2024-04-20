@@ -49,7 +49,8 @@ export class TransfersRepository
         session: ClientSession,
     ): Promise<ITransferDocument | null> => {
         try {
-            const transactionOptions = { session };
+            console.log('transfer');
+            console.log(taskId);
             const newTransfer: ITransfer = {
                 taskId: taskId,
                 taskAmount: amount,
@@ -62,10 +63,9 @@ export class TransfersRepository
                     },
                 ],
             };
-            const createdTransfer = await this._model.create(
-                [newTransfer],
-                transactionOptions,
-            );
+            console.log('amount');
+            console.log(amount);
+            const createdTransfer = await this._model.create([newTransfer]);
             return createdTransfer[0];
         } catch (error) {
             await session.abortTransaction();
@@ -83,7 +83,6 @@ export class TransfersRepository
         session: ClientSession,
     ): Promise<ITransferDocument | null> => {
         try {
-            const transactionOptions = { session };
             const newTransfer = await this._model.findOneAndUpdate(
                 { taskId: taskId },
                 {
@@ -97,7 +96,7 @@ export class TransfersRepository
                         },
                     },
                 },
-                { new: true, ...transactionOptions },
+                { new: true },
             );
             return newTransfer;
         } catch (error) {
