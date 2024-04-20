@@ -6,6 +6,7 @@ import {
 } from '../repositories/WalletsRepository';
 import { IWalletDocument } from '../models/WalletModel';
 import { ValidationError } from '../errors/RepoError';
+import { Types } from 'mongoose';
 dotenv.config({ path: './config/config.env' });
 
 export interface IWalletsService {
@@ -24,6 +25,7 @@ export interface IWalletsService {
         walletHistory: IWalletDocument['paymentHistory'];
         count: number;
     }>;
+    createMissingWallet: (userId: string) => Promise<boolean | null>;
 }
 
 @Service()
@@ -101,6 +103,25 @@ export class WalletsService implements IWalletsService {
             return { walletHistory: [], count: 0 };
         } catch (error) {
             throw error;
+        }
+    };
+
+    createMissingWallet = async (userId: string): Promise<boolean | null> => {
+        try {
+            // Check if a wallet exists for the provided user ID
+            const existingWallet = await this.getWalletByUserId(userId);
+            if (existingWallet) {
+                return true;
+            } else {
+                // If no wallet exists, create a new wallet for the user
+                const newWalletData = {
+                    userId: new Types.ObjectId(userId),
+                } as IWalletDocument;
+                await this.walletsRepository.create(newWalletData);
+                return true;
+            }
+        } catch (error) {
+            throw new Error('Error while fetching or creating wallet');
         }
     };
 }

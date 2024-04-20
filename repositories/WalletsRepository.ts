@@ -51,9 +51,6 @@ export class WalletsRepository
     ): Promise<IWalletDocument | null> => {
         try {
             const result = await this._model.findOne({ userId });
-            if (!result) {
-                throw new UserWalletNotFoundError('user wallet not found');
-            }
             return result;
         } catch (error) {
             console.error(error);
