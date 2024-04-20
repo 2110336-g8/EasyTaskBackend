@@ -23,6 +23,7 @@ import {
 } from '../errors/TransferError';
 
 import mongoose from 'mongoose';
+import { Types } from 'mongoose';
 dotenv.config({ path: './config/config.env' });
 
 export interface ITransfersService {
@@ -58,9 +59,12 @@ export class TransfersService implements ITransfersService {
         const session = await mongoose.startSession();
         try {
             session.startTransaction();
-            const taskId = task.id;
+
+            const taskId = task._id;
             const customerId = task.customerId;
-            const amount = task.wages * task.hiredWorkers.length;
+            const amount =
+                Number(task.wages) * Number(task.hiredWorkers.length);
+            // console.log(amount);
             //decrease amount of money from customer's wallet
             const updatedWallet = await this.walletsRepository.payStartTask(
                 customerId,
@@ -89,7 +93,9 @@ export class TransfersService implements ITransfersService {
             return updatedTransfer;
         } catch (error) {
             // Abort the transaction and end the session if an error occurs
-            await session.abortTransaction();
+            if (session && session.inTransaction()) {
+                await session.abortTransaction();
+            }
             session.endSession();
 
             if (error instanceof ValidationError)
@@ -113,9 +119,9 @@ export class TransfersService implements ITransfersService {
         const session = await mongoose.startSession();
         try {
             session.startTransaction();
-            const taskId = task.id;
+            const taskId = task._id;
             const customerId = task.customerId;
-            const wage = task.wages;
+            const wage = Number(task.wages);
             //check amount in the task
             const taskTransfer =
                 await this.transfersRepository.findOneByTaskId(taskId);
@@ -203,7 +209,9 @@ export class TransfersService implements ITransfersService {
 
             //recheck that task's transfer amount = 0
             const updatedtaskTransfer =
-                await this.transfersRepository.findOneByTaskId(taskId);
+                await this.transfersRepository.findOneByTaskId(
+                    taskId.toString(),
+                );
             if (!updatedtaskTransfer) {
                 throw new TaskTransferNotFoundError('task transfer not found');
             }
@@ -220,7 +228,9 @@ export class TransfersService implements ITransfersService {
             return updatedtaskTransfer;
         } catch (error) {
             // Abort the transaction and end the session if an error occurs
-            await session.abortTransaction();
+            if (session && session.inTransaction()) {
+                await session.abortTransaction();
+            }
             session.endSession();
 
             if (error instanceof ValidationError) {
@@ -284,7 +294,9 @@ export class TransfersService implements ITransfersService {
             return updatedtaskTransfer;
         } catch (error) {
             // Abort the transaction and end the session if an error occurs
-            await session.abortTransaction();
+            if (session && session.inTransaction()) {
+                await session.abortTransaction();
+            }
             session.endSession();
 
             if (error instanceof ValidationError) {

@@ -49,8 +49,16 @@ export class WalletsRepository
     findOneByUserId = async (
         userId: string,
     ): Promise<IWalletDocument | null> => {
-        const result = await this._model.findOne({ userId });
-        return result;
+        try {
+            const result = await this._model.findOne({ userId });
+            if (!result) {
+                throw new UserWalletNotFoundError('user wallet not found');
+            }
+            return result;
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
     };
 
     addTopupHistory = async (
@@ -153,6 +161,7 @@ export class WalletsRepository
             const customerWallet = await this.findOneByUserId(
                 customerId.toString(),
             );
+            console.log(customerWallet);
             if (!customerWallet) {
                 throw new CustomerWalletNotFoundError(
                     'customer wallet not found',
@@ -164,7 +173,6 @@ export class WalletsRepository
                     'Customer does not have enough money in wallet',
                 );
             }
-            const transactionOptions = { session };
             //transfer wallet -> task
             const updatedWallet = await this._model.findOneAndUpdate(
                 { userId: customerId },
@@ -179,7 +187,7 @@ export class WalletsRepository
                         },
                     },
                 },
-                { new: true, ...transactionOptions },
+                { new: true },
             );
 
             return updatedWallet;
@@ -218,7 +226,7 @@ export class WalletsRepository
                         },
                     },
                 },
-                { new: true, ...transactionOptions },
+                { new: true },
             );
 
             return updatedWallet;

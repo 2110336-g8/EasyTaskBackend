@@ -7,7 +7,6 @@ import {
     TransfersService,
     ITransfersService,
 } from '../services/TransfersService';
-import { WalletsService, IWalletsService } from '../services/WalletsService';
 import sharp from 'sharp';
 import { groupBy } from 'lodash';
 import {
@@ -890,6 +889,7 @@ class TasksController {
             const result = await this.tasksService.acceptTask(taskId, workerId);
             //commit transaction
             await session.commitTransaction();
+
             res.status(200).json({
                 success: true,
                 task: result,
