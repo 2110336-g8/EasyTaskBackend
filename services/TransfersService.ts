@@ -59,8 +59,7 @@ export class TransfersService implements ITransfersService {
         const session = await mongoose.startSession();
         try {
             session.startTransaction();
-
-            const taskId = task._id;
+            const taskId = task.id;
             const customerId = task.customerId;
             const amount =
                 Number(task.wages) * Number(task.hiredWorkers.length);
@@ -119,7 +118,7 @@ export class TransfersService implements ITransfersService {
         const session = await mongoose.startSession();
         try {
             session.startTransaction();
-            const taskId = task._id;
+            const taskId = task.id;
             const customerId = task.customerId;
             const wage = Number(task.wages);
             //check amount in the task
