@@ -58,6 +58,7 @@ export class TransfersService implements ITransfersService {
         const session = await mongoose.startSession();
         try {
             session.startTransaction();
+
             const taskId = task.id;
             const customerId = task.customerId;
             const amount = task.wages * task.hiredWorkers.length;

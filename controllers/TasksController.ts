@@ -27,7 +27,7 @@ import {
     CustomerWalletNotFoundError,
 } from '../errors/WalletError';
 import { CannotTransferError } from '../errors/TransferError';
-
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { IMessagesService, MessagesService } from '../services/MessagesService';
 dotenv.config({ path: './config/config.env' });
@@ -680,7 +680,11 @@ class TasksController {
     };
 
     startTask = async (req: Request, res: Response) => {
+        const session = await mongoose.startSession();
         try {
+            // Start a database transaction
+            session.startTransaction();
+
             const taskId = req.params.id;
             const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
@@ -707,11 +711,18 @@ class TasksController {
                 });
                 return;
             }
+
+            // Commit the transaction
+            await session.commitTransaction();
+
             await res
                 .status(200)
                 .json({ success: true, task: result, transfer: transfer });
         } catch (error) {
             console.error('Error in startTask:', error);
+            // Rollback the transaction if an error occurs
+            await session.abortTransaction();
+
             let statusCode = 500;
             let errorMessage = 'Internal Server Error';
 
@@ -734,11 +745,18 @@ class TasksController {
             return res
                 .status(statusCode)
                 .json({ success: false, error: errorMessage });
+        } finally {
+            // End the session
+            session.endSession();
         }
     };
 
     dismissTask = async (req: Request, res: Response) => {
+        const session = await mongoose.startSession();
         try {
+            // Start a database transaction
+            session.startTransaction();
+
             const taskId = req.params.id;
             const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
@@ -755,28 +773,34 @@ class TasksController {
                 });
                 return;
             }
+
+            let result;
+            let transfer;
             if (task.status === 'Open') {
-                const result = await this.tasksService.dismissOpenTask(taskId);
-                res.status(200).json({ success: true, result });
+                result = await this.tasksService.dismissOpenTask(taskId);
             } else if (task.status === 'InProgress') {
-                const transfer =
+                transfer =
                     await this.transferService.dismissInprogressTaskTransfer(
                         task,
                     );
-                const result =
-                    await this.tasksService.dismissInProgressTask(taskId);
-                res.status(200).json({
-                    success: true,
-                    task: result,
-                    transfer: transfer,
-                });
+                result = await this.tasksService.dismissInProgressTask(taskId);
             } else {
-                res.status(400).json({
+                return res.status(400).json({
                     success: false,
-                    error: 'This task have already been dismissed or completed',
+                    error: 'This task has already been dismissed or completed',
                 });
             }
+
+            await session.commitTransaction();
+            res.status(200).json({
+                success: true,
+                task: result,
+                transfer: transfer,
+            });
         } catch (error) {
+            console.error('Error in dismissTask:', error);
+            // Rollback the transaction if an error occurs
+            await session.abortTransaction();
             if (error instanceof CannotDismissTaskError) {
                 res.status(400).json({
                     success: false,
@@ -793,6 +817,8 @@ class TasksController {
                     error: 'Internal Server Error',
                 });
             }
+        } finally {
+            session.endSession();
         }
     };
 
@@ -834,7 +860,11 @@ class TasksController {
     };
 
     acceptTask = async (req: Request, res: Response) => {
+        const session = await mongoose.startSession();
         try {
+            // start session
+            session.startTransaction();
+
             const taskId = req.params.id;
             const workerId = req.body.employee;
             const task = await this.tasksService.getTaskById(taskId);
@@ -858,11 +888,19 @@ class TasksController {
                 task.wages,
             );
             const result = await this.tasksService.acceptTask(taskId, workerId);
+
+            //commit transaction
+            await session.commitTransaction();
+
             res.status(200).json({
                 success: true,
                 task: result,
             });
         } catch (error) {
+            console.error('Error in acceptTask:', error);
+            //rollback session
+            await session.abortTransaction();
+
             if (error instanceof CannotAcceptTaskError) {
                 res.status(400).json({
                     success: false,
@@ -879,6 +917,8 @@ class TasksController {
                     error: 'Internal Server Error',
                 });
             }
+        } finally {
+            session.endSession();
         }
     };
 
