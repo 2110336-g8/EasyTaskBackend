@@ -52,6 +52,7 @@ export interface IUsersRepository extends IRepository<IUser> {
         matchedCount: number;
         modifiedCount: number;
     }>;
+    getAllUserIds: () => Promise<string[]>;
 }
 
 @Service()
@@ -282,6 +283,16 @@ export class UsersRepository
             return user?.email ?? null;
         } catch (error) {
             console.error('User not found:', error);
+            throw error;
+        }
+    };
+
+    getAllUserIds = async (): Promise<string[]> => {
+        try {
+            const users = await this.findUsers();
+            const userIds = users.map(user => user._id.toString());
+            return userIds;
+        } catch (error) {
             throw error;
         }
     };

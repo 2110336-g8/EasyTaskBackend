@@ -140,11 +140,15 @@ export class TransfersService implements ITransfersService {
                     worker.status === 'Resubmitted'
                 ) {
                     workerCompensation += wage;
+                    console.log('worker compensation', workerCompensation);
                 } else if (worker.status === 'InProgress') {
                     workerCompensation += Math.round(0.3 * wage * 100) / 100;
+                    console.log('worker compensation', workerCompensation);
                 }
             }
+            console.log('taskAmount', taskAmount);
             customerCompensation = taskAmount - workerCompensation;
+            console.log(customerCompensation);
             if (customerCompensation < 0) {
                 throw new NotEnoughMoneyInTaskTransfer(
                     'there is not enough money in task',
@@ -152,6 +156,15 @@ export class TransfersService implements ITransfersService {
             }
             //transfer money
             //task -> customer wallet
+            //decrease money in task transfer
+            await this.transfersRepository.taskPayment(
+                customerId,
+                taskId,
+                customerCompensation,
+                'CustomerRefund',
+                session,
+            );
+            //increate money in customer wallet
             const updatedCustomerWallet =
                 await this.walletsRepository.taskIncome(
                     customerId,
@@ -163,6 +176,7 @@ export class TransfersService implements ITransfersService {
             if (!updatedCustomerWallet) {
                 throw new CustomerWalletNotFoundError('updatedWallet is null');
             }
+
             //task -> workers
             for (const worker of task.hiredWorkers) {
                 if (
@@ -189,14 +203,17 @@ export class TransfersService implements ITransfersService {
                 } else if (worker.status === 'InProgress') {
                     //round with 2 floating point number
                     const compensation = Math.round(0.3 * wage * 100) / 100;
+                    console.log('compensation', compensation);
                     //decrease money in task transfer
-                    await this.transfersRepository.taskPayment(
-                        worker.userId,
-                        taskId,
-                        compensation,
-                        'NotSubmittedWorkerCompensation',
-                        session,
-                    );
+                    const updatedTransfer =
+                        await this.transfersRepository.taskPayment(
+                            worker.userId,
+                            taskId,
+                            compensation,
+                            'NotSubmittedWorkerCompensation',
+                            session,
+                        );
+                    console.log('transfer', updatedTransfer?.taskAmount);
                     //increase money in user wallet
                     await this.walletsRepository.taskIncome(
                         worker.userId,
@@ -207,7 +224,7 @@ export class TransfersService implements ITransfersService {
                     );
                 }
             }
-
+            console.log('after');
             //recheck that task's transfer amount = 0
             const updatedtaskTransfer =
                 await this.transfersRepository.findOneByTaskId(
@@ -217,6 +234,7 @@ export class TransfersService implements ITransfersService {
                 throw new TaskTransferNotFoundError('task transfer not found');
             }
             const updatedtaskAmount = updatedtaskTransfer.taskAmount;
+            console.log(updatedtaskAmount);
             if (updatedtaskAmount != 0) {
                 throw new NotCorrectAmountTransferError(
                     'money was not transfered correctly',
