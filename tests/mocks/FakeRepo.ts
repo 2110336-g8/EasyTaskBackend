@@ -4,4 +4,5 @@ export const fakeRepo = {
     deleteOne: jest.fn(),
     findOne: jest.fn(),
     findAll: jest.fn(),
+    startSession: jest.fn(),
 };
