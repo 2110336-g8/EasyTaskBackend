@@ -11,6 +11,6 @@ router.route('/start').post(transfersController.startTaskTransfer);
 router
     .route('/dismiss')
     .post(transfersController.dismissInprogressTaskTransfer);
-router.route('/accept').get(transfersController.acceptTaskPayment);
+router.route('/accept').post(transfersController.acceptTaskPayment);
 
 export default router;

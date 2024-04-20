@@ -7,6 +7,8 @@ import {
 } from '../services/TransfersService';
 import { ITransferDocument } from '../models/TransferModel';
 
+//this controller is not used in the website (just for testing)
+
 @Service()
 class TransferController {
     private transferService: ITransfersService;
