@@ -13,6 +13,7 @@ describe('UsersService', () => {
         getUserProfileImage: jest.fn(),
         updateUserProfileImage: jest.fn(),
         deleteUserProfileImage: jest.fn(),
+        getAllUserIds: jest.fn(),
     };
     const usersController = new UsersController(mockUserService);
     afterEach(() => {

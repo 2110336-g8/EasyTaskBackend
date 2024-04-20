@@ -12,6 +12,7 @@ describe('UserMiddleware', () => {
         getUserProfileImage: jest.fn(),
         updateUserProfileImage: jest.fn(),
         deleteUserProfileImage: jest.fn(),
+        getAllUserIds: jest.fn(),
     };
     const userMiddleware = new UserMiddleware(mockUserService);
 
