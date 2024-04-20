@@ -65,7 +65,7 @@ cron.schedule('59 16 * * *', async () => {
     }
 });
 
-cron.schedule('5 * * * *', async () => {
+cron.schedule('10 * * * *', async () => {
     console.log('Log: add wallet to old user');
     const userIds = await userService.getAllUserIds();
     for (const id of userIds) {
