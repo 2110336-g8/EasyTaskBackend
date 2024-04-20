@@ -492,6 +492,15 @@ class TasksController {
                 });
                 return;
             }
+            const startDateMinus15hr = new Date(task.startDate);
+            startDateMinus15hr.setHours(startDateMinus15hr.getHours() - 15);
+            if (startDateMinus15hr > new Date()) {
+                res.status(403).json({
+                    success: false,
+                    error: 'Task is closed. The application period has not started yet.',
+                });
+                return;
+            }
 
             const result = await this.tasksService.applyTask(
                 taskId,
