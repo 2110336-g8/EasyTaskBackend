@@ -17,6 +17,7 @@ describe('UsersService', () => {
         updateApplicationStatus: jest.fn(),
         addTask: jest.fn(),
         updateTaskStatus: jest.fn(),
+        getAllUserIds: jest.fn(),
     };
     const mockOtpRepo = {
         ...fakeRepo,
