@@ -23,6 +23,10 @@ export interface ITransfersRepository extends IRepository<ITransfer> {
         type: string,
         session: ClientSession,
     ) => Promise<ITransferDocument | null>;
+    updateTaskAmount: (
+        transferId: Types.ObjectId,
+        newAmount: number,
+    ) => Promise<ITransfer | null>;
 }
 
 @Service()
@@ -39,6 +43,22 @@ export class TransfersRepository
     ): Promise<ITransferDocument | null> => {
         const result = await this._model.findOne({ taskId });
         return result;
+    };
+
+    updateTaskAmount = async (
+        transferId: Types.ObjectId,
+        newAmount: number,
+    ): Promise<ITransfer | null> => {
+        try {
+            const updatedTransfer = await TransferModel.findOneAndUpdate(
+                { _id: transferId },
+                { taskAmount: newAmount },
+                { new: true },
+            );
+            return updatedTransfer;
+        } catch (error) {
+            throw new Error('Error while updating task amount');
+        }
     };
 
     // customer wallet -> task

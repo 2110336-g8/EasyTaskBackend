@@ -116,6 +116,7 @@ export class WalletsService implements IWalletsService {
                 // If no wallet exists, create a new wallet for the user
                 const newWalletData = {
                     userId: new Types.ObjectId(userId),
+                    walletAmount: 0,
                 } as IWalletDocument;
                 await this.walletsRepository.create(newWalletData);
                 return true;

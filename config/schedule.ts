@@ -65,11 +65,13 @@ cron.schedule('59 16 * * *', async () => {
     }
 });
 
-cron.schedule('10 * * * *', async () => {
-    console.log('Log: add wallet to old user');
-    const userIds = await userService.getAllUserIds();
-    for (const id of userIds) {
-        await walletService.createMissingWallet(id);
-    }
-    console.log('update successfully');
-});
+//// uncomment this to create a wallet to all old user for your local system
+//// for
+// cron.schedule('10 * * * *', async () => {
+//     console.log('Log: add wallet to old user');
+//     const userIds = await userService.getAllUserIds();
+//     for (const id of userIds) {
+//         await walletService.createMissingWallet(id);
+//     }
+//     console.log('update successfully');
+// });
