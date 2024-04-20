@@ -7,6 +7,7 @@ import { IWalletsService, WalletsService } from '../services/WalletsService';
 import { IWalletDocument } from '../models/WalletModel';
 import { IUsersService, UsersService } from '../services/UsersService';
 import dotenv from 'dotenv';
+import { IEmailService, MailJetService } from '../services/EmailService';
 dotenv.config({ path: './config/config.env' });
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -17,15 +18,18 @@ class PaymentsController {
     private stripeService: IStripeService;
     private walletsService: IWalletsService;
     private usersService: IUsersService;
+    private emailService: IEmailService;
 
     constructor(
         @Inject(() => StripeService) stripeService: IStripeService,
         @Inject(() => WalletsService) walletsService: IWalletsService,
         @Inject(() => UsersService) usersService: IUsersService,
+        @Inject(() => MailJetService) emailService: IEmailService,
     ) {
         this.stripeService = stripeService;
         this.walletsService = walletsService;
         this.usersService = usersService;
+        this.emailService = emailService;
     }
 
     stripeWebhook = async (req: Request, res: Response) => {
@@ -56,6 +60,18 @@ class PaymentsController {
                             Number(amount),
                             String(sessionId),
                         );
+                        
+                    const user = await this.usersService.getUserById(
+                        String(userId),
+                    );
+                    if (user) {
+                        const isSent =this.emailService.sendTopUpConfirmation(
+                            user,
+                            Number(amount),
+                            String(sessionId),
+                        );
+                    }
+
                     if (!updatedWallet)
                         res.status(500).send(`Updated Wallet Error`);
                 } catch (err) {
