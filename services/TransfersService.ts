@@ -61,8 +61,10 @@ export class TransfersService implements ITransfersService {
             session.startTransaction();
             const taskId = task.id;
             const customerId = task.customerId;
-            const amount =
-                Number(task.wages) * Number(task.hiredWorkers.length);
+            const acceptedApplicants = task.applicants.filter(
+                applicant => applicant.status === 'Accepted',
+            ).length;
+            const amount = Number(task.wages) * acceptedApplicants;
             // console.log(amount);
             //decrease amount of money from customer's wallet
             const updatedWallet = await this.walletsRepository.payStartTask(
