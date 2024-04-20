@@ -7,7 +7,6 @@ import {
     TransfersService,
     ITransfersService,
 } from '../services/TransfersService';
-import { WalletsService, IWalletsService } from '../services/WalletsService';
 import sharp from 'sharp';
 import { groupBy } from 'lodash';
 import {
