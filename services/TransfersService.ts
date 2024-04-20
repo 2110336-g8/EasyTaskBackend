@@ -224,7 +224,6 @@ export class TransfersService implements ITransfersService {
                     );
                 }
             }
-            console.log('after');
             //recheck that task's transfer amount = 0
             const updatedtaskTransfer =
                 await this.transfersRepository.findOneByTaskId(
@@ -233,8 +232,16 @@ export class TransfersService implements ITransfersService {
             if (!updatedtaskTransfer) {
                 throw new TaskTransferNotFoundError('task transfer not found');
             }
-            const updatedtaskAmount = updatedtaskTransfer.taskAmount;
+            let updatedtaskAmount = updatedtaskTransfer.taskAmount;
             console.log(updatedtaskAmount);
+            //if the amount is too small update it to 0
+            if (updatedtaskAmount < 0.009) {
+                updatedtaskAmount = 0;
+                await this.transfersRepository.updateTaskAmount(
+                    updatedtaskTransfer.id,
+                    0,
+                );
+            }
             if (updatedtaskAmount != 0) {
                 throw new NotCorrectAmountTransferError(
                     'money was not transfered correctly',
