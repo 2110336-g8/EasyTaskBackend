@@ -13,8 +13,11 @@ import taskRouter from './routes/TasksRoute';
 import bankRouter from './routes/BankRoute';
 import messagesRouter from './routes/MessagesRoute';
 import socketRouter from './routes/SocketRoute';
+import paymentsRouter from './routes/PaymentRoute';
+import transferRouter from './routes/TransferRoute';
 import AuthMiddleware from './middlewares/AuthMiddleware';
 import swaggerDocs from './swagger';
+import PaymentsController from './controllers/PaymentsController';
 
 // Load ENVs
 dotenv.config({ path: `${__dirname}/config/config.env` });
@@ -67,6 +70,14 @@ const corsOption = {
 };
 
 const authMiddleware = Container.get(AuthMiddleware);
+const paymentsController: PaymentsController =
+    Container.get(PaymentsController);
+
+app.post(
+    '/v1/webhooks/stripe',
+    bodyParser.raw({ type: '*/*' }),
+    paymentsController.stripeWebhook,
+);
 
 app.use(express.json());
 app.use(bodyParser.raw({ type: ['image/jpeg', 'image/png'], limit: '5mb' }));
@@ -79,6 +90,8 @@ app.use('/v1/banks', bankRouter);
 app.use('/v1/users', authMiddleware.validateToken, userRouter);
 app.use('/v1/tasks', authMiddleware.validateToken, taskRouter);
 app.use('/v1/messages', authMiddleware.validateToken, messagesRouter);
+app.use('/v1/payments', authMiddleware.validateToken, paymentsRouter);
+app.use('/v1/transfers', authMiddleware.validateToken, transferRouter);
 
 // Other paths are invalid, res 404
 app.use('*', (req: Request, res: Response) => {
