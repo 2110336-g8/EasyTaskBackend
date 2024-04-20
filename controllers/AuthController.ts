@@ -9,6 +9,8 @@ import { CannotCreateUserError } from '../errors/UsersError';
 import { IEmailService, MailJetService } from '../services/EmailService';
 import { CannotSendEmailError } from '../errors/EmailError';
 import { CannotCreateOtpError } from '../errors/OtpError';
+import { IWalletsService, WalletsService } from '../services/WalletsService';
+import { IWalletDocument, WalletModel } from '../models/WalletModel';
 
 @Service()
 class AuthController {
@@ -16,17 +18,20 @@ class AuthController {
     private otpService: IOtpService;
     private userService: IUsersService;
     private emailService: IEmailService;
+    private walletsService: IWalletsService;
 
     constructor(
         @Inject(() => AuthService) authService: IAuthService,
         @Inject(() => OtpService) otpService: IOtpService,
         @Inject(() => UsersService) userService: IUsersService,
         @Inject(() => MailJetService) emailService: IEmailService,
+        @Inject(() => WalletsService) walletsService: IWalletsService,
     ) {
         this.authService = authService;
         this.otpService = otpService;
         this.userService = userService;
         this.emailService = emailService;
+        this.walletsService = walletsService;
     }
 
     sentOtp = async (req: Request, res: Response): Promise<void> => {
@@ -71,6 +76,12 @@ class AuthController {
         const data = req.body;
         try {
             const user = await this.userService.createUser(data);
+
+            const walletData: IWalletDocument = new WalletModel({
+                userId: user._id,
+            });
+            await this.walletsService.createWallet(walletData);
+
             await this.otpService.deleteOtp(user.email);
             const token = this.authService.generateToken(user._id);
             this.setJwtCookie(res, token);

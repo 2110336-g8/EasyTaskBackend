@@ -8,7 +8,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ITasksService, TasksService } from '../services/TasksService';
 import { IUsersService, UsersService } from '../services/UsersService';
-import { IMessage, IMessageDocument } from '../models/MessageModel';
+import { IMessageDocument } from '../models/MessageModel';
 import { ITaskDocument } from '../models/TaskModel';
 export interface SendMessageDTO {
     taskId: string;
@@ -50,12 +50,11 @@ export interface MessageRoomInfo {
 
 @Service()
 export class MessagesController {
-    private activeUsers: Map<string, Set<string>> = new Map();
-
     constructor(
         @Inject(() => MessagesService)
         private messagesService: IMessagesService,
-        @Inject(() => TasksService) private tasksService: ITasksService,
+        @Inject(() => TasksService)
+        private tasksService: ITasksService,
         @Inject(() => UsersService) private usersService: IUsersService,
     ) {}
 
@@ -70,15 +69,9 @@ export class MessagesController {
     private handleJoinRoom = (socket: Socket) => async (taskId: string) => {
         try {
             const userId = socket.data.user._id;
-            await this.messagesService.isJoinableIdRoom(taskId, userId);
+            await this.messagesService.isJoinableRoom(taskId, userId);
+            this.messagesService.joinSocketRoom(socket.id, taskId, userId);
             socket.join(taskId);
-            await this.messagesService.resetUnreadCount(taskId, userId);
-
-            if (!this.activeUsers.get(taskId)) {
-                this.activeUsers.set(taskId, new Set());
-            }
-            this.activeUsers.get(taskId)?.add(userId.toString());
-
             socket.emit('join_success', 'Room joined successfully');
             console.log(`User ${userId} joined room ${taskId}`);
         } catch (error) {
@@ -96,23 +89,7 @@ export class MessagesController {
 
     private handleDisconnect = (socket: Socket) => {
         try {
-            const userId = socket.data.user._id;
-            const activeRooms = Array.from(this.activeUsers.entries())
-                .filter(([_, users]) => users.has(userId.toString()))
-                .map(([room]) => room);
-
-            activeRooms.forEach(room => {
-                const usersInRoom = this.activeUsers.get(room);
-                if (usersInRoom) {
-                    usersInRoom.delete(userId.toString());
-                    if (usersInRoom.size === 0) {
-                        this.activeUsers.delete(room);
-                    }
-                    console.log(
-                        `User ${userId} disconnected from room ${room}`,
-                    );
-                }
-            });
+            this.messagesService.leaveSocketRoom(socket.id);
         } catch (error) {
             console.error('Error handling disconnect:', error);
         }
@@ -124,25 +101,15 @@ export class MessagesController {
                 const taskId = data.taskId;
                 const senderId = data.senderId;
                 const text = data.text;
-                const message = await this.messagesService.saveUserMessage(
+                const message = await this.messagesService.sendUserMessage(
+                    io,
                     taskId,
                     senderId,
                     text,
                 );
-                const userList: Set<string> =
-                    await this.messagesService.getUsersOfRoom(taskId);
-                this.activeUsers.get(taskId)?.forEach(userId => {
-                    userList.delete(userId);
-                });
-
-                await this.messagesService.increaseUnreadCount(
-                    taskId,
-                    Array.from(userList),
-                );
                 console.log(
                     `user ${senderId} sent \"${text}\" to room ${taskId}`,
                 );
-                io.of('/messages').to(taskId).emit('chat_message', message);
             } catch (error) {
                 console.log(error);
             }

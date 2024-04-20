@@ -1,0 +1,221 @@
+---
+openapi: 3.0.0
+info:
+  title: Easy Task API
+  contact:
+    email: easy.task.se2@gmail.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.0
+servers:
+- url: https://virtserver.swaggerhub.com/6430342121/Easy_task/1.0.0
+  description: SwaggerHub API Auto Mocking
+tags:
+- name: Task
+  description: some task APIs
+paths:
+  /v1/tasks/{id}:
+    get:
+      tags:
+      - Task
+      summary: get task by id
+      description: get a task doc by task id
+      operationId: getTaskById
+      parameters:
+      - name: id
+        in: path
+        description: pass a task id for looking up task
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      - name: userId
+        in: query
+        description: a user id for authorization
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: task is found and allowed to view this task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+        "404":
+          description: task or user not found
+  /v1/tasks:
+    post:
+      tags:
+      - Task
+      summary: adds an inventory item
+      description: Adds an item to the system
+      operationId: addInventory
+      parameters:
+      - name: userId
+        in: query
+        description: a user id for authorization
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+          format: uuid
+      - name: title
+        in: query
+        description: a task title
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: workers
+        in: query
+        description: maximum number of workers
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: category
+        in: query
+        description: a task category
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      requestBody:
+        description: task to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/taskDocument'
+      responses:
+        "201":
+          description: a task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_201'
+        "400":
+          description: "invalid input, object invalid"
+        "500":
+          description: Internal Server Error
+components:
+  schemas:
+    taskDocument:
+      required:
+      - applicants
+      - category
+      - createdAt
+      - customerId
+      - endDate
+      - hiredWorkers
+      - startDate
+      - status
+      - title
+      - updatedAt
+      - wages
+      - workers
+      type: object
+      properties:
+        title:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        location:
+          $ref: '#/components/schemas/taskDocument_location'
+        status:
+          type: string
+          example: Open
+        wages:
+          type: number
+          example: 4000
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        customerId:
+          type: string
+          format: uuid
+        imageKey:
+          type: string
+        applicants:
+          type: array
+          items:
+            $ref: '#/components/schemas/taskDocument_applicants'
+        hiredWorkers:
+          type: array
+          items:
+            $ref: '#/components/schemas/taskDocument_applicants'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        __v:
+          minimum: 0
+          type: number
+    inline_response_200:
+      required:
+      - applicantsInfo
+      - task
+      type: object
+      properties:
+        task:
+          $ref: '#/components/schemas/taskDocument'
+        applicantsInfo:
+          type: array
+          items:
+            type: string
+            format: uuid
+        hiredWorkersInfo:
+          type: array
+          items:
+            type: string
+            format: uuid
+    inline_response_201:
+      required:
+      - success
+      - task
+      type: object
+      properties:
+        success:
+          type: boolean
+        task:
+          $ref: '#/components/schemas/taskDocument'
+    taskDocument_location:
+      type: object
+      properties:
+        name:
+          type: string
+          example: cafe
+        latitude:
+          type: number
+          example: 13.746570232390042
+        longitude:
+          type: number
+          example: 100.50833639602769
+    taskDocument_applicants:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time

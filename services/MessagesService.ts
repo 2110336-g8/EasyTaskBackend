@@ -9,26 +9,30 @@ import {
     IMessagesRepository,
     MessagesRepository,
 } from '../repositories/MessagesRepo';
-import { ITasksRepository, TasksRepository } from '../repositories/TasksRepo';
 import { MongooseError, Types } from 'mongoose';
-import dotenv from 'dotenv';
 import UnreadCountRepository, {
     IUnreadCountRepository,
 } from '../repositories/UnreadCountRepo';
 import { ITasksService, TasksService } from './TasksService';
-
+import { Server } from 'socket.io';
 export interface IMessagesService {
-    saveUserMessage: (
+    joinSocketRoom: (socketId: string, taskId: string, userId: string) => void;
+    leaveSocketRoom: (socketId: string) => void;
+    getUsersInSocketRoom: (taskId: string) => Set<string>;
+    sendUserMessage: (
+        io: Server,
         taskId: string,
         senderId: string,
         text: string,
     ) => Promise<IMessage>;
-    saveSystemMessage: (
+    sendSystemMessage: (
+        io: Server,
         taskId: string,
-        text: { title?: string; content?: string },
+        text: {
+            title?: string;
+            content?: string;
+        },
     ) => Promise<IMessage>;
-    increaseUnreadCount: (taskId: string, userIds: string[]) => Promise<void>;
-    resetUnreadCount: (taskId: string, userId: string) => Promise<void>;
     getUnreadCount: (userId: string) => Promise<Map<string, number>>;
     getMessageHistory: (
         taskId: string,
@@ -41,12 +45,15 @@ export interface IMessagesService {
     ) => Promise<
         { message: IMessageDocument; task: ITaskDocument | undefined }[]
     >;
-    isJoinableIdRoom: (taskId: string, userId: string) => Promise<void>;
-    getUsersOfRoom: (taskId: string) => Promise<Set<string>>;
+    isJoinableRoom: (taskId: string, userId: string) => Promise<void>;
 }
 
 @Service()
 export class MessagesService implements IMessagesService {
+    private activeSocket: Map<string, { userId: string; taskId: string }> =
+        new Map();
+    private activeUsers: Map<string, Set<string>> = new Map();
+
     constructor(
         @Inject(() => MessagesRepository)
         private messagesRepository: IMessagesRepository,
@@ -55,6 +62,27 @@ export class MessagesService implements IMessagesService {
         @Inject(() => UnreadCountRepository)
         private unreadCountRepository: IUnreadCountRepository,
     ) {}
+
+    joinSocketRoom(socketId: string, taskId: string, userId: string): void {
+        this.activeSocket.set(socketId, { userId, taskId });
+        if (!this.activeUsers.get(taskId)) {
+            this.activeUsers.set(taskId, new Set());
+        }
+        this.activeUsers.get(taskId)?.add(userId);
+        this.resetUnreadCount(taskId, userId);
+    }
+
+    leaveSocketRoom(socketId: string): void {
+        const socket = this.activeSocket.get(socketId);
+        if (!!socket) {
+            this.activeUsers.get(socket.taskId)?.delete(socket.userId);
+        }
+        this.activeSocket.delete(socketId);
+    }
+
+    getUsersInSocketRoom(taskId: string): Set<string> {
+        return this.activeUsers.get(taskId) ?? new Set();
+    }
 
     async getUnreadCount(userId: string): Promise<Map<string, number>> {
         const unreadDoc =
@@ -67,24 +95,7 @@ export class MessagesService implements IMessagesService {
         return mapper;
     }
 
-    async getUsersOfRoom(taskId: string): Promise<Set<string>> {
-        try {
-            const task = await this.tasksService.getTaskById(taskId);
-            if (!task) {
-                throw new Error('Invalid task id');
-            }
-            const users = new Set<string>();
-            users.add(task.customerId.toString());
-            task.hiredWorkers.forEach(hiredWorker =>
-                users.add(hiredWorker.userId.toString()),
-            );
-            return users;
-        } catch (err) {
-            throw err;
-        }
-    }
-
-    async isJoinableIdRoom(taskId: string, userId: string): Promise<void> {
+    async isJoinableRoom(taskId: string, userId: string): Promise<void> {
         try {
             const task = await this.tasksService.getTaskById(taskId);
             if (
@@ -115,32 +126,8 @@ export class MessagesService implements IMessagesService {
         }
     }
 
-    async saveSystemMessage(
-        taskId: string,
-        text: { title?: string; content?: string },
-    ): Promise<IMessage> {
-        try {
-            const task = await this.tasksService.getTaskById(taskId);
-            if (!task) {
-                throw new CannotCreateMessageError('Invalid task id');
-            }
-            if (task.status !== 'InProgress') {
-                throw new CannotCreateMessageError(
-                    'Invalid task status, must be in progress',
-                );
-            }
-            const newMessage = await this.messagesRepository.create({
-                taskId: new Types.ObjectId(taskId),
-                senderType: 'sys',
-                text,
-            } as IMessage);
-            return newMessage;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    async saveUserMessage(
+    async sendUserMessage(
+        io: Server,
         taskId: string,
         senderId: string,
         text: string,
@@ -156,8 +143,6 @@ export class MessagesService implements IMessagesService {
                 );
             }
             const isUserHired = task.hiredWorkers.some(worker => {
-                console.log(worker);
-                console.log(senderId);
                 return (
                     worker.userId.toString() === senderId.toString() &&
                     [
@@ -182,18 +167,43 @@ export class MessagesService implements IMessagesService {
                 senderId: new Types.ObjectId(senderId),
                 text: { content: text },
             } as IMessage);
+            this.increaseUnreadCount(taskId);
+            io.of('/messages').to(taskId).emit('chat_message', newMessage);
             return newMessage;
         } catch (error) {
             throw error;
         }
     }
 
-    async increaseUnreadCount(taskId: string, userIds: string[]) {
-        await this.unreadCountRepository.incrementUnread(taskId, userIds);
-    }
-
-    async resetUnreadCount(taskId: string, userId: string) {
-        await this.unreadCountRepository.resetUnread(taskId, userId);
+    async sendSystemMessage(
+        io: Server,
+        taskId: string,
+        text: {
+            title?: string;
+            content?: string;
+        },
+    ): Promise<IMessage> {
+        try {
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                throw new CannotCreateMessageError('Invalid task id');
+            }
+            if (task.status !== 'InProgress') {
+                throw new CannotCreateMessageError(
+                    'Invalid task status, must be in progress',
+                );
+            }
+            const newMessage = await this.messagesRepository.create({
+                taskId: new Types.ObjectId(taskId),
+                senderType: 'sys',
+                text: { title: text.title, content: text.content },
+            } as IMessage);
+            this.increaseUnreadCount(taskId);
+            io.of('/messages').to(taskId).emit('chat_message', newMessage);
+            return newMessage;
+        } catch (error) {
+            throw error;
+        }
     }
 
     async getMessageHistory(
@@ -234,5 +244,34 @@ export class MessagesService implements IMessagesService {
         });
 
         return taskWithMessages;
+    }
+
+    private async increaseUnreadCount(taskId: string) {
+        const users = await this.getUsersOfRoom(taskId);
+        const inRoom = this.getUsersInSocketRoom(taskId);
+        inRoom.forEach(user => users.delete(user));
+        await this.unreadCountRepository.incrementUnread(
+            taskId,
+            Array.from(users),
+        );
+    }
+    private async resetUnreadCount(taskId: string, userId: string) {
+        await this.unreadCountRepository.resetUnread(taskId, userId);
+    }
+    private async getUsersOfRoom(taskId: string): Promise<Set<string>> {
+        try {
+            const task = await this.tasksService.getTaskById(taskId);
+            if (!task) {
+                throw new Error('Invalid task id');
+            }
+            const users = new Set<string>();
+            users.add(task.customerId.toString());
+            task.hiredWorkers.forEach(hiredWorker =>
+                users.add(hiredWorker.userId.toString()),
+            );
+            return users;
+        } catch (err) {
+            throw err;
+        }
     }
 }
