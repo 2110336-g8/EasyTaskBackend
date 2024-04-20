@@ -888,10 +888,8 @@ class TasksController {
                 task.wages,
             );
             const result = await this.tasksService.acceptTask(taskId, workerId);
-
             //commit transaction
             await session.commitTransaction();
-
             res.status(200).json({
                 success: true,
                 task: result,
