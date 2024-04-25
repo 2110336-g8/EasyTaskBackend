@@ -3,6 +3,10 @@ import { ValidationError } from '../errors/RepoError';
 import { Service, Inject } from 'typedi';
 import { TasksService, ITasksService } from '../services/TasksService';
 import { UsersService, IUsersService } from '../services/UsersService';
+import {
+    TransfersService,
+    ITransfersService,
+} from '../services/TransfersService';
 import sharp from 'sharp';
 import { groupBy } from 'lodash';
 import {
@@ -17,6 +21,12 @@ import {
     CannotAcceptTaskError,
     CannotRequestRevisionError,
 } from '../errors/TaskError';
+import {
+    NotEnoughMoneyError,
+    CustomerWalletNotFoundError,
+} from '../errors/WalletError';
+import { CannotTransferError } from '../errors/TransferError';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { IMessagesService, MessagesService } from '../services/MessagesService';
 dotenv.config({ path: './config/config.env' });
@@ -25,15 +35,18 @@ dotenv.config({ path: './config/config.env' });
 class TasksController {
     private tasksService: ITasksService;
     private usersService: IUsersService;
+    private transferService: ITransfersService;
 
     constructor(
         @Inject(() => TasksService) tasksService: ITasksService,
         @Inject(() => UsersService) usersService: IUsersService,
+        @Inject(() => TransfersService) transfersService: ITransfersService,
         @Inject(() => MessagesService)
         private messagesService: IMessagesService,
     ) {
         this.tasksService = tasksService;
         this.usersService = usersService;
+        this.transferService = transfersService;
     }
 
     createTask = async (req: Request, res: Response): Promise<void> => {
@@ -492,7 +505,16 @@ class TasksController {
             if (endDatePlus1hr59min < new Date()) {
                 res.status(403).json({
                     success: false,
-                    error: 'Task is closed. The application period has ended.',
+                    error: 'Task is not open for applications. The owner has already started the task.',
+                });
+                return;
+            }
+            const startDateMinus15hr = new Date(task.startDate);
+            startDateMinus15hr.setHours(startDateMinus15hr.getHours() - 15);
+            if (startDateMinus15hr > new Date()) {
+                res.status(403).json({
+                    success: false,
+                    error: 'Task is closed. The application period has not started yet.',
                 });
                 return;
             }
@@ -666,7 +688,11 @@ class TasksController {
     };
 
     startTask = async (req: Request, res: Response) => {
+        const session = await mongoose.startSession();
         try {
+            // Start a database transaction
+            session.startTransaction();
+
             const taskId = req.params.id;
             const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
@@ -683,30 +709,62 @@ class TasksController {
                 });
                 return;
             }
+            const transfer = await this.transferService.startTaskTransfer(task);
+
             const result = await this.tasksService.startTask(taskId);
-            res.status(200).json({ success: true, task: result });
-        } catch (error) {
-            if (error instanceof CannotStartTaskError) {
-                res.status(400).json({
+            if (!result) {
+                res.status(404).json({
                     success: false,
-                    error: error.message,
+                    error: 'No result from startTask',
                 });
-            } else if (error instanceof CannotUpdateStateError) {
-                res.status(500).json({
-                    sucess: false,
-                    error: error.message,
-                });
-            } else {
-                res.status(500).json({
-                    sucess: false,
-                    error: 'Internal Server Error',
-                });
+                return;
             }
+
+            // Commit the transaction
+            await session.commitTransaction();
+
+            await res
+                .status(200)
+                .json({ success: true, task: result, transfer: transfer });
+        } catch (error) {
+            console.error('Error in startTask:', error);
+            // Rollback the transaction if an error occurs
+            await session.abortTransaction();
+
+            let statusCode = 500;
+            let errorMessage = 'Internal Server Error';
+
+            if (error instanceof CannotStartTaskError) {
+                statusCode = 400;
+                errorMessage = error.message;
+            } else if (error instanceof CannotUpdateStateError) {
+                statusCode = 500;
+                errorMessage = error.message;
+            } else if (
+                error instanceof ValidationError ||
+                error instanceof NotEnoughMoneyError ||
+                error instanceof CustomerWalletNotFoundError ||
+                error instanceof CannotTransferError
+            ) {
+                statusCode = 500;
+                errorMessage = error.message;
+            }
+
+            return res
+                .status(statusCode)
+                .json({ success: false, error: errorMessage });
+        } finally {
+            // End the session
+            session.endSession();
         }
     };
 
     dismissTask = async (req: Request, res: Response) => {
+        const session = await mongoose.startSession();
         try {
+            // Start a database transaction
+            session.startTransaction();
+
             const taskId = req.params.id;
             const task = await this.tasksService.getTaskById(taskId);
             if (!task) {
@@ -723,20 +781,34 @@ class TasksController {
                 });
                 return;
             }
+
+            let result;
+            let transfer;
             if (task.status === 'Open') {
-                const result = await this.tasksService.dismissOpenTask(taskId);
-                res.status(200).json({ success: true, result });
+                result = await this.tasksService.dismissOpenTask(taskId);
             } else if (task.status === 'InProgress') {
-                const result =
-                    await this.tasksService.dismissInProgressTask(taskId);
-                res.status(200).json({ success: true, result });
+                transfer =
+                    await this.transferService.dismissInprogressTaskTransfer(
+                        task,
+                    );
+                result = await this.tasksService.dismissInProgressTask(taskId);
             } else {
-                res.status(400).json({
+                return res.status(400).json({
                     success: false,
-                    error: 'This task have already been dismissed or completed',
+                    error: 'This task has already been dismissed or completed',
                 });
             }
+
+            await session.commitTransaction();
+            res.status(200).json({
+                success: true,
+                task: result,
+                transfer: transfer,
+            });
         } catch (error) {
+            console.error('Error in dismissTask:', error);
+            // Rollback the transaction if an error occurs
+            await session.abortTransaction();
             if (error instanceof CannotDismissTaskError) {
                 res.status(400).json({
                     success: false,
@@ -753,6 +825,8 @@ class TasksController {
                     error: 'Internal Server Error',
                 });
             }
+        } finally {
+            session.endSession();
         }
     };
 
@@ -794,7 +868,11 @@ class TasksController {
     };
 
     acceptTask = async (req: Request, res: Response) => {
+        const session = await mongoose.startSession();
         try {
+            // start session
+            session.startTransaction();
+
             const taskId = req.params.id;
             const workerId = req.body.employee;
             const task = await this.tasksService.getTaskById(taskId);
@@ -812,12 +890,24 @@ class TasksController {
                 });
                 return;
             }
+            await this.transferService.acceptTaskPayment(
+                taskId,
+                workerId,
+                task.wages,
+            );
             const result = await this.tasksService.acceptTask(taskId, workerId);
+            //commit transaction
+            await session.commitTransaction();
+
             res.status(200).json({
                 success: true,
                 task: result,
             });
         } catch (error) {
+            console.error('Error in acceptTask:', error);
+            //rollback session
+            await session.abortTransaction();
+
             if (error instanceof CannotAcceptTaskError) {
                 res.status(400).json({
                     success: false,
@@ -834,6 +924,8 @@ class TasksController {
                     error: 'Internal Server Error',
                 });
             }
+        } finally {
+            session.endSession();
         }
     };
 

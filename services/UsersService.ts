@@ -37,6 +37,7 @@ export interface IUsersService {
         key: string,
     ) => Promise<void>;
     deleteUserProfileImage: (userId: string, imageKey: string) => Promise<void>;
+    getAllUserIds: () => Promise<string[]>;
 }
 
 @Service()
@@ -222,6 +223,18 @@ export class UsersService implements IUsersService {
             }
         } catch (error) {
             throw new Error('Failed to delete profile image');
+        }
+    }
+
+    async getAllUserIds(): Promise<string[]> {
+        try {
+            const userIds = await this.usersRepository.getAllUserIds();
+            if (!userIds) {
+                throw new Error('there is no userIds found');
+            }
+            return userIds;
+        } catch (error) {
+            throw error;
         }
     }
 }
